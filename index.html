@@ -1,0 +1,2449 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Pastis Pronos - CDM 2026</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+  <script  src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script defer src="https://unpkg.com/twemoji@latest/dist/twemoji.min.js" crossorigin="anonymous"></script>
+
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'], oswald: ['Oswald', 'sans-serif'], },
+          colors: {
+            navy: { 900: '#15203d', 800: '#212E55', 700: '#314376' },
+            pastis: { 500: '#F7D11A', 600: '#DFBC17' } 
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    /* 1. Blocage de la page : indispensable pour vaincre l'iframe mobile */
+    html, body { height: 100%; height: 100dvh; overflow: hidden; margin: 0; padding: 0; }
+    
+    /* 2. Barre de défilement de la zone centrale sur PC */
+    .main-scroll { overflow-y: scroll; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: #4A5D7E #212E55; -webkit-overflow-scrolling: touch; }
+    .main-scroll::-webkit-scrollbar { width: 8px; }
+    .main-scroll::-webkit-scrollbar-track { background: #212E55; border-radius: 4px; }
+    .main-scroll::-webkit-scrollbar-thumb { background-color: #4A5D7E; border-radius: 4px; }
+    .main-scroll::-webkit-scrollbar-thumb:hover { background-color: #F7D11A; }
+
+    /* Masquer scrollbar des petites listes (ex: tags) */
+    .no-scrollbar::-webkit-scrollbar { display: none !important; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    /* Scrollbar interne pour les tableaux de classement */
+    .custom-scrollbar { scrollbar-width: auto; scrollbar-color: #4A5D7E #212E55; }
+    .custom-scrollbar::-webkit-scrollbar { height: 10px; width: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #212E55; border-radius: 8px; border: 1px solid #314376; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #4A5D7E; border-radius: 8px; border: 2px solid #212E55; }
+
+    .loader { border: 4px solid #15203d; border-top: 4px solid #F7D11A; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    img.emoji { height: 1em; width: 1em; margin: 0 .05em 0 .1em; vertical-align: -0.1em; display: inline-block; }
+    @keyframes pulse-gold { 
+      0% { box-shadow: 0 0 0 0 rgba(247, 209, 26, 0.7); } 
+      70% { box-shadow: 0 0 0 6px rgba(247, 209, 26, 0); } 
+      100% { box-shadow: 0 0 0 0 rgba(247, 209, 26, 0); } 
+    }
+    .joker-pulse { animation: pulse-gold 2s infinite; border: 1px solid #F7D11A; }
+    .bracket-col { display: flex; flex-direction: column; justify-content: space-around; height: 100%; }
+
+    @media (max-width: 767px) { .desktop-hide { display: block; } }
+    @media (min-width: 768px) { .desktop-hide { display: none !important; } }
+  </style>
+  </head>
+
+<body class="bg-navy-900 text-white font-sans antialiased flex flex-col h-[100dvh] overflow-hidden">
+
+  <div id="loader-screen" class="fixed inset-0 bg-navy-900 z-[100] hidden flex-col items-center justify-center">
+    <div class="loader mb-4"></div>
+    <p id="loader-text" class="text-gray-400 font-medium animate-pulse">Rajout de points à tous les Perals en cours...</p>
+  </div>
+
+  <div id="tooltip" class="fixed bg-white text-navy-900 border border-gray-200 px-3 py-2 rounded-lg shadow-2xl z-[100] text-[10px] md:text-xs font-bold transition-opacity duration-200 opacity-0 pointer-events-none transform -translate-x-1/2 -translate-y-full mb-3 whitespace-normal break-words text-center w-max max-w-[250px] md:max-w-sm"></div>
+
+<header class="bg-navy-900/80 backdrop-blur-md border-b border-navy-700/50 flex-none z-40 shadow-lg sticky top-0">
+  <div class="max-w-7xl w-full mx-auto px-4 py-3 flex justify-between items-center">
+    
+    <div class="flex-1 flex items-center justify-start">
+      <img src="https://lh3.googleusercontent.com/d/1x6zPLarU8YmCHqDTKaqr22jX5p5neFpz" alt="Pastis Prono" class="h-10 md:h-14 w-auto object-contain cursor-pointer hover:opacity-80 transition transform hover:scale-105" onclick="switchView('calendrier')" title="Retour à l'accueil">
+    </div>
+    
+    <div class="flex-[2] flex justify-center items-center">
+      <h2 class="font-oswald font-bold tracking-wider uppercase text-center flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 whitespace-nowrap">
+        <span class="text-white drop-shadow-md text-lg md:text-2xl leading-tight">Coupe du monde</span>
+        <span class="bg-pastis-500 text-navy-900 px-2 py-0.5 rounded shadow-sm text-sm md:text-base leading-none font-black">2026</span>
+      </h2>
+    </div>
+    
+    <div class="flex flex-col items-end flex-1 min-w-[70px]">
+      <button onclick="refreshData(true)" class="bg-pastis-500 hover:bg-pastis-600 text-navy-900 text-xs md:text-sm font-bold px-3 py-1.5 md:py-2 rounded shadow transition flex items-center space-x-1.5 relative z-50 mb-1">
+        <span>🔄</span> <span class="hidden sm:inline">Actualiser</span>
+      </button>
+      <div id="header-date" class="text-[9px] md:text-[10px] text-gray-400 font-medium capitalize text-right"></div>
+    </div>
+    
+  </div>
+</header>
+
+  <main class="flex-1 main-scroll max-w-7xl w-full mx-auto p-4 relative pb-24">
+    <button id="btn-today" onclick="scrollToToday()" class="fixed bottom-24 right-8 md:right-12 bg-pastis-500 hover:bg-pastis-600 text-navy-900 font-black px-4 py-3 rounded-full shadow-[0_0_15px_rgba(247,195,37,0.5)] z-[80] transition transform hover:scale-105 hidden flex items-center space-x-2">
+  <span>🎯 Matchs du jour</span>
+</button>
+
+<section id="view-calendrier" class="hidden animate-fade-in relative">
+      <div class="sticky -top-4 z-30 bg-navy-900 pt-4 pb-3 -mx-4 px-4 md:-mx-0 md:px-0 border-b border-navy-700/50 shadow-md mb-4">
+        <!-- Header Flex avec Filtres adaptatifs (Mobile = Stack, PC = Ligne) -->
+        <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-3 space-y-2 md:space-y-0">
+          <h2 class="text-xl font-oswald font-bold text-white tracking-wide uppercase">Matchs & Résultats</h2>
+          
+          <div class="flex items-center space-x-2 overflow-x-auto no-scrollbar pb-1 md:pb-0 w-full md:w-auto mask-fade-right">
+            <!-- NOUVEAU : Une vraie icône entonnoir SVG au lieu de l'emoji -->
+            <span class="text-[10px] text-gray-500 uppercase tracking-widest font-bold flex items-center mr-1">
+              <svg class="w-3.5 h-3.5 md:mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+              </svg>
+              <span class="hidden md:inline">Filtres</span>
+            </span>
+            
+            <select id="phase-filter" onchange="renderCalendrier()" class="bg-navy-800 text-gray-200 text-[10px] md:text-xs font-bold border border-navy-600 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-pastis-500 max-w-[130px] md:max-w-[160px] truncate cursor-pointer shadow-sm appearance-none flex-shrink-0">
+               <option value="all">🏆 Toutes les phases</option>
+            </select>
+            
+            <select id="team-filter" onchange="renderCalendrier()" class="bg-navy-800 text-gray-200 text-[10px] md:text-xs font-bold border border-navy-600 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-pastis-500 max-w-[130px] md:max-w-[180px] truncate cursor-pointer shadow-sm appearance-none flex-shrink-0">
+               <option value="all">🌍 Toutes les équipes</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex bg-navy-900/60 rounded-xl p-1 shadow-inner border border-navy-700/50 relative gap-1">
+          <button onclick="switchCalView('all')" id="btn-cal-all" class="flex-1 py-1.5 md:py-2 text-xs md:text-sm font-bold uppercase tracking-wider rounded-lg z-10 transition-colors duration-200 bg-pastis-500 text-navy-900 shadow-md font-black">Matchs</button>
+          <button onclick="switchCalView('poules')" id="btn-cal-poules" class="flex-1 py-1.5 md:py-2 text-xs md:text-sm font-bold uppercase tracking-wider rounded-lg z-10 transition-colors duration-200 text-gray-400 hover:text-gray-200 hover:bg-navy-700/50">Groupes</button>
+          <button onclick="switchCalView('final')" id="btn-cal-final" class="flex-1 py-1.5 md:py-2 text-xs md:text-sm font-bold uppercase tracking-wider rounded-lg z-10 transition-colors duration-200 text-gray-400 hover:text-gray-200 hover:bg-navy-700/50">Phases Finales</button>
+        </div>
+      </div>
+
+      <div id="cal-view-all" class="space-y-3"></div>
+      <div id="cal-view-poules" class="space-y-6 hidden"></div>
+      <div id="cal-view-final" class="hidden"></div>
+    </section>
+
+    <section id="view-classement" class="hidden animate-fade-in">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-oswald font-bold text-white tracking-wide uppercase">Classement Général</h2>
+        <button id="btn-toggle-details" onclick="toggleClassementColumns()" class="text-[10px] md:text-xs bg-navy-700 hover:bg-navy-800 border border-navy-700 text-white font-bold px-3 py-2 rounded shadow transition relative z-20">
+          👁️ Afficher le classement complet
+        </button>
+      </div>
+      
+      <div id="top-scrollbar" class="w-full overflow-x-scroll custom-scrollbar bg-navy-800 rounded-t-xl border border-navy-700 border-b-0 hidden md:block h-[14px]">
+        <div id="top-scrollbar-content" class="h-[1px]"></div>
+      </div>
+      
+      <div id="main-table-container" class="bg-navy-800 rounded-b-xl md:rounded-t-none rounded-xl shadow-lg border border-navy-700 overflow-x-scroll overflow-y-auto max-h-[calc(100dvh-220px)] md:max-h-[calc(100vh-240px)] custom-scrollbar pb-3 relative z-10">
+        <table class="min-w-full text-sm text-center whitespace-nowrap table-fixed">
+          <thead id="classement-head" class="bg-navy-900 text-gray-400 text-[10px] md:text-xs uppercase font-semibold border-b border-navy-700 select-none sticky top-0 z-40 shadow-sm"></thead>
+          <tbody id="classement-list" class="divide-y divide-navy-700"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="view-graph" class="hidden animate-fade-in">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-oswald font-bold text-white tracking-wide uppercase">Évolution de la compétition</h2>
+      </div>
+      <div class="bg-navy-800 p-4 rounded-xl border border-navy-700 mb-6 shadow-lg">
+        <h3 class="text-xs text-gray-400 font-bold uppercase tracking-wider mb-3">Joueurs à comparer <span class="text-[10px] normal-case text-pastis-500">(10 Max en même temps)</span></h3>
+        <div id="graph-players-selector" class="flex flex-wrap gap-2 max-h-32 overflow-y-auto no-scrollbar"></div>
+      </div>
+      <div class="bg-navy-800 p-2 md:p-4 rounded-xl border border-navy-700 shadow-lg relative mb-6">
+        <div class="flex justify-center space-x-2 mb-4 bg-navy-900 p-1 rounded-lg w-fit mx-auto border border-navy-700">
+          <button id="btn-chart-pts" onclick="updateChartType('points')" class="px-4 py-1.5 rounded-md text-xs font-bold transition bg-pastis-500 text-navy-900 shadow">Points</button>
+          <button id="btn-chart-rank" onclick="updateChartType('rank')" class="px-4 py-1.5 rounded-md text-xs font-bold transition text-gray-400 hover:text-white">Classement</button>
+        </div>
+        <div class="relative h-[300px] md:h-[400px] w-full">
+          <canvas id="evolutionChart"></canvas>
+        </div>
+        <p id="graph-empty-state" class="text-center text-gray-500 italic mt-4 hidden">Aucun match joué pour l'instant.</p>
+      </div>
+    </section>
+
+    <section id="view-duel" class="hidden animate-fade-in">
+      <h2 class="text-xl font-oswald font-bold mb-4 text-white tracking-wide uppercase text-center">Duel</h2>
+      <div class="flex items-center justify-between space-x-2 mb-6 bg-navy-800 p-3 rounded-xl border border-navy-700 shadow-lg relative z-20">
+        <select id="duel-p1" onchange="renderDuelView()" class="w-[45%] bg-navy-900 border border-navy-600 text-white rounded-lg px-2 py-3 focus:ring-pastis-500 font-bold text-sm md:text-lg shadow truncate text-center"></select>
+        <span class="font-oswald font-black text-pastis-500 text-lg md:text-2xl">VS</span>
+        <select id="duel-p2" onchange="renderDuelView()" class="w-[45%] bg-navy-900 border border-navy-600 text-white rounded-lg px-2 py-3 focus:ring-pastis-500 font-bold text-sm md:text-lg shadow truncate text-center"></select>
+      </div>
+      <div id="duel-stats" class="hidden mb-6"></div>
+      <div id="duel-list" class="space-y-3 hidden"></div>
+      <p id="duel-empty-state" class="text-center text-gray-500 italic mt-10">Sélectionnez deux joueurs différents pour lancer le duel.</p>
+    </section>
+
+    <section id="view-joueurs" class="hidden animate-fade-in">
+      <h2 class="text-xl font-oswald font-bold mb-4 text-white tracking-wide uppercase">Profil des Joueurs</h2>
+      <label class="block text-gray-400 text-xs font-bold uppercase tracking-wider mb-2 ml-1">Sélectionner un joueur :</label>
+      <select id="select-joueur" onchange="renderJoueurProfile()" class="w-full bg-navy-800 border border-navy-700 text-white rounded-lg px-4 py-3 mb-6 focus:ring-pastis-500 focus:border-pastis-500 font-semibold text-lg appearance-none shadow relative z-20">
+        <option value="">-- Liste des joueurs --</option>
+      </select>
+      <div id="joueur-profile-header" class="hidden space-y-4"></div>
+      
+      <div id="joueur-history-section" class="hidden mt-6">
+        <div class="flex justify-between items-center mb-2">
+          <h3 class="text-md font-oswald font-bold text-gray-300 uppercase tracking-wider text-lg">Historique complet</h3>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4 bg-navy-800 p-2 rounded-lg border border-navy-700 shadow-sm relative z-20">
+          <select id="filter-pts" onchange="renderJoueurHistory()" class="bg-navy-900 border border-navy-700 text-gray-300 text-[10px] md:text-sm rounded p-2 focus:ring-pastis-500 font-semibold appearance-none">
+            <option value="all">Tous les points</option>
+            <option value="25">25 points</option>
+            <option value="20">20 points</option>
+            <option value="15">15 points</option>
+            <option value="14">14 points</option>
+            <option value="12">12 points</option>
+            <option value="10">10 points</option>
+            <option value="7">7 points</option>
+            <option value="6">6 points</option>
+            <option value="5">5 points</option>
+            <option value="4">4 points</option>
+            <option value="2">2 points</option>
+            <option value="1">1 point</option>
+            <option value="0">0 point</option>
+          </select>
+          <select id="filter-perf" onchange="renderJoueurHistory()" class="bg-navy-900 border border-navy-700 text-gray-300 text-[10px] md:text-sm rounded p-2 focus:ring-pastis-500 font-semibold appearance-none">
+            <option value="all">Toutes les perfs</option>
+            <option value="Expert foot">💎 Expert foot</option>
+            <option value="Bien vu">🔥 Bien vu</option>
+            <option value="Trompé">👎 Trompé</option>
+            <option value="Ridicule">🥶 Ridicule</option>
+          </select>
+          <select id="filter-joueur-phase" onchange="renderJoueurHistory()" class="bg-navy-900 border border-navy-700 text-gray-300 text-[10px] md:text-sm rounded p-2 focus:ring-pastis-500 font-semibold appearance-none">
+             <option value="all">Toutes les phases</option>
+          </select>
+          <select id="filter-joueur-team" onchange="renderJoueurHistory()" class="bg-navy-900 border border-navy-700 text-gray-300 text-[10px] md:text-sm rounded p-2 focus:ring-pastis-500 font-semibold appearance-none">
+             <option value="all">Toutes les équipes</option>
+          </select>
+        </div>
+        <div id="joueur-history-list" class="space-y-1.5 md:space-y-2"></div>
+      </div>
+    </section>
+
+    <section id="view-match" class="hidden animate-fade-in relative">
+      <button onclick="switchView('calendrier')" class="flex items-center text-pastis-500 hover:text-pastis-600 mb-6 font-medium bg-navy-800 px-4 py-2 rounded-lg w-fit transition border border-navy-700 shadow-sm relative z-20">
+        ⬅️ Retour au calendrier
+      </button>
+      <div id="match-header" class="bg-gradient-to-br from-navy-800 to-navy-700 rounded-xl p-4 md:p-6 text-center shadow-lg border border-navy-700 mb-6 mt-4 relative"></div>
+      <h3 class="text-md font-oswald font-bold text-gray-300 mb-3 uppercase tracking-wider text-lg flex justify-between">
+        <span>Pronostics</span>
+      </h3>
+      <div class="bg-navy-800 rounded-xl overflow-hidden shadow-lg border border-navy-700">
+        <ul id="pronostics-list" class="divide-y divide-navy-700"></ul>
+      </div>
+    </section>
+
+    <section id="view-reglement" class="hidden animate-fade-in">
+      <h2 class="text-xl font-oswald font-bold mb-4 text-white tracking-wide uppercase text-center">Règlement</h2>
+      <div id="reglement-content" class="bg-navy-900 p-2 rounded-xl relative">
+        </div>
+    </section>
+
+  </main>
+
+<nav class="w-full bg-navy-900/80 backdrop-blur-xl border-t border-navy-700/50 pb-[env(safe-area-inset-bottom,0.5rem)] pt-1 z-[100] flex-none shadow-[0_-10px_25px_rgba(0,0,0,0.5)]">
+    <div class="w-full max-w-7xl mx-auto grid grid-cols-6 gap-0">
+      <button onclick="switchView('calendrier')" id="nav-calendrier" class="py-2 flex flex-col items-center justify-center text-pastis-500 transition">
+        <div class="text-xl md:text-2xl mb-0.5">📅</div>
+        <span class="text-[9px] md:text-sm font-semibold tracking-wide">Matchs</span>
+      </button>
+      <button onclick="switchView('classement')" id="nav-classement" class="py-2 flex flex-col items-center justify-center text-gray-400 hover:text-white transition">
+        <div class="text-xl md:text-2xl mb-0.5">📊</div>
+        <span class="text-[9px] md:text-sm font-semibold tracking-wide">Class.</span>
+      </button>
+      <button onclick="switchView('joueurs')" id="nav-joueurs" class="py-2 flex flex-col items-center justify-center text-gray-400 hover:text-white transition">
+        <div class="text-xl md:text-2xl mb-0.5">👤</div>
+        <span class="text-[9px] md:text-sm font-semibold tracking-wide">Joueurs</span>
+      </button>
+      <button onclick="switchView('graph')" id="nav-graph" class="py-2 flex flex-col items-center justify-center text-gray-400 hover:text-white transition">
+        <div class="text-xl md:text-2xl mb-0.5">📈</div>
+        <span class="text-[9px] md:text-sm font-semibold tracking-wide">Évol.</span>
+      </button>
+      <button onclick="switchView('duel')" id="nav-duel" class="py-2 flex flex-col items-center justify-center text-gray-400 hover:text-white transition">
+        <div class="text-xl md:text-2xl mb-0.5">⚔️</div>
+        <span class="text-[9px] md:text-sm font-semibold tracking-wide">Duel</span>
+      </button>
+      <button onclick="switchView('reglement')" id="nav-reglement" class="py-2 flex flex-col items-center justify-center text-gray-400 hover:text-white transition">
+        <div class="text-xl md:text-2xl mb-0.5">📝</div>
+        <span class="text-[9px] md:text-sm font-semibold tracking-wide">Règles</span>
+      </button>
+    </div>
+</nav>
+
+  <script>
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxXDUy7-rggkIafbQPDxShVFj5tV_E3GZ_P5sfytXRIOi0D6Mof0-mxEOsYnyu8M3k/exec?api=1';
+    let appData = { classement: [], calendrier: [], pronostics: [], equipes: [], chaines: [], reglement: [] };
+    let phasesStarted = {}; 
+    let phasesVisibility = {}; 
+    let isTournamentStarted = false; 
+    let currentView = 'calendrier'; 
+    let currentCalView = 'all'; // Garde en mémoire le sous-menu actif
+    let currentSort = { col: 25, asc: false }; 
+    let isDetailedViewOpen = false; 
+
+    let historyTimeline = []; 
+    let historyData = {}; 
+    let chartInstance = null;
+    let playerChartInstance = null;
+    let activeChartType = 'points'; 
+    let selectedPlayersForChart = [];
+    const chartColors = ['#F7D11A', '#3b82f6', '#ef4444', '#10b981', '#8b5cf6', '#f97316', '#ec4899', '#06b6d4', '#84cc16', '#6366f1'];
+    window.onload = function() { 
+      displayHeaderDate();
+      fetchData(); 
+      setupSyncScrollbar(); 
+    };
+
+    function escapeJS(str) { return str ? str.replace(/'/g, "\\'") : ""; }
+
+    function parseFlags() {
+      if (typeof twemoji !== 'undefined') {
+        const flagNodes = document.querySelectorAll('.emoji-flag');
+        flagNodes.forEach(node => twemoji.parse(node));
+      }
+    }
+
+    function setupSyncScrollbar() {
+      const topScroll = document.getElementById('top-scrollbar');
+      const mainTableContainer = document.getElementById('main-table-container');
+      
+      topScroll.addEventListener('scroll', function() {
+        mainTableContainer.scrollLeft = topScroll.scrollLeft;
+      });
+      mainTableContainer.addEventListener('scroll', function() {
+        topScroll.scrollLeft = mainTableContainer.scrollLeft;
+      });
+    }
+
+    function syncScrollbarWidth() {
+      const table = document.querySelector('#main-table-container table');
+      const topContent = document.getElementById('top-scrollbar-content');
+      if (table && topContent) {
+        topContent.style.width = table.offsetWidth + 'px';
+      }
+    }
+
+    function displayHeaderDate() {
+      const options = { year: 'numeric', month: 'long', day: 'numeric' };
+      document.getElementById('header-date').innerText = new Date().toLocaleDateString('fr-FR', options);
+    }
+
+    function refreshData(force = false) {
+  document.getElementById('loader-text').innerText = "Falsification des pronostics en cours...";
+  document.getElementById('loader-screen').style.display = 'flex';
+  
+  const url = force ? API_URL + '&nocache=' + Date.now() : API_URL;
+  
+  fetch(url)
+    .then(r => r.json())
+    .then(data => {
+      localStorage.setItem('pastisDataCache', JSON.stringify(data));
+      initApp(data, false);
+    })
+    .catch(err => {
+      console.error('Erreur API:', err);
+      document.getElementById('loader-screen').style.display = 'none';
+      alert('Erreur de chargement. Vérifiez votre connexion.');
+    });
+}
+
+function fetchData() {
+  const cachedData = localStorage.getItem('pastisDataCache');
+  if (cachedData) {
+    try {
+      const parsed = JSON.parse(cachedData);
+      initApp(parsed, true);
+    } catch(e) {}
+  } else {
+    document.getElementById('loader-screen').style.display = 'flex';
+  }
+
+  fetch(API_URL)
+    .then(r => r.json())
+    .then(data => {
+      localStorage.setItem('pastisDataCache', JSON.stringify(data));
+      initApp(data, false);
+    })
+    .catch(err => {
+      console.error('Erreur API:', err);
+      if (!cachedData) {
+        document.getElementById('loader-screen').style.display = 'none';
+        alert('Impossible de charger les données. Vérifiez votre connexion.');
+      }
+    });
+}
+
+    function getPlayerEvolution(joueur) {
+      if(!historyData[joueur] || historyData[joueur].ranks.length < 2) return { j1: "=", j2: "=" };
+      let ranks = historyData[joueur].ranks;
+      let current = ranks[ranks.length - 1];
+      let prev1 = ranks[ranks.length - 2];
+      let prev2 = ranks.length > 2 ? ranks[ranks.length - 3] : prev1;
+
+      let diff1 = prev1 - current;
+      let diff2 = prev2 - current;
+
+      return {
+        j1: diff1 > 0 ? '+'+diff1 : diff1.toString(),
+        j2: diff2 > 0 ? '+'+diff2 : diff2.toString()
+      };
+    }
+
+function populateFilters() {
+      const teamSelect = document.getElementById('team-filter');
+      const phaseSelect = document.getElementById('phase-filter');
+      // Les nouveaux filtres de la vue Joueurs
+      const teamSelectJoueur = document.getElementById('filter-joueur-team');
+      const phaseSelectJoueur = document.getElementById('filter-joueur-phase');
+
+      // 1. Remplissage des Équipes
+      let teamOptions = '<option value="all">🌍 Toutes les équipes</option>';
+      let validTeams = appData.equipes.filter(e => e[0] && e[0].trim() !== "");
+      let uniqueTeams = [];
+      validTeams.forEach(t => { if(!uniqueTeams.some(x => x[0] === t[0])) uniqueTeams.push(t); });
+      uniqueTeams.sort((a,b) => a[0].localeCompare(b[0]));
+      uniqueTeams.forEach(t => { teamOptions += `<option value="${escapeJS(t[0])}">${getFlagOnly(t[0])} ${getCleanName(t[0])}</option>`; });
+      
+      if(teamSelect) teamSelect.innerHTML = teamOptions;
+      if(teamSelectJoueur) teamSelectJoueur.innerHTML = teamOptions;
+
+      // 2. Remplissage des Phases ET Détection de la Phase en cours
+      let phaseOptions = '<option value="all">🏆 Toutes les phases</option>';
+      let phasesOrder = [];
+      appData.calendrier.forEach(m => {
+        let p = m[8] ? m[8].trim() : "";
+        if(p && !phasesOrder.includes(p) && !p.toLowerCase().includes("vainqueur") && !p.toLowerCase().includes("finaliste")) {
+            phasesOrder.push(p);
+        }
+      });
+
+      let currentPhaseToSelect = "all";
+      let foundCurrent = false;
+
+      phasesOrder.forEach(p => {
+         let hasUnplayed = appData.calendrier.some(m => m[8] && m[8].trim() === p && m[5] === "");
+         if (hasUnplayed && !foundCurrent) {
+             currentPhaseToSelect = p;
+             foundCurrent = true;
+         }
+         phaseOptions += `<option value="${escapeJS(p)}">${p}</option>`;
+      });
+
+      if (!foundCurrent && phasesOrder.length > 0) {
+          currentPhaseToSelect = phasesOrder[phasesOrder.length - 1];
+      }
+
+      if(phaseSelect) {
+          phaseSelect.innerHTML = phaseOptions;
+          phaseSelect.value = escapeJS(currentPhaseToSelect);
+      }
+      if(phaseSelectJoueur) {
+          phaseSelectJoueur.innerHTML = phaseOptions;
+          phaseSelectJoueur.value = escapeJS(currentPhaseToSelect);
+      }
+    }
+
+function initApp(data, isCached = false) {
+      appData = data;
+      
+      if (!isCached) {
+        document.getElementById('loader-screen').style.display = 'none';
+      }
+      
+      phasesStarted = {};
+      isTournamentStarted = false;
+      let isPoulesFinished = false;
+
+      // Index : Phase = 8, ScoreA = 5
+      appData.calendrier.forEach(r => {
+        let phase = r[8], scoreA = r[5];
+        if(scoreA !== "") { 
+          phasesStarted[phase] = true; 
+          isTournamentStarted = true; 
+          if(phase !== "Poules" && phase !== "") isPoulesFinished = true;
+        }
+      });
+
+      const colHasPoints = (idx) => appData.classement.some(r => parseInt(r[idx]) > 0);
+      
+      phasesVisibility.showPts25 = isPoulesFinished && colHasPoints(4);
+      phasesVisibility.showPts20 = isPoulesFinished && colHasPoints(5);
+      phasesVisibility.showPts15 = isPoulesFinished && colHasPoints(6);
+      phasesVisibility.showPts14 = colHasPoints(7);
+      phasesVisibility.showPts12 = colHasPoints(8);
+      phasesVisibility.showPts10 = colHasPoints(9);
+      phasesVisibility.showPts7 = colHasPoints(10);
+      phasesVisibility.showPts6 = colHasPoints(11);
+      phasesVisibility.showPts5 = colHasPoints(12);
+      phasesVisibility.showPts4 = colHasPoints(13);
+      phasesVisibility.showPts2 = colHasPoints(14);
+      phasesVisibility.showPts1 = colHasPoints(15);
+      phasesVisibility.showPts0 = colHasPoints(16);
+
+      phasesVisibility.showPoules = isPoulesFinished && colHasPoints(18);
+      phasesVisibility.show16e = colHasPoints(19);
+      phasesVisibility.show8e = colHasPoints(20);
+      phasesVisibility.show14 = colHasPoints(21);
+      phasesVisibility.show12 = colHasPoints(22);
+      phasesVisibility.showF = colHasPoints(23);
+      phasesVisibility.showBonus = colHasPoints(24);
+
+      buildHistoryEngine(); 
+
+      appData.classement.forEach(r => {
+        let evo = getPlayerEvolution(r[3]);
+        r[1] = evo.j1; 
+        r.evoJ2 = evo.j2; 
+      });
+
+      sortTableData(currentSort.col, true); 
+
+      // NOUVEAU : Initialisation des filtres et détection de la phase en cours
+      populateFilters();
+
+      renderClassement();
+      renderCalendrier();
+      populateJoueursSelect();
+      initGraphUI();
+      renderReglement(); 
+      
+      switchView(currentView);
+      if(currentView === 'calendrier') switchCalView(currentCalView); 
+    }
+
+   // ==========================================
+    // GÉNÉRATEUR RÈGLEMENT (Version Oswald Sans Alinéa)
+    // ==========================================
+    function renderReglement() {
+      const container = document.getElementById('reglement-content');
+      
+      if (!appData.reglement || appData.reglement.length === 0) {
+        container.innerHTML = '<p class="text-gray-400 italic text-center mt-10 font-oswald">Le règlement n\'est pas encore disponible.</p>';
+        return;
+      }
+
+      function formaterTexte(texte) {
+        if (!texte) return '';
+        // **gras jaune** et __souligné jaune__
+        let res = texte.replace(/\*\*(.*?)\*\*/g, '<span class="text-pastis-500 font-black">$1</span>');
+        res = res.replace(/__(.*?)__/g, '<u class="decoration-pastis-500 decoration-2 underline-offset-2">$1</u>');
+        return res;
+      }
+
+      let blocksHtml = [];
+      appData.reglement.forEach(row => {
+        let contenuLigne = row.filter(cell => cell && cell.toString().trim() !== '').join(' ');
+        
+        if (contenuLigne.trim() !== '') {
+          // 1. On enlève les espaces au début/fin de la cellule
+          // 2. On enlève les espaces au début de CHAQUE ligne (trimStart)
+          let textePropre = contenuLigne.split('\n').map(line => line.trimStart()).join('\n').trim();
+          
+          // IMPORTANT : On écrit tout sur UNE SEULE LIGNE dans le code JS ci-dessous 
+          // pour éviter que les espaces du code ne créent des alinéas visuels.
+          let block = `<div class="bg-navy-800 p-4 md:p-5 rounded-xl border border-navy-700 shadow-md text-gray-200 text-sm md:text-base whitespace-pre-wrap leading-relaxed font-oswald tracking-wide">${formaterTexte(textePropre)}</div>`;
+          blocksHtml.push(block);
+        }
+      });
+      
+      // On assemble les blocs avec un espacement vertical (space-y-4)
+      container.innerHTML = `<div class="space-y-4">${blocksHtml.join('')}</div>`;
+    }
+
+    // ==========================================
+    // MOTEUR GRAPHIQUE & STATS
+    // ==========================================
+    function buildHistoryEngine() {
+      historyData = {};
+      historyTimeline = [];
+      let playedMatches = appData.calendrier.filter(m => m[5] !== ""); // ScoreA = 5
+      if (playedMatches.length === 0) return;
+
+      let datesSet = new Set();
+      playedMatches.forEach(m => datesSet.add(getLogicalDate(m[1], m[2])));
+      historyTimeline = Array.from(datesSet).sort((a,b) => {
+        let [dA, mA, yA] = a.split('/');
+        let [dB, mB, yB] = b.split('/');
+        return new Date(yA, mA-1, dA) - new Date(yB, mB-1, dB);
+      });
+
+      appData.classement.forEach(c => {
+        if(c[3] && c[3] !== "") historyData[c[3]] = { points: [], ranks: [], cumul: 0 };
+      });
+
+      historyTimeline.forEach(date => {
+        let matchIdsOnDate = playedMatches.filter(m => getLogicalDate(m[1], m[2]) === date).map(m => m[0]);
+        matchIdsOnDate.forEach(mId => {
+          let pronosForMatch = appData.pronostics.filter(p => p[1] == mId);
+          pronosForMatch.forEach(p => {
+            let joueur = p[0], pts = parseInt(p[9]) || 0; 
+            if(historyData[joueur] !== undefined) historyData[joueur].cumul += pts;
+          });
+        });
+
+        let leaderboard = Object.keys(historyData).map(j => ({ joueur: j, pts: historyData[j].cumul }));
+        leaderboard.sort((a,b) => b.pts - a.pts);
+        let currentRank = 1;
+        for(let i=0; i<leaderboard.length; i++) {
+          if (i > 0 && leaderboard[i].pts < leaderboard[i-1].pts) currentRank = i + 1;
+          let j = leaderboard[i].joueur;
+          historyData[j].points.push(leaderboard[i].pts);
+          historyData[j].ranks.push(currentRank);
+        }
+      });
+    }
+
+    function initGraphUI() {
+      if (historyTimeline.length === 0) {
+        document.getElementById('graph-empty-state').classList.remove('hidden');
+        document.getElementById('evolutionChart').classList.add('hidden');
+        return;
+      }
+      let sortedPlayers = [...appData.classement].filter(r => r[3] && r[3] !== "").sort((a,b) => parseInt(a[2]) - parseInt(b[2]));
+      selectedPlayersForChart = sortedPlayers.slice(0, 5).map(r => r[3]);
+      renderGraphPlayerSelector();
+      drawChart();
+    }
+
+    function renderGraphPlayerSelector() {
+      const container = document.getElementById('graph-players-selector');
+      let allPlayers = [...appData.classement].filter(r => r[3] && r[3] !== "").sort((a,b) => a[3].localeCompare(b[3]));
+      let html = '';
+      allPlayers.forEach(p => {
+        let isSelected = selectedPlayersForChart.includes(p[3]);
+        let colorClass = isSelected ? "bg-pastis-500 text-navy-900 border-pastis-500 shadow-sm" : "bg-navy-800 text-gray-400 border-navy-700 hover:bg-navy-700";
+        html += `<button onclick="toggleChartPlayer('${escapeJS(p[3])}')" class="px-3 py-1 rounded-full text-[10px] md:text-xs font-bold border transition ${colorClass}">${p[3]}</button>`;
+      });
+      container.innerHTML = html;
+    }
+
+    function toggleChartPlayer(joueur) {
+      if (selectedPlayersForChart.includes(joueur)) {
+        selectedPlayersForChart = selectedPlayersForChart.filter(j => j !== joueur);
+      } else {
+        if (selectedPlayersForChart.length >= 10) {
+          showTooltip(null, "10 joueurs maximum pour la lisibilité !");
+          return;
+        }
+        selectedPlayersForChart.push(joueur);
+      }
+      renderGraphPlayerSelector();
+      drawChart();
+    }
+
+    function updateChartType(type) {
+      activeChartType = type;
+      if (type === 'points') {
+        document.getElementById('btn-chart-pts').className = "px-4 py-1.5 rounded-md text-xs font-bold transition bg-pastis-500 text-navy-900 shadow";
+        document.getElementById('btn-chart-rank').className = "px-4 py-1.5 rounded-md text-xs font-bold transition text-gray-400 hover:text-white";
+      } else {
+        document.getElementById('btn-chart-rank').className = "px-4 py-1.5 rounded-md text-xs font-bold transition bg-pastis-500 text-navy-900 shadow";
+        document.getElementById('btn-chart-pts').className = "px-4 py-1.5 rounded-md text-xs font-bold transition text-gray-400 hover:text-white";
+      }
+      drawChart();
+    }
+
+    function drawChart() {
+      if (!document.getElementById('evolutionChart')) return;
+      const ctx = document.getElementById('evolutionChart').getContext('2d');
+      if (chartInstance) chartInstance.destroy();
+
+      const labels = historyTimeline.map(d => shortDate(d));
+
+      const datasets = selectedPlayersForChart.map((joueur, index) => {
+        let dataArray = activeChartType === 'points' ? historyData[joueur].points : historyData[joueur].ranks;
+        let color = chartColors[index % chartColors.length];
+        return {
+          label: joueur, data: dataArray, borderColor: color, backgroundColor: color,
+          tension: 0.3, borderWidth: 3, pointRadius: 4, pointHoverRadius: 6
+        };
+      });
+
+      let yAxisConfig = { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#9ca3af', font: { size: 10 } } };
+      if (activeChartType === 'rank') { yAxisConfig.reverse = true; yAxisConfig.min = 1; yAxisConfig.ticks.stepSize = 1; }
+
+      chartInstance = new Chart(ctx, {
+        type: 'line', data: { labels: labels, datasets: datasets },
+        options: {
+          layout: { padding: { top: 20 } },
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { color: '#fff', usePointStyle: true, boxWidth: 8, padding: 15 } },
+            tooltip: { mode: 'index', intersect: false, backgroundColor: '#212E55', titleColor: '#F7D11A', bodyColor: '#fff', bodyFont: { weight: 'bold' } }
+          },
+          scales: { x: { grid: { display: false }, ticks: { color: '#9ca3af', font: { size: 10 } } }, y: yAxisConfig },
+          interaction: { mode: 'nearest', axis: 'x', intersect: false }
+        }
+      });
+    }
+
+    function drawPlayerChart(joueur) {
+      const canvas = document.getElementById('playerEvolutionChart');
+      if(!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (playerChartInstance) playerChartInstance.destroy();
+
+      if(!historyData[joueur] || historyData[joueur].ranks.length === 0) {
+        canvas.parentElement.innerHTML = `<p class="text-center text-gray-500 italic mt-6 text-sm">Pas de données pour afficher l'évolution.</p>`;
+        return;
+      }
+
+      const labels = historyTimeline.map(d => shortDate(d));
+      const dataArray = historyData[joueur].ranks;
+
+      playerChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Classement',
+            data: dataArray,
+            borderColor: '#F7D11A',
+            backgroundColor: 'rgba(247, 209, 26, 0.1)',
+            tension: 0.3, borderWidth: 3, pointRadius: 4, pointHoverRadius: 6, fill: true
+          }]
+        },
+        options: {
+          layout: { padding: { top: 20 } },
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { backgroundColor: '#212E55', titleColor: '#F7D11A', bodyColor: '#fff', bodyFont: { weight: 'bold' } } },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: '#9ca3af', font: { size: 10 } } },
+            y: { reverse: true, min: 1, grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#9ca3af', font: { size: 10 }, stepSize: 1 } }
+          },
+          interaction: { mode: 'nearest', axis: 'x', intersect: false }
+        }
+      });
+    }
+
+    // ==========================================
+    // MOTEUR DUEL (H2H)
+    // ==========================================
+    function initDuelView() {
+      const select1 = document.getElementById('duel-p1');
+      const select2 = document.getElementById('duel-p2');
+      let options = '<option value="">Joueur...</option>';
+      let sortedPlayers = [...appData.classement].filter(r => r[3] && r[3] !== "").sort((a,b) => a[3].localeCompare(b[3]));
+      sortedPlayers.forEach(r => options += `<option value="${r[3]}">${r[3]}</option>`);
+      select1.innerHTML = options;
+      select2.innerHTML = options;
+    }
+
+    function renderDuelView() {
+      const j1 = document.getElementById('duel-p1').value;
+      const j2 = document.getElementById('duel-p2').value;
+      const statsContainer = document.getElementById('duel-stats');
+      const listContainer = document.getElementById('duel-list');
+      const emptyState = document.getElementById('duel-empty-state');
+
+      if (!j1 || !j2 || j1 === j2) {
+        statsContainer.classList.add('hidden');
+        listContainer.classList.add('hidden');
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      statsContainer.classList.remove('hidden');
+      listContainer.classList.remove('hidden');
+
+      const infoJ1 = appData.classement.find(r => r[3] === j1);
+      const infoJ2 = appData.classement.find(r => r[3] === j2);
+      
+      statsContainer.innerHTML = `
+        <div class="grid grid-cols-3 gap-2 text-center bg-navy-800 p-4 rounded-xl border border-navy-700 shadow-inner">
+          <div class="flex flex-col">
+            <span class="text-pastis-500 font-oswald text-2xl md:text-3xl font-black">${infoJ1[25]}</span>
+            <span class="text-[10px] text-gray-400 uppercase tracking-wide">Points</span>
+            <span class="text-white font-bold text-lg md:text-xl mt-2 font-oswald">${infoJ1[33]}</span>
+            <span class="text-[10px] text-gray-400 uppercase tracking-wide">Bons Résul.</span>
+          </div>
+          <div class="flex flex-col items-center justify-center">
+            <span class="text-3xl md:text-4xl">⚔️</span>
+          </div>
+          <div class="flex flex-col">
+            <span class="text-pastis-500 font-oswald text-2xl md:text-3xl font-black">${infoJ2[25]}</span>
+            <span class="text-[10px] text-gray-400 uppercase tracking-wide">Points</span>
+            <span class="text-white font-bold text-lg md:text-xl mt-2 font-oswald">${infoJ2[33]}</span>
+            <span class="text-[10px] text-gray-400 uppercase tracking-wide">Bons Résul.</span>
+          </div>
+        </div>
+      `;
+
+      let html = '';
+      appData.calendrier.forEach(match => {
+        let idMatch = match[0], date = match[1], eqA = match[3], eqB = match[4];
+        let scoreA = match[5], scoreB = match[6];
+        const isPlayed = (scoreA !== "" && scoreB !== "");
+        
+        let p1 = appData.pronostics.find(p => p[0] === j1 && p[1] === idMatch);
+        let p2 = appData.pronostics.find(p => p[0] === j2 && p[1] === idMatch);
+
+        if ((p1 && p1[5] !== "") || (p2 && p2[5] !== "")) {
+          let pts1Raw = p1 ? p1[9] : ""; 
+          let pts2Raw = p2 ? p2[9] : "";
+          let pts1 = parseInt(pts1Raw) || 0;
+          let pts2 = parseInt(pts2Raw) || 0;
+          
+          let isJoker1 = p1 && p1[8] && String(p1[8]).toLowerCase() === 'oui';
+          let isJoker2 = p2 && p2[8] && String(p2[8]).toLowerCase() === 'oui';
+
+          let bg1 = (isPlayed && pts1 > pts2) ? "bg-green-900/30 border-green-700/50" : "border-transparent";
+          let bg2 = (isPlayed && pts2 > pts1) ? "bg-green-900/30 border-green-700/50" : "border-transparent";
+
+          let jkrBadge1 = isJoker1 ? `<span class="joker-pulse bg-pastis-500 text-navy-900 text-[8px] font-black px-1 rounded ml-1 whitespace-nowrap">x2</span>` : ``;
+          let jkrBadge2 = isJoker2 ? `<span class="joker-pulse bg-pastis-500 text-navy-900 text-[8px] font-black px-1 rounded mr-1 whitespace-nowrap">x2</span>` : ``;
+
+          let colorProno1 = isJoker1 ? 'text-pastis-500' : 'text-white';
+          let colorProno2 = isJoker2 ? 'text-pastis-500' : 'text-white';
+
+          let pronoBloc1 = p1 && p1[5] !== "" ? `<span class="font-black text-base md:text-xl font-oswald ${colorProno1}">${p1[5]}-${p1[6]}</span>${jkrBadge1}` : `<span class="text-gray-600">-</span>`;
+          let pronoBloc2 = p2 && p2[5] !== "" ? `${jkrBadge2}<span class="font-black text-base md:text-xl font-oswald ${colorProno2}">${p2[5]}-${p2[6]}</span>` : `<span class="text-gray-600">-</span>`;
+          
+          let badge1 = (isPlayed && p1 && p1[5] !== "") ? getPointsBadge(pts1Raw) : '';
+          let badge2 = (isPlayed && p2 && p2[5] !== "") ? getPointsBadge(pts2Raw) : '';
+
+          let centerScore = isPlayed ? `<span class="bg-navy-900 px-3 py-1 rounded text-pastis-500 font-black text-sm md:text-lg border border-navy-600 font-oswald">${scoreA}-${scoreB}</span>` : `<span class="text-[10px] text-gray-500">${shortDate(date)}</span>`;
+
+          html += `
+            <div class="flex items-center justify-between bg-navy-800 p-2 md:p-3 rounded-lg border border-navy-700 shadow-sm mt-2">
+              <div class="w-[30%] flex flex-col items-center justify-center p-2 rounded border transition ${bg1}">
+                <div class="flex flex-col xl:flex-row items-center justify-center w-full gap-1 md:gap-2">
+                  ${pronoBloc1} ${badge1}
+                </div>
+              </div>
+              <div class="w-[40%] flex flex-col items-center justify-center px-1 text-center">
+                <div class="text-[11px] md:text-sm text-white font-bold leading-tight whitespace-normal break-words w-full mb-1 font-oswald tracking-wide">${getCleanName(eqA)} - ${getCleanName(eqB)}</div>
+                ${centerScore}
+              </div>
+              <div class="w-[30%] flex flex-col items-center justify-center p-2 rounded border transition ${bg2}">
+                <div class="flex flex-col xl:flex-row items-center justify-center w-full gap-1 md:gap-2">
+                  ${badge2} ${pronoBloc2} 
+                </div>
+              </div>
+            </div>
+          `;
+        }
+      });
+      listContainer.innerHTML = html || `<p class="text-center text-gray-500 italic text-sm">Aucun pronostic à comparer.</p>`;
+    }
+
+    // ==========================================
+    // MOTEUR DE TRI (Classement)
+    // ==========================================
+    function getRawSortValue(val) {
+      if (!val) return "";
+      return val.toString().replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim().toLowerCase();
+    }
+
+    function sortClassement(colIndex, isNumeric) {
+      if (currentSort.col === colIndex) {
+        currentSort.asc = !currentSort.asc;
+      } else {
+        currentSort.col = colIndex;
+        currentSort.asc = !isNumeric; 
+      }
+      sortTableData(colIndex, isNumeric);
+      renderClassement(); 
+    }
+
+    function sortTableData(colIndex, isNumeric) {
+      appData.classement.sort((a, b) => {
+        let valA = a[colIndex];
+        let valB = b[colIndex];
+        
+        if (colIndex === 1) { 
+            valA = parseInt((valA||"").toString().replace('+','')) || 0;
+            valB = parseInt((valB||"").toString().replace('+','')) || 0;
+            return currentSort.asc ? valA - valB : valB - valA;
+        }
+
+        if (colIndex === 36 || colIndex === 40) { 
+            let cleanA = getRawSortValue(valA);
+            let cleanB = getRawSortValue(valB);
+            if (cleanA < cleanB) return currentSort.asc ? -1 : 1;
+            if (cleanA > cleanB) return currentSort.asc ? 1 : -1;
+            return 0;
+        }
+
+        if (isNumeric) {
+          valA = parseFloat(valA) || 0; valB = parseFloat(valB) || 0;
+          return currentSort.asc ? valA - valB : valB - valA;
+        } else {
+          valA = valA ? valA.toString().toLowerCase() : ""; valB = valB ? valB.toString().toLowerCase() : "";
+          if (valA < valB) return currentSort.asc ? -1 : 1;
+          if (valA > valB) return currentSort.asc ? 1 : -1;
+          return 0;
+        }
+      });
+    }
+
+    function thSort(colIdx, label, isNum, extraClasses) {
+      let isActive = currentSort.col === colIdx;
+      let icon = isActive ? (currentSort.asc ? "▲" : "▼") : "▼";
+      let iconClass = isActive ? "text-pastis-500 opacity-100" : "text-gray-600 opacity-50";
+      let activeClass = isActive ? "text-white" : "";
+      
+      return `<th onclick="sortClassement(${colIdx}, ${isNum})" class="cursor-pointer hover:bg-navy-700 transition select-none ${activeClass} ${extraClasses}">
+        <div class="flex items-center justify-center space-x-1">
+          <span>${label}</span>
+          <span class="text-[8px] md:text-[9px] ${iconClass} transition-colors">${icon}</span>
+        </div>
+      </th>`;
+    }
+
+    // ==========================================
+    // UTILITAIRES & DESIGNS (Logos TV, Badges...)
+    // ==========================================
+    function scrollToToday() {
+      // Si on n'est pas sur la bonne vue, on switch de force
+      if (currentView !== 'calendrier' || currentCalView !== 'all') {
+        switchView('calendrier');
+        switchCalView('all');
+        // Un délai millimétré pour laisser le DOM afficher les éléments
+        setTimeout(() => {
+          const todayCard = document.querySelector('.border-pastis-500');
+          if (todayCard) todayCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          else showTooltip(null, "Aucun match prévu aujourd'hui !");
+        }, 300);
+      } else {
+        const todayCard = document.querySelector('.border-pastis-500');
+        if (todayCard) todayCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        else showTooltip(null, "Aucun match prévu aujourd'hui !");
+      }
+    }
+
+    let tooltipTimeout;
+    function showTooltip(event, message) {
+      if(event) event.stopPropagation(); 
+      const tooltip = document.getElementById('tooltip');
+      tooltip.innerText = message;
+      tooltip.classList.remove('opacity-0');
+      
+      if(event && event.target) {
+        const rect = event.target.getBoundingClientRect();
+        let leftPos = rect.left + (rect.width / 2);
+        if (leftPos < 110) leftPos = 110;
+        if (leftPos > window.innerWidth - 110) leftPos = window.innerWidth - 110;
+        tooltip.style.left = leftPos + 'px';
+        tooltip.style.top = (rect.top - 8) + 'px'; 
+      } else {
+        tooltip.style.left = '50%';
+        tooltip.style.top = '80%';
+      }
+      clearTimeout(tooltipTimeout);
+      tooltipTimeout = setTimeout(() => { tooltip.classList.add('opacity-0'); }, 3000);
+    }
+
+    function formatPoints(pts) {
+      let p = parseInt(pts);
+      if(isNaN(p)) return '-';
+      return p > 1 ? p + ' points' : p + ' point';
+    }
+
+    function cleanPlus(val) { return val.toString().replace(/\+/g, '').trim(); }
+
+    function styleEvolText(val) {
+      if(!val || val === "" || val == 0 || val === "=") return `<span class="text-gray-500 font-bold">=</span>`;
+      let str = val.toString();
+      if(str.includes('-') || parseInt(str) < 0) return `<span class="text-red-500 font-bold">${str}</span>`;
+      if(str.includes('+') || parseInt(str) > 0) return `<span class="text-green-500 font-bold">${str.includes('+') ? str : '+'+str}</span>`;
+      return `<span class="text-gray-500 font-bold">${str}</span>`;
+    }
+
+    function getFlagOnly(countryString) {
+      if(!countryString || countryString === "") return '-';
+      let eq = appData.equipes.find(e => countryString.includes(e[0]));
+      return eq ? eq[1] : '🏳️';
+    }
+
+    function getCleanName(countryString) {
+      if(!countryString || countryString === "") return '-';
+      let eq = appData.equipes.find(e => countryString.includes(e[0]));
+      return eq ? eq[0] : countryString;
+    }
+    
+    function getFifaRank(countryString) {
+      if(!countryString || countryString === "") return '';
+      let eq = appData.equipes.find(e => countryString.includes(e[0]));
+      let rank = eq && eq[6] ? eq[6].toString().trim() : '';
+      return rank !== "" ? rank : '';
+    }
+
+    function getLogoUrl(countryString) {
+      if(!countryString || countryString === "") return '';
+      let eq = appData.equipes.find(e => countryString.includes(e[0]));
+      let logo = eq && eq[8] ? eq[8].toString().trim() : '';
+      
+      if (logo.startsWith('http')) return logo;
+      
+      let match = logo.match(/(https?:\/\/[^"\s\)]+)/);
+      if(match) return match[1];
+
+      return '';
+    }
+
+    function getMaillotUrl(countryString) {
+      if(!countryString || countryString === "") return '';
+      let eq = appData.equipes.find(e => countryString.includes(e[0]));
+      // La colonne R correspond à l'index 17 (A=0, B=1, ... R=17)
+      let maillot = eq && eq[17] ? eq[17].toString().trim() : '';
+
+      if (maillot.startsWith('http')) return maillot;
+
+      let match = maillot.match(/(https?:\/\/[^"\s\)]+)/);
+      if(match) return match[1];
+
+      return '';
+    }
+
+    function getStatusClass(status) {
+      if (!status) return "";
+      let s = status.toLowerCase();
+      if (s.includes("élimin")) return "text-red-500 font-bold";
+      if (s.includes("vainqueur")) return "text-pastis-500 font-black";
+      if (s.includes("finaliste")) return "text-blue-300 font-bold";
+      return "text-green-500 font-bold";
+    }
+
+    function getPointsBadge(points) {
+      if (points === "") return `<span class="px-1.5 py-0.5 md:px-2 md:py-1 rounded-md text-[10px] md:text-sm text-gray-400 bg-navy-700">-</span>`;
+      let pNum = parseInt(points);
+      
+      if (pNum >= 50) return `<span class="px-2 py-1 md:px-3 md:py-1.5 rounded-lg text-navy-900 bg-pastis-500 font-oswald font-black text-sm md:text-xl shadow-[0_0_20px_rgba(247,195,37,0.8)] border border-pastis-600 transform md:scale-110 inline-block tracking-wide">${pNum} pts</span>`;
+      if (pNum >= 25) return `<span class="px-2 py-1 md:px-3 md:py-1.5 rounded-lg text-white bg-purple-600 font-oswald font-bold text-sm md:text-xl shadow-[0_0_15px_rgba(147,51,234,0.6)] border border-purple-400 transform md:scale-110 inline-block tracking-wide">${pNum} pts</span>`;
+      if (pNum >= 20) return `<span class="px-2 py-1 md:px-3 md:py-1 rounded-lg text-white bg-pink-600 font-oswald font-bold text-sm md:text-lg shadow-[0_0_10px_rgba(219,39,119,0.5)] tracking-wide">${pNum} pts</span>`;
+      if (pNum >= 14) return `<span class="px-2 py-1 md:px-3 md:py-1 rounded-lg text-white bg-red-600 font-oswald font-bold text-sm md:text-lg shadow-[0_0_10px_rgba(220,38,38,0.5)] tracking-wide">${pNum} pts</span>`;
+      if (pNum >= 10) return `<span class="px-1.5 py-0.5 md:px-3 md:py-1 rounded-md text-navy-900 bg-pastis-500 font-oswald font-bold text-xs md:text-base shadow-[0_0_8px_rgba(247,195,37,0.4)] tracking-wide">${pNum} pts</span>`;
+      if (pNum >= 5 && pNum <= 7) return `<span class="px-1.5 py-0.5 md:px-2 md:py-1 rounded-md text-white bg-green-600 font-bold text-xs md:text-sm shadow-[0_0_5px_rgba(22,163,74,0.3)]">${pNum} pts</span>`;
+      if (pNum === 1 || pNum === 2) return `<span class="px-1.5 py-0.5 md:px-2 md:py-1 rounded-md text-white bg-orange-500 font-bold text-xs md:text-sm shadow-[0_0_5px_rgba(249,115,22,0.3)]">${pNum} pts</span>`;
+      if (pNum === 0) return `<span class="px-1.5 py-0.5 md:px-2 md:py-1 rounded-md text-gray-400 bg-navy-700 font-medium text-[10px] md:text-sm">${pNum} pt</span>`;
+      
+      return `<span class="px-1.5 py-0.5 md:px-2 md:py-1 rounded-md text-[10px] md:text-sm text-gray-300 bg-navy-700">${pNum} pts</span>`;
+    }
+
+    function getPerformanceBadge(textPerf) {
+      if (!textPerf || textPerf.trim() === "") return "";
+      let perfColor = "bg-navy-800 text-gray-400 border-navy-700"; 
+      
+      if (textPerf.includes("Expert")) perfColor = "bg-purple-900/50 text-purple-300 border-purple-500/50";
+      else if (textPerf.includes("Bien vu")) perfColor = "bg-orange-900/50 text-orange-300 border-orange-500/50";
+      else if (textPerf.includes("Ridicule")) perfColor = "bg-blue-900/50 text-blue-300 border-orange-500/50";
+      else if (textPerf.includes("Trompé") || textPerf.includes("sieste") || textPerf.includes("Contre-perf")) perfColor = "bg-gray-700/60 text-gray-300 border-gray-500/50";
+      
+      return `<div class="text-[7.5px] md:text-[9px] font-black px-1.5 py-0.5 rounded-full border ${perfColor} uppercase text-center w-max mb-1 inline-flex justify-center items-center tracking-wide whitespace-nowrap">${textPerf}</div>`;
+    }
+
+    function getTvLogoHTML(channelsString) {
+      if (!channelsString) return "";
+      
+      let channels = channelsString.split(/[,/]/).map(c => c.trim()).filter(c => c !== "");
+      
+      let htmlArray = channels.map(channel => {
+        let foundChannel = appData.chaines.find(c => c[0] && c[0].toLowerCase() === channel.toLowerCase());
+        let logoUrl = foundChannel && foundChannel[1] ? foundChannel[1].toString().trim() : "";
+        
+        if (!logoUrl.startsWith('http')) {
+           let match = logoUrl.match(/(https?:\/\/[^"\s\)]+)/);
+           if(match) logoUrl = match[1];
+        }
+        
+        if (logoUrl !== "" && logoUrl.startsWith('http')) {
+          let adaptedFallbackHTML = `<span class='px-1.5 py-0.5 rounded shadow-sm text-[9px] md:text-[10px] font-black tracking-wide inline-flex items-center justify-center whitespace-nowrap bg-navy-700 text-gray-200 border border-navy-600'>${channel}</span>`;
+
+          let sizeClass = "h-auto w-auto max-h-3.5 md:max-h-5 object-contain inline-block drop-shadow-sm";
+
+          return `
+            <span class="inline-flex items-center justify-center mx-1">
+              <img src="${logoUrl}" loading="lazy" title="${channel}" onerror="this.outerHTML=\`${adaptedFallbackHTML}\`" class="${sizeClass}" alt="${channel}">
+            </span>
+          `;
+        } else {
+          return `<span class="px-1.5 py-0.5 rounded shadow-sm text-[9px] md:text-[10px] font-black tracking-wide inline-flex items-center justify-center whitespace-nowrap bg-navy-700 text-gray-200 border border-navy-600 mx-1">${channel}</span>`;
+        }
+      });
+      
+      return `<div class="flex items-center justify-center space-x-0.5">${htmlArray.join('')}</div>`;
+    }
+
+    function getTeamDisplayStyles(eqA, eqB, scoreA, scoreB, vainqueurTAB) {
+      let winA = false, winB = false, real1N2 = "";
+      const isPlayed = (scoreA !== "" && scoreB !== "");
+      
+      if (isPlayed) {
+        let sA = parseInt(scoreA), sB = parseInt(scoreB);
+        if(sA > sB) { winA = true; real1N2 = "1"; }
+        else if(sA < sB) { winB = true; real1N2 = "2"; }
+        else {
+          real1N2 = "N";
+          if (vainqueurTAB === eqA) winA = true;
+          else if (vainqueurTAB === eqB) winB = true;
+        }
+      }
+      let clsEqA = winA ? "text-white font-black" : (isPlayed && !winA && !winB ? "text-gray-300 font-bold" : (isPlayed ? "text-gray-500 font-medium" : "text-white font-bold"));
+      let clsEqB = winB ? "text-white font-black" : (isPlayed && !winA && !winB ? "text-gray-300 font-bold" : (isPlayed ? "text-gray-500 font-medium" : "text-white font-bold"));
+      let flagOpacityA = (isPlayed && !winA && !winB) ? 'opacity-80 grayscale-[50%]' : (isPlayed && !winA ? 'opacity-40 grayscale-[80%]' : 'opacity-100');
+      let flagOpacityB = (isPlayed && !winA && !winB) ? 'opacity-80 grayscale-[50%]' : (isPlayed && !winB ? 'opacity-40 grayscale-[80%]' : 'opacity-100');
+      
+      let iconA = winA ? `<div class="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-pastis-500 shadow-[0_0_5px_#F7D11A] flex-shrink-0 mr-2 md:mr-3"></div>` : "";
+      let iconB = winB ? `<div class="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-pastis-500 shadow-[0_0_5px_#F7D11A] flex-shrink-0 ml-2 md:ml-3"></div>` : "";
+
+      return { winA, winB, real1N2, clsEqA, clsEqB, flagOpacityA, flagOpacityB, iconA, iconB };
+    }
+
+    function generatePlayerHistoryItemHTML(match, prono) {
+      let idMatch = match[0], date = match[1], phase = match[8], eqA = match[3], eqB = match[4];
+      let scoreA = match[5], scoreB = match[6], vainqueurTABReel = match[7];
+      let isbonus = match[9] && String(match[9]).toLowerCase() === "oui";
+      
+      let pA = prono[5] !== undefined ? prono[5] : "";
+      let pB = prono[6] !== undefined ? prono[6] : "";
+      let pTAB = prono[7], isJoker = prono[8] && String(prono[8]).toLowerCase() === 'oui';
+      let points = prono[9], textInfo = prono[10], textPerf = prono[11];
+      
+      let isPlayed = (scoreA !== "" && scoreB !== "");
+      let isPhaseStarted = phasesStarted[phase] || false;
+      
+      let ptsBadge = "", btnInfo = "", pronoBloc = "", pTabHTML = "";
+      const styles = getTeamDisplayStyles(eqA, eqB, scoreA, scoreB, vainqueurTABReel);
+      
+      let rTabHTML = (isPlayed && vainqueurTABReel && vainqueurTABReel.trim() !== "") ? `<div class="text-[9px] text-gray-500 font-bold uppercase mt-0.5">TAB: ${vainqueurTABReel}</div>` : '';
+      let reelBloc = isPlayed ? `<div class="font-bold text-gray-400 font-oswald text-base md:text-2xl leading-none">${scoreA}-${scoreB}</div>${rTabHTML}` : `<div class="font-bold text-gray-600 text-base md:text-2xl font-oswald">VS</div>`;
+
+      let jkrBadge = isJoker ? `<span class="joker-pulse bg-pastis-500 text-navy-900 text-[7px] md:text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm flex items-center justify-center -mt-2 mb-1 w-fit mx-auto">🌟 JOKER</span>` : ``;
+      let bonusIcon = isbonus ? `<span class="ml-1" title="Match Bonus">🔥</span>` : "";
+
+      if(!isPhaseStarted && !isPlayed) {
+        pronoBloc = `<div class="font-black text-gray-500 text-sm md:text-lg leading-none">🔒</div>`;
+        btnInfo = `<button onclick="showTooltip(event, 'Pronostic masqué avant le début de la phase')" class="ml-1 md:ml-2 w-4 h-4 md:w-5 md:h-5 flex items-center justify-center rounded-full bg-navy-700 text-white font-bold font-serif text-[9px] shadow transition flex-shrink-0 relative z-20 pointer-events-auto">i</button>`;
+      } else {
+        ptsBadge = getPointsBadge(points);
+        btnInfo = `<button onclick="showTooltip(event, '${escapeJS(textInfo)}')" class="ml-1 md:w-5 w-4 h-4 h-5 flex items-center justify-center rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold font-serif text-[9px] shadow transition flex-shrink-0 relative z-20 pointer-events-auto">i</button>`;
+        
+        let colorProno = isJoker ? 'text-pastis-500' : 'text-white';
+        let dispA = pA !== "" ? pA : "-";
+        let dispB = pB !== "" ? pB : "-";
+        pronoBloc = `<span class="font-black ${colorProno} font-oswald text-base md:text-2xl leading-none">${dispA}-${dispB}</span>`;
+        pTabHTML = (pTAB && pTAB.trim() !== "") ? `<div class="text-[8px] md:text-[9px] text-pastis-500 font-bold uppercase mt-0.5">TAB: ${pTAB}</div>` : '';
+      }
+
+      let perfBadge = getPerformanceBadge(textPerf);
+
+      return `
+        <div class="flex items-center justify-between bg-navy-800 p-2 md:p-3 rounded-lg border border-navy-700 relative mt-2 shadow-sm">
+          <div class="text-[9px] md:text-sm text-gray-400 w-[10%] leading-tight">${shortDate(date)}${bonusIcon}</div>
+          
+          <div class="w-[35%] flex flex-col justify-center px-1 font-oswald tracking-wide min-w-0">
+            <div class="flex flex-row items-center space-x-1.5 min-w-0">
+              <span class="${styles.flagOpacityA} emoji-flag">${getFlagOnly(eqA)}</span>
+              <span class="whitespace-normal break-words leading-tight text-xs md:text-lg ${styles.clsEqA}">${getCleanName(eqA)}</span>
+            </div>
+            <div class="flex flex-row items-center space-x-1.5 min-w-0 mt-1">
+              <span class="${styles.flagOpacityB} emoji-flag">${getFlagOnly(eqB)}</span>
+              <span class="whitespace-normal break-words leading-tight text-xs md:text-lg ${styles.clsEqB}">${getCleanName(eqB)}</span>
+            </div>
+          </div>
+          
+          <div class="flex items-center w-[30%] justify-center">
+            <div class="text-center w-1/2">
+              <div class="text-[9px] md:text-[11px] text-gray-500 uppercase mb-1">Réel</div>
+              ${reelBloc}
+            </div>
+            <div class="text-center w-1/2 border-l border-navy-700 pl-1 md:pl-2 flex flex-col items-center justify-center">
+              ${jkrBadge}
+              <div class="text-[9px] md:text-[11px] text-blue-400 uppercase mb-1">Prono</div>
+              ${pronoBloc}
+              ${pTabHTML}
+            </div>
+          </div>
+
+          <div class="w-[25%] flex flex-col items-end justify-start space-y-1 pt-1">
+            ${isPlayed ? perfBadge : ''}
+            <div class="flex items-center justify-end space-x-1 mt-auto pb-1">
+              ${ptsBadge}
+              ${btnInfo}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // --- GESTION DU SOUS-MENU CALENDRIER ---
+function switchCalView(view) {
+  currentCalView = view;
+  document.getElementById('cal-view-all').classList.add('hidden');
+  document.getElementById('cal-view-poules').classList.add('hidden');
+  document.getElementById('cal-view-final').classList.add('hidden');
+  
+  const btnAll = document.getElementById('btn-cal-all');
+  const btnPoules = document.getElementById('btn-cal-poules');
+  const btnFinal = document.getElementById('btn-cal-final');
+
+  const activeClass = "bg-pastis-500 text-navy-900 shadow-md font-black".split(' ');
+  const inactiveClass = "text-gray-400 hover:text-gray-200 hover:bg-navy-700/50".split(' ');
+
+  [btnAll, btnPoules, btnFinal].forEach(b => {
+    b.classList.remove(...activeClass);
+    b.classList.add(...inactiveClass);
+  });
+
+  if (view === 'all') {
+    document.getElementById('cal-view-all').classList.remove('hidden');
+    btnAll.classList.remove(...inactiveClass);
+    btnAll.classList.add(...activeClass);
+    // On ne l'affiche QUE si on est sur le calendrier
+    if(currentView === 'calendrier') {
+        document.getElementById('btn-today').classList.remove('hidden');
+    }
+  } else if (view === 'poules') {
+    document.getElementById('cal-view-poules').classList.remove('hidden');
+    btnPoules.classList.remove(...inactiveClass);
+    btnPoules.classList.add(...activeClass);
+    document.getElementById('btn-today').classList.add('hidden');
+  } else if (view === 'final') {
+    document.getElementById('cal-view-final').classList.remove('hidden');
+    btnFinal.classList.remove(...inactiveClass);
+    btnFinal.classList.add(...activeClass);
+    document.getElementById('btn-today').classList.add('hidden');
+  }
+}
+
+    function switchView(viewName) {
+  currentView = viewName;
+  ['classement', 'joueurs', 'calendrier', 'match', 'graph', 'duel', 'reglement'].forEach(v => document.getElementById('view-' + v).classList.add('hidden'));
+  ['classement', 'joueurs', 'calendrier', 'graph', 'duel', 'reglement'].forEach(v => document.getElementById('nav-' + v).classList.remove('text-pastis-500'));
+
+  if (viewName === 'calendrier') {
+    switchCalView(currentCalView);
+  } else {
+    // Masque le bouton pour toutes les autres vues, incluant 'joueurs'
+    document.getElementById('btn-today').classList.add('hidden');
+  }
+  
+  if (viewName === 'duel' && document.getElementById('duel-p1').innerHTML === "") initDuelView();
+  if(viewName === 'match') {
+    document.getElementById('view-match').classList.remove('hidden');
+    document.getElementById('nav-calendrier').classList.add('text-pastis-500');
+  } else {
+    document.getElementById('view-' + viewName).classList.remove('hidden');
+    document.getElementById('nav-' + viewName).classList.add('text-pastis-500');
+    window.scrollTo(0,0);
+  }
+  
+  if(viewName === 'classement') {
+    setTimeout(syncScrollbarWidth, 100);
+  }
+}
+
+    function goToPlayerProfile(joueur) {
+      const select = document.getElementById('select-joueur');
+      select.value = joueur; 
+      renderJoueurProfile(joueur);
+      switchView('joueurs');
+    }
+
+    function getLogicalDate(dateStr, timeStr) {
+      if(!dateStr) return "";
+      let dParts = dateStr.split('/');
+      if(dParts.length !== 3) return dateStr;
+      let h = 12, m = 0; 
+      if(timeStr && timeStr.includes(':')) {
+        let tParts = timeStr.split(':');
+        h = parseInt(tParts[0]) || 0; m = parseInt(tParts[1]) || 0;
+      }
+      let dateObj = new Date(dParts[2], parseInt(dParts[1])-1, dParts[0], h, m);
+      dateObj.setHours(dateObj.getHours() - 8); 
+      return String(dateObj.getDate()).padStart(2, '0') + '/' + String(dateObj.getMonth() + 1).padStart(2, '0') + '/' + dateObj.getFullYear();
+    }
+
+    function getLogicalToday() {
+      let now = new Date();
+      now.setHours(now.getHours() - 8); 
+      return String(now.getDate()).padStart(2, '0') + '/' + String(now.getMonth() + 1).padStart(2, '0') + '/' + now.getFullYear();
+    }
+
+    function shortDate(dateStr) {
+      if(!dateStr) return "";
+      let p = dateStr.split('/');
+      return p.length >= 2 ? p[0] + '/' + p[1] : dateStr;
+    }
+
+// --- HELPER DATE FORMAT ---
+    function formatFullDate(dateStr) {
+      if(!dateStr) return "";
+      let parts = dateStr.split('/');
+      if(parts.length !== 3) return dateStr;
+      let d = new Date(parts[2], parts[1]-1, parts[0]);
+      let options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+      return d.toLocaleDateString('fr-FR', options);
+    }
+
+    // --- CALENDRIER PRINCIPAL ---
+    function renderCalendrier() {
+      const logicalTodayStr = getLogicalToday();
+      const teamFilterEl = document.getElementById('team-filter');
+      const phaseFilterEl = document.getElementById('phase-filter');
+      const teamFilterValue = teamFilterEl ? teamFilterEl.value : 'all';
+      const phaseFilterValue = phaseFilterEl ? phaseFilterEl.value : 'all';
+      
+      // 1. Génération de "Tous les matchs" AVEC TITRES DE DATES ET FILTRES
+      let allHtml = '';
+      let currentDate = '';
+      let matchCount = 0;
+      
+      appData.calendrier.forEach((row) => {
+        let phase = (row[8] || "").trim();
+        let eqA = row[3] || "";
+        let eqB = row[4] || "";
+        let date = row[1] || "";
+        
+        // Cacher Vainqueur et Finaliste
+        if (phase.toLowerCase().includes("vainqueur") || phase.toLowerCase().includes("finaliste")) return;
+        
+        // --- APPLICATION DES FILTRES ---
+        if (teamFilterValue !== 'all' && eqA !== teamFilterValue && eqB !== teamFilterValue) return;
+        if (phaseFilterValue !== 'all' && phase !== phaseFilterValue) return;
+        
+        // --- REGROUPEMENT PAR DATE ---
+        if (date !== currentDate && date !== "") {
+          currentDate = date;
+          let dateFormatee = formatFullDate(date);
+          
+          allHtml += `
+            <div class="w-full text-left mt-8 mb-2 pointer-events-none pl-2 border-b border-navy-700 pb-1">
+              <span class="text-pastis-500 font-oswald font-bold uppercase tracking-wider text-sm md:text-base capitalize drop-shadow-md">${dateFormatee}</span>
+            </div>
+          `;
+        }
+        allHtml += generateMatchCardHTML(row, logicalTodayStr);
+        matchCount++;
+      });
+      
+      if (matchCount === 0) {
+        allHtml = `<p class="text-center text-gray-500 italic mt-12 text-sm md:text-base font-medium">Aucun match ne correspond à cette sélection.</p>`;
+      }
+      
+      document.getElementById('cal-view-all').innerHTML = allHtml;
+
+      // 2. Génération des "Poules"
+      document.getElementById('cal-view-poules').innerHTML = renderPoules();
+
+      // 3. Génération de la "Phase Finale"
+      document.getElementById('cal-view-final').innerHTML = renderTableauFinal(logicalTodayStr);
+
+      parseFlags();
+    }
+
+// --- USINE À CARTES (Générateur HTML pour 1 match) ---
+function generateMatchCardHTML(row, logicalTodayStr) {
+  const idMatch = row[0]; 
+  if(!idMatch || idMatch === "") return "";
+
+  const date = row[1], time = row[2], phase = row[8], eqA = row[3], eqB = row[4];
+  const scoreA = row[5], scoreB = row[6], vainqueurTAB = row[7];
+  
+  const isbonus = row[9] && String(row[9]).toLowerCase() === "oui";
+  const groupName = row[10] || ""; 
+  const tvChannel = row[11] || ""; 
+  
+  const stat1 = row[13], statN = row[14], stat2 = row[15]; 
+  const bonus = (row[16] || "").replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim(); 
+  const jokerCount = row[17] || ""; // Récupération colonne R
+
+  const isPlayed = (scoreA !== "" && scoreB !== "");
+  const matchLogicalDate = getLogicalDate(date, time); 
+  
+  let scoreBlock = `<div class="bg-navy-700 px-2 md:px-4 py-1 rounded text-xl font-oswald text-gray-400 font-bold shadow-inner border border-navy-700">VS</div>`;
+  if(isPlayed) scoreBlock = `<div class="bg-pastis-500 px-2 md:px-4 py-1 rounded text-xl font-oswald text-navy-900 font-bold shadow-inner">${scoreA} - ${scoreB}</div>`;
+  
+  let tabHTML = vainqueurTAB !== "" ? `<div class="text-center text-[10px] text-gray-400 font-bold mt-1 uppercase">TAB : ${vainqueurTAB}</div>` : '';
+  const styles = getTeamDisplayStyles(eqA, eqB, scoreA, scoreB, vainqueurTAB);
+  
+  let fifaA = getFifaRank(eqA); let fifaB = getFifaRank(eqB);
+  let logoA = getLogoUrl(eqA); let logoB = getLogoUrl(eqB);
+
+  let logoHtmlA = logoA !== "" ? `<img src="${logoA}" loading="lazy" class="w-10 h-10 md:w-20 md:h-20 object-contain drop-shadow-md ${styles.flagOpacityA}" alt="">` : "";
+  let logoHtmlB = logoB !== "" ? `<img src="${logoB}" loading="lazy" class="w-10 h-10 md:w-20 md:h-20 object-contain drop-shadow-md ${styles.flagOpacityB}" alt="">` : "";
+
+  let statsHTML = '';
+  
+  if (stat1 && stat1 !== "" && phasesStarted[phase]) {
+    let bg1 = styles.real1N2 === "1" ? "bg-pastis-500 text-navy-900 border-pastis-500 shadow-[0_0_10px_rgba(247,195,37,0.4)]" : "bg-navy-800 text-white border-navy-700 shadow-sm";
+    let lbl1 = styles.real1N2 === "1" ? "text-navy-900 opacity-70" : "text-gray-400";
+    let bgN = styles.real1N2 === "N" ? "bg-pastis-500 text-navy-900 border-pastis-500 shadow-[0_0_10px_rgba(247,195,37,0.4)]" : "bg-navy-800 text-white border-navy-700 shadow-sm";
+    let lblN = styles.real1N2 === "N" ? "text-navy-900 opacity-70" : "text-gray-400";
+    let bg2 = styles.real1N2 === "2" ? "bg-pastis-500 text-navy-900 border-pastis-500 shadow-[0_0_10px_rgba(247,195,37,0.4)]" : "bg-navy-800 text-white border-navy-700 shadow-sm";
+    let lbl2 = styles.real1N2 === "2" ? "text-navy-900 opacity-70" : "text-gray-400";
+
+    let jokerHTML = "";
+    if (isbonus && jokerCount !== "") {
+      // Joker forcé en position absolue (left-50% + décalage) pour ne JAMAIS perturber le centrage de Tendance
+      jokerHTML = `
+        <div class="absolute left-1/2 ml-[115px] sm:ml-[140px] md:ml-[190px] pl-2 md:pl-4 bottom-0 flex flex-col items-center justify-end">
+          <span class="text-[7px] sm:text-[8px] md:text-[9px] text-pastis-500 uppercase tracking-widest font-bold mb-1 md:mb-1.5 whitespace-normal md:whitespace-nowrap text-center leading-[1.1] max-w-[60px] sm:max-w-[70px] md:max-w-none">Joker(s) sur ce match</span>
+          <div class="flex items-center justify-center bg-pastis-500 text-navy-900 text-sm md:text-base font-black px-2 md:px-3 py-0.5 rounded shadow-[0_0_8px_rgba(247,195,37,0.4)] min-w-[35px] border border-pastis-500 leading-none">
+            ${jokerCount}
+          </div>
+        </div>
+      `;
+    }
+
+    statsHTML = `
+      <div class="flex flex-col items-center mt-2 w-full relative z-10 border-t border-navy-700/50 pt-2 pb-1">
+        <div class="relative flex justify-center w-full px-1">
+          
+          <div class="flex flex-col items-center flex-none w-[230px] sm:w-[280px] md:w-[380px]">
+            <span class="text-[10px] md:text-xs text-gray-400 uppercase tracking-[0.2em] font-bold mb-1.5 text-center">Tendance</span>
+            <div class="grid grid-cols-3 gap-1.5 md:gap-3 font-oswald w-full">
+              <div class="flex items-center justify-center px-1 md:px-1.5 py-0.5 rounded border ${bg1} transition overflow-hidden">
+                <span class="text-[9px] md:text-[11px] font-bold uppercase ${lbl1} truncate mr-1 md:mr-1.5">${getCleanName(eqA)}</span><span class="text-sm md:text-base font-black flex-shrink-0">${stat1}</span>
+              </div>
+              <div class="flex items-center justify-center px-1 md:px-1.5 py-0.5 rounded border ${bgN} transition overflow-hidden">
+                <span class="text-[9px] md:text-[11px] font-bold uppercase ${lblN} mr-1 md:mr-1.5">Nul</span><span class="text-sm md:text-base font-black flex-shrink-0">${statN}</span>
+              </div>
+              <div class="flex items-center justify-center px-1 md:px-1.5 py-0.5 rounded border ${bg2} transition overflow-hidden">
+                <span class="text-[9px] md:text-[11px] font-bold uppercase ${lbl2} truncate mr-1 md:mr-1.5">${getCleanName(eqB)}</span><span class="text-sm md:text-base font-black flex-shrink-0">${stat2}</span>
+              </div>
+            </div>
+          </div>
+          
+          ${jokerHTML}
+
+        </div>
+        ${bonus !== "" ? `<div class="text-[10px] md:text-xs font-bold text-pastis-500 uppercase tracking-wide text-center mt-2">${bonus}</div>` : ''}
+      </div>
+    `;
+  }
+
+  let groupText = "";
+  if (groupName !== "") {
+      let groupNameLower = groupName.toLowerCase();
+      groupText = `
+        <span class="hidden md:inline mx-1 text-gray-600">•</span>
+        <span class="hidden md:inline text-gray-400 capitalize">${groupNameLower}</span>
+      `;
+  }
+
+  let tvHTML = "";
+  if (tvChannel !== "") {
+      tvHTML = `
+        <span class="hidden md:inline mx-1 text-gray-600">•</span>
+        <div class="hidden md:flex items-center">${getTvLogoHTML(tvChannel)}</div>
+        <span class="md:hidden mx-1 text-gray-600">•</span>
+        <div class="flex md:hidden items-center text-[10px] text-gray-400 font-bold whitespace-nowrap">📺 ${tvChannel}</div>
+      `;
+  }
+  
+  let baseClass = isbonus ? "bg-gradient-to-r from-orange-900/10 via-navy-800 to-orange-900/10" : "bg-navy-800";
+  
+  let cardHighlightClass = matchLogicalDate === logicalTodayStr 
+    ? `border-pastis-500 ring-2 ring-pastis-500 shadow-[0_0_15px_rgba(247,195,37,0.3)] hover:bg-navy-700 hover:shadow-[0_0_20px_rgba(247,195,37,0.5)] ${baseClass}` 
+    : `border-navy-700 hover:border-blue-400 hover:bg-navy-700 hover:shadow-[0_0_15px_rgba(96,165,250,0.2)] transition-all ${baseClass}`;
+    
+  let badgeHighlightHTML = matchLogicalDate === logicalTodayStr ? `<div class="absolute -top-2 -right-2 bg-pastis-500 text-navy-900 text-[9px] font-black px-2 py-0.5 rounded-full shadow-md z-10 uppercase tracking-wider">Aujourd'hui</div>` : "";
+  let bonusBadgeHTML = isbonus ? `<div class="absolute -top-3 left-4 md:left-6 bg-orange-600 text-white text-[8px] md:text-[10px] font-black px-2 py-0.5 rounded-full shadow-md z-10 uppercase tracking-wider border border-orange-400 flex items-center gap-1"><span>🔥</span> Match Bonus</div>` : "";
+
+  return `
+    <div onclick="openMatchDetails('${idMatch}')" class="rounded-xl p-2 md:pt-3 md:px-3 md:pb-3 border relative cursor-pointer mb-3 md:mb-4 ${cardHighlightClass}">
+      ${bonusBadgeHTML}
+      ${badgeHighlightHTML}
+      
+      <div class="mb-1.5 text-xs md:text-sm font-semibold tracking-wider text-center flex items-center justify-center overflow-hidden px-1">
+        <span class="text-gray-300 flex items-center uppercase whitespace-nowrap"><span class="text-pastis-500">${time}</span> ${groupText}</span>
+        ${tvHTML}
+      </div>
+
+      <div class="flex justify-between items-center font-oswald w-full">
+        
+        <div class="flex-1 flex flex-row items-center justify-between pl-1 md:pl-2 pr-1 md:pr-3 min-w-0 relative">
+          <div class="flex-shrink-0 flex items-center justify-center mr-2 md:mr-4">
+            ${logoHtmlA}
+          </div>
+          <div class="flex flex-col items-end justify-center flex-1 space-y-0.5">
+            <div class="flex items-center justify-end w-full">
+              ${styles.iconA}
+              <span class="text-right text-sm md:text-2xl leading-tight tracking-wide whitespace-normal break-words ${styles.clsEqA}">${getCleanName(eqA)}</span>
+              <div class="flex items-center hidden md:flex ml-1.5 md:ml-2">
+                <span class="text-xl md:text-4xl flex-shrink-0 transition-opacity emoji-flag ${styles.flagOpacityA}">${getFlagOnly(eqA)}</span>
+              </div>
+            </div>
+            ${fifaA !== "" ? `<span class="text-[8px] md:text-[10px] text-pastis-500 opacity-70 font-oswald tracking-widest uppercase mt-0.5">FIFA #${fifaA}</span>` : ""}
+          </div>
+        </div>
+
+        <div class="flex flex-col items-center justify-center min-w-[70px] md:min-w-[80px] flex-shrink-0 z-10 px-1 md:px-2">
+          ${scoreBlock}
+          ${tabHTML}
+        </div>
+
+        <div class="flex-1 flex flex-row items-center justify-between pr-1 md:pr-2 pl-1 md:pl-3 min-w-0 relative">
+          <div class="flex flex-col items-start justify-center flex-1 space-y-0.5">
+            <div class="flex items-center justify-start w-full">
+              <div class="flex items-center hidden md:flex mr-1.5 md:mr-2">
+                <span class="text-xl md:text-4xl flex-shrink-0 transition-opacity emoji-flag ${styles.flagOpacityB}">${getFlagOnly(eqB)}</span>
+              </div>
+              <span class="text-left text-sm md:text-2xl leading-tight tracking-wide whitespace-normal break-words ${styles.clsEqB}">${getCleanName(eqB)}</span>
+              ${styles.iconB}
+            </div>
+            ${fifaB !== "" ? `<span class="text-[8px] md:text-[10px] text-pastis-500 opacity-70 font-oswald tracking-widest uppercase mt-0.5">FIFA #${fifaB}</span>` : ''}
+          </div>
+          <div class="flex-shrink-0 flex items-center justify-center ml-2 md:ml-4">
+            ${logoHtmlB}
+          </div>
+        </div>
+
+      </div>
+      ${statsHTML}
+    </div>
+  `;
+}
+    // --- MOTEUR DE GÉNÉRATION DES POULES ---
+    function renderPoules() {
+      let groups = {};
+      let allTeamsArray = [];
+
+      // 1. Instancier les équipes
+      appData.equipes.forEach(eq => {
+        let name = eq[0], groupName = eq[10]; // Colonne K
+        if(name && groupName) {
+          let gName = groupName.trim();
+          if(!groups[gName]) groups[gName] = {};
+          groups[gName][name] = { name: name, pts: 0, p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, gd: 0, groupName: gName };
+        }
+      });
+
+      // 2. Calculer les points
+      appData.calendrier.forEach(match => {
+        let phase = match[8], eqA = match[3], eqB = match[4], scoreA = match[5], scoreB = match[6];
+        if(phase === "Poules" && scoreA !== "" && scoreB !== "") {
+          let sA = parseInt(scoreA), sB = parseInt(scoreB);
+          let teamA = Object.values(groups).find(g => g[eqA])?.[eqA];
+          let teamB = Object.values(groups).find(g => g[eqB])?.[eqB];
+
+          if(teamA) { teamA.p++; teamA.gf += sA; teamA.ga += sB; teamA.gd += (sA - sB); if(sA > sB) { teamA.w++; teamA.pts += 3; } else if(sA === sB) { teamA.d++; teamA.pts += 1; } else teamA.l++; }
+          if(teamB) { teamB.p++; teamB.gf += sB; teamB.ga += sA; teamB.gd += (sB - sA); if(sB > sA) { teamB.w++; teamB.pts += 3; } else if(sA === sB) { teamB.d++; teamB.pts += 1; } else teamB.l++; }
+        }
+      });
+
+      // 3. Trier chaque groupe et assigner les Rangs
+      Object.keys(groups).forEach(gName => {
+        let teams = Object.values(groups[gName]);
+        teams.sort((a, b) => (b.pts - a.pts) || (b.gd - a.gd) || (b.gf - a.gf) || a.name.localeCompare(b.name));
+        
+        let isGroupFinished = teams.every(t => t.p === 3);
+
+        teams.forEach((t, index) => {
+          t.rank = index + 1;
+          t.isGroupFinished = isGroupFinished;
+          allTeamsArray.push(t);
+        });
+      });
+
+      // 4. Identifier les 8 meilleurs troisièmes
+      let thirdPlaces = allTeamsArray.filter(t => t.rank === 3);
+      thirdPlaces.sort((a,b) => (b.pts - a.pts) || (b.gd - a.gd) || (b.gf - a.gf));
+      let best8ThirdsNames = thirdPlaces.slice(0, 8).map(t => t.name);
+
+      // 5. Générer l'affichage HTML
+      let html = '';
+      let sortedGroupNames = Object.keys(groups).sort();
+      if(sortedGroupNames.length === 0) return `<p class="text-gray-500 text-center italic mt-10">Les groupes ne sont pas encore définis.</p>`;
+
+      sortedGroupNames.forEach(gName => {
+        let teams = Object.values(groups[gName]);
+        teams.sort((a,b) => a.rank - b.rank); 
+
+        let lblGrp = gName.toLowerCase().includes('groupe') ? gName : `Groupe ${gName}`;
+
+        html += `
+          <div class="bg-navy-800 rounded-xl border border-navy-700 shadow-lg overflow-hidden">
+            <div class="bg-navy-900 py-2 px-4 border-b border-navy-700 text-white font-oswald font-bold tracking-wide flex justify-between items-center">
+              <span>${lblGrp}</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full table-fixed text-center text-[10px] md:text-sm whitespace-nowrap min-w-[320px]">
+                <colgroup>
+                  <col class="w-6 md:w-10">
+                  <col class="w-auto">
+                  <col class="w-8 md:w-12">
+                  <col class="w-5 md:w-8">
+                  <col class="w-5 md:w-8">
+                  <col class="w-5 md:w-8">
+                  <col class="w-5 md:w-8">
+                  <col class="w-6 md:w-10">
+                  <col class="w-6 md:w-10">
+                  <col class="w-7 md:w-10">
+                </colgroup>
+                <thead class="bg-navy-900/50 text-gray-400 border-b border-navy-700">
+                  <tr>
+                    <th class="py-2 pl-2 md:pl-3 text-left">#</th>
+                    <th class="py-2 text-left">Équipe</th>
+                    <th class="py-2 text-pastis-500">Pts</th>
+                    <th class="py-2">J</th>
+                    <th class="py-2">V</th>
+                    <th class="py-2">N</th>
+                    <th class="py-2">D</th>
+                    <th class="py-2">BP</th>
+                    <th class="py-2">BC</th>
+                    <th class="py-2 pr-2 md:pr-3">Diff</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-navy-700">`;
+
+        teams.forEach((t, index) => {
+          let isTop2 = index < 2;
+          let isBest3rd = (index === 2 && best8ThirdsNames.includes(t.name));
+          
+          let rowClass = ""; let rankClass = "text-gray-400"; let statusBadge = "";
+          
+          if (isTop2) {
+            rowClass = "bg-green-900/20 border-l-4 border-green-500";
+            rankClass = "text-green-400 font-bold";
+            if (t.isGroupFinished) statusBadge = `<span class="ml-2 text-[8px] md:text-[10px] bg-green-600 text-white px-1.5 py-0.5 rounded shadow-sm flex-shrink-0">Qualifié</span>`;
+          } else if (isBest3rd) {
+            rowClass = "bg-pastis-500/10 border-l-4 border-pastis-500";
+            rankClass = "text-pastis-500 font-bold";
+            if (t.isGroupFinished) statusBadge = `<span onclick="showTooltip(event, 'Fait partie des 8 meilleurs 3èmes')" class="ml-2 text-[8px] md:text-[10px] bg-pastis-500 text-navy-900 px-1.5 py-0.5 rounded shadow-sm font-bold cursor-pointer flex-shrink-0">Qualifié (3e)</span>`;
+          } else if (t.isGroupFinished) {
+            rowClass = "opacity-50 grayscale";
+            statusBadge = `<span class="ml-2 text-[8px] md:text-[10px] bg-red-800 text-white px-1.5 py-0.5 rounded flex-shrink-0">Éliminé</span>`;
+          }
+
+          let diffClass = t.gd > 0 ? "text-green-400" : (t.gd < 0 ? "text-red-400" : "text-gray-400");
+          let flag = `<span class="emoji-flag text-sm md:text-base">${getFlagOnly(t.name)}</span>`;
+          
+          html += `
+            <tr class="hover:bg-navy-700 transition ${rowClass}">
+              <td class="py-2.5 md:py-3 pl-2 md:pl-3 text-left ${rankClass}">${index + 1}</td>
+              <td class="py-2.5 md:py-3 text-left font-bold text-white pr-2">
+                <div class="flex items-center w-full min-w-0">
+                  <span class="flex-shrink-0 mr-1.5">${flag}</span>
+                  <span class="truncate">${getCleanName(t.name)}</span>
+                  ${statusBadge}
+                </div>
+              </td>
+              <td class="py-2.5 md:py-3 font-black text-pastis-500 text-xs md:text-base">${t.pts}</td>
+              <td class="py-2.5 md:py-3 text-gray-400">${t.p}</td>
+              <td class="py-2.5 md:py-3 text-gray-400">${t.w}</td>
+              <td class="py-2.5 md:py-3 text-gray-400">${t.d}</td>
+              <td class="py-2.5 md:py-3 text-gray-400">${t.l}</td>
+              <td class="py-2.5 md:py-3 text-gray-400">${t.gf}</td>
+              <td class="py-2.5 md:py-3 text-gray-400">${t.ga}</td>
+              <td class="py-2.5 md:py-3 pr-2 md:pr-3 font-bold ${diffClass}">${t.gd > 0 ? '+'+t.gd : t.gd}</td>
+            </tr>`;
+        });
+        html += `</tbody></table></div></div>`;
+      });
+      return html;
+    }
+
+    // --- MOTEUR DE GÉNÉRATION TABLEAU FINAL (ARBRE ET LISTE MOBILE) ---
+    function renderTableauFinal(logicalTodayStr) {
+      let m16 = [], m8 = [], m4 = [], m2 = [], mF = [], m3rd = [];
+      let matchCount = 0;
+
+      // SÉPARATION DES PHASES (Y COMPRIS LA PETITE FINALE)
+      appData.calendrier.forEach(m => {
+        let phase = (m[8] || "").toLowerCase().trim();
+        if(!phase || phase === "poules" || phase === "") return;
+
+        // Cacher Vainqueur et Finaliste du bracket s'ils sont listés comme des phases
+        if(phase.includes("vainqueur") || phase.includes("finaliste")) return;
+
+        matchCount++;
+        
+        if (phase.includes("16") || phase.includes("seizi")) m16.push(m);
+        else if (phase.includes("8") || phase.includes("huiti")) m8.push(m);
+        else if (phase.includes("1/4") || phase.includes("quart")) m4.push(m);
+        else if (phase.includes("1/2") || phase.includes("demi")) m2.push(m);
+        else if (phase.includes("3") || phase.includes("petite")) m3rd.push(m);
+        else if (phase.includes("finale") || phase.includes("f.")) mF.push(m);
+      });
+
+      if(matchCount === 0) return `<p class="text-gray-500 text-center italic mt-10">Aucun match de phase finale défini pour l'instant.</p>`;
+
+      m16.sort((a,b) => parseInt(a[0].replace(/\D/g,'')) - parseInt(b[0].replace(/\D/g,'')));
+      m8.sort((a,b) => parseInt(a[0].replace(/\D/g,'')) - parseInt(b[0].replace(/\D/g,'')));
+      m4.sort((a,b) => parseInt(a[0].replace(/\D/g,'')) - parseInt(b[0].replace(/\D/g,'')));
+      m2.sort((a,b) => parseInt(a[0].replace(/\D/g,'')) - parseInt(b[0].replace(/\D/g,'')));
+
+      let left16 = m16.slice(0, 8), right16 = m16.slice(8, 16);
+      let left8 = m8.slice(0, 4), right8 = m8.slice(4, 8);
+      let left4 = m4.slice(0, 2), right4 = m4.slice(2, 4);
+      let left2 = m2.slice(0, 1), right2 = m2.slice(1, 2);
+
+      const renderCol = (arr, side) => {
+        let h = '';
+        arr.forEach(match => { h += generateCompactBracketCard(match, side); });
+        return h;
+      };
+
+      let winnerTextDesktop = "";
+      
+      // DÉTECTION DU VAINQUEUR DE LA FINALE
+      if (mF.length > 0) {
+          let fin = mF[0];
+          let sA = fin[5], sB = fin[6], eqA = getCleanName(fin[3]), eqB = getCleanName(fin[4]), vTAB = fin[7];
+          if (sA !== "" && sB !== "") {
+              let winName = "";
+              if(parseInt(sA) > parseInt(sB)) winName = eqA;
+              else if(parseInt(sB) > parseInt(sA)) winName = eqB;
+              else winName = getCleanName(vTAB);
+              
+              if(winName) {
+                  winnerTextDesktop = `<div class="mt-4 md:mt-6 text-pastis-500 font-black uppercase text-lg md:text-2xl font-oswald animate-pulse text-center w-full leading-tight">🏆 VICTOIRE<br>${winName} 🏆</div>`;
+              }
+          }
+      }
+
+      return `
+        <div class="bg-navy-800 border border-navy-700 rounded-xl p-4 md:p-6 shadow-xl w-full overflow-x-scroll custom-scrollbar mt-4">
+          <div class="flex justify-between items-center min-w-[1200px] h-[900px] md:h-[1000px] pb-4">
+            
+            <div class="flex space-x-6 md:space-x-8 h-full">
+               <div class="bracket-col w-40 md:w-44">${renderCol(left16, 'left')}</div>
+               <div class="bracket-col w-40 md:w-44">${renderCol(left8, 'left')}</div>
+               <div class="bracket-col w-40 md:w-44">${renderCol(left4, 'left')}</div>
+               <div class="bracket-col w-40 md:w-44">${renderCol(left2, 'left')}</div>
+            </div>
+
+            <div class="flex flex-col justify-center items-center px-4 md:px-6 w-56 md:w-64 h-full border-x border-navy-700/50 bg-navy-900/30 rounded-3xl mx-6 relative">
+               
+               <div class="w-full flex flex-col items-center mb-12 md:mb-16 relative z-10">
+                 <span class="text-pastis-500 font-black font-oswald text-2xl md:text-3xl tracking-widest mb-4 shadow-sm flex flex-col items-center">
+                   <span>🏆</span> FINALE
+                 </span>
+                 <div class="w-full transform scale-110 shadow-[0_0_20px_rgba(247,195,37,0.3)] rounded-lg bg-navy-900">
+                   ${renderCol(mF, 'center')}
+                 </div>
+                 ${winnerTextDesktop}
+               </div>
+               
+               <div class="w-full flex flex-col items-center mt-8">
+                 <span class="text-gray-400 font-bold font-oswald text-xs md:text-sm tracking-widest mb-3 uppercase border-b border-navy-700 pb-1">Petite Finale</span>
+                 <div class="w-full shadow-lg rounded-lg border border-navy-700 bg-navy-800/90 transform scale-95">
+                   ${renderCol(m3rd, 'center')}
+                 </div>
+               </div>
+
+            </div>
+
+            <div class="flex space-x-6 md:space-x-8 h-full">
+               <div class="bracket-col w-40 md:w-44">${renderCol(right2, 'right')}</div>
+               <div class="bracket-col w-40 md:w-44">${renderCol(right4, 'right')}</div>
+               <div class="bracket-col w-40 md:w-44">${renderCol(right8, 'right')}</div>
+               <div class="bracket-col w-40 md:w-44">${renderCol(right16, 'right')}</div>
+            </div>
+
+          </div>
+        </div>
+      `;
+    }
+
+    function generateCompactBracketCard(match, side) {
+      if(!match) return '';
+      const idMatch = match[0], date = match[1], time = match[2];
+      const eqA = match[3], eqB = match[4], scoreA = match[5], scoreB = match[6], vainqueurTAB = match[7];
+      const isPlayed = (scoreA !== "" && scoreB !== "");
+      
+      let winA = false, winB = false;
+      if (isPlayed) {
+        if(parseInt(scoreA) > parseInt(scoreB)) winA = true;
+        else if(parseInt(scoreA) < parseInt(scoreB)) winB = true;
+        else if (vainqueurTAB === eqA) winA = true;
+        else if (vainqueurTAB === eqB) winB = true;
+      }
+
+      let flagA = getFlagOnly(eqA), flagB = getFlagOnly(eqB);
+      let nameA = getCleanName(eqA), nameB = getCleanName(eqB);
+      if(nameA==='-') nameA = eqA; if(nameB==='-') nameB = eqB; 
+
+      let bgA = winA ? 'bg-pastis-500/10' : 'bg-white';
+      let textA = winA ? 'text-navy-900' : (isPlayed ? 'text-gray-500' : 'text-gray-700');
+      let ptsA = winA ? 'text-pastis-600' : 'text-gray-500';
+
+      let bgB = winB ? 'bg-pastis-500/10' : 'bg-white';
+      let textB = winB ? 'text-navy-900' : (isPlayed ? 'text-gray-500' : 'text-gray-700');
+      let ptsB = winB ? 'text-pastis-600' : 'text-gray-500';
+
+      let tabHtml = vainqueurTAB ? `<div class="bg-gray-100 text-[9px] text-center text-gray-500 py-0.5 border-t border-gray-200 uppercase font-bold">Vainqueur: ${vainqueurTAB}</div>` : '';
+
+      return `
+        <div class="flex flex-col mb-2 w-full cursor-pointer hover:scale-105 transition transform relative" onclick="openMatchDetails('${idMatch}')">
+          <div class="relative z-10">
+            <span class="text-[9px] text-gray-400 font-medium mb-0.5 ml-1 italic tracking-wide drop-shadow-md">${date} • ${time}</span>
+            <div class="bg-white border border-gray-300 hover:border-pastis-500 hover:shadow-[0_0_10px_rgba(247,195,37,0.3)] rounded shadow flex flex-col overflow-hidden font-oswald text-xs relative">
+              <div class="flex justify-between items-center p-1.5 border-b border-gray-200 ${bgA}">
+                <div class="flex items-center space-x-1.5 overflow-hidden w-[80%]">
+                  <span class="emoji-flag text-xs opacity-${isPlayed && !winA ? '50 grayscale' : '100'}">${flagA}</span>
+                  <span class="truncate font-bold ${textA} uppercase tracking-wider">${nameA}</span>
+                </div>
+                <span class="font-black ${ptsA} text-right bg-gray-100 px-1.5 rounded">${isPlayed ? scoreA : '-'}</span>
+              </div>
+              <div class="flex justify-between items-center p-1.5 ${bgB}">
+                <div class="flex items-center space-x-1.5 overflow-hidden w-[80%]">
+                  <span class="emoji-flag text-xs opacity-${isPlayed && !winB ? '50 grayscale' : '100'}">${flagB}</span>
+                  <span class="truncate font-bold ${textB} uppercase tracking-wider">${nameB}</span>
+                </div>
+                <span class="font-black ${ptsB} text-right bg-gray-100 px-1.5 rounded">${isPlayed ? scoreB : '-'}</span>
+              </div>
+              ${tabHtml}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // --- CLASSEMENT COMPLET ---
+    function toggleClassementColumns() {
+      isDetailedViewOpen = !isDetailedViewOpen;
+      renderClassement(); 
+    }
+
+    function renderClassement() {
+      const headContainer = document.getElementById('classement-head');
+      const listContainer = document.getElementById('classement-list');
+      const btn = document.getElementById('btn-toggle-details');
+      
+      if (isDetailedViewOpen) {
+        btn.innerHTML = '🙈 Masquer le classement complet';
+        btn.classList.replace('bg-navy-700', 'bg-navy-800');
+      } else {
+        btn.innerHTML = '👁️ Afficher le classement complet';
+        btn.classList.replace('bg-navy-800', 'bg-navy-700');
+      }
+
+      let dClass = isDetailedViewOpen ? "" : "hidden";
+
+      let headHTML = `
+        <tr>
+          ${thSort(1, "Evo", true, "md:sticky md:left-0 z-10 md:z-30 w-[40px] min-w-[40px] max-w-[40px] bg-navy-900 border-r border-white/5")}
+          ${thSort(2, "Rang", true, "sticky left-0 md:left-[40px] z-30 w-[30px] md:w-[40px] min-w-[30px] md:min-w-[40px] max-w-[30px] md:max-w-[40px] bg-navy-900 border-r border-white/5")}
+          <th onclick="sortClassement(3, false)" class="cursor-pointer hover:bg-navy-700 transition select-none ${currentSort.col === 3 ? 'text-white' : ''} sticky left-[30px] md:left-[80px] z-30 text-left border-r border-white/5 w-[90px] md:w-[120px] min-w-[90px] md:min-w-[120px] max-w-[90px] md:max-w-[120px] bg-navy-900">
+            <div class="flex items-center justify-start space-x-1 pl-2">
+              <span>Joueur</span>
+              <span class="text-[8px] md:text-[9px] ${currentSort.col === 3 ? 'text-pastis-500 opacity-100' : 'text-gray-600 opacity-50'} transition-colors">${currentSort.col === 3 ? (currentSort.asc ? '▲' : '▼') : '▼'}</span>
+            </div>
+          </th>
+          ${thSort(25, "Total", true, "sticky left-[120px] md:left-[200px] z-30 px-1 md:px-4 py-3 text-pastis-500 text-sm md:text-base w-[40px] md:w-[60px] min-w-[40px] md:min-w-[60px] font-oswald bg-navy-900 border-r-2 border-navy-600 shadow-[3px_0_5px_rgba(0,0,0,0.3)]")}
+      `;
+
+      if(phasesVisibility.showPts25) headHTML += thSort(4, "25", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-white/5`);
+      if(phasesVisibility.showPts20) headHTML += thSort(5, "20", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-white/5`);
+      if(phasesVisibility.showPts15) headHTML += thSort(6, "15", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-white/5`);
+      if(phasesVisibility.showPts14) headHTML += thSort(7, "14", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-white/5`);
+      if(phasesVisibility.showPts12) headHTML += thSort(8, "12", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-white/5`);
+      if(phasesVisibility.showPts10) headHTML += thSort(9, "10", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-white/5`);
+      if(phasesVisibility.showPts7) headHTML += thSort(10, "7", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-white/5`);
+      if(phasesVisibility.showPts6) headHTML += thSort(11, "6", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-white/5`);
+      if(phasesVisibility.showPts5) headHTML += thSort(12, "5", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-white/5`);
+      if(phasesVisibility.showPts4) headHTML += thSort(13, "4", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-white/5`);
+      if(phasesVisibility.showPts2) headHTML += thSort(14, "2", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-white/5`);
+      if(phasesVisibility.showPts1) headHTML += thSort(15, "1", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-white/5`);
+      if(phasesVisibility.showPts0) headHTML += thSort(16, "0", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-navy-700`);
+
+      if(phasesVisibility.showPoules) headHTML += thSort(18, "Poules", true, `px-3 py-3 detail-col ${dClass} bg-navy-900 border-r border-white/5`);
+      if(phasesVisibility.show16e) headHTML += thSort(19, "16e", true, `px-3 py-3 detail-col ${dClass} bg-navy-900 border-r border-white/5`);
+      if(phasesVisibility.show8e) headHTML += thSort(20, "8e", true, `px-3 py-3 detail-col ${dClass} bg-navy-900 border-r border-white/5`);
+      if(phasesVisibility.show14) headHTML += thSort(21, "1/4", true, `px-3 py-3 detail-col ${dClass} bg-navy-900 border-r border-white/5`);
+      if(phasesVisibility.show12) headHTML += thSort(22, "1/2", true, `px-3 py-3 detail-col ${dClass} bg-navy-900 border-r border-white/5`);
+      if(phasesVisibility.showF) headHTML += thSort(23, "F.", true, `px-3 py-3 detail-col ${dClass} bg-navy-900 border-r border-navy-700`);
+      if(phasesVisibility.showBonus) headHTML += thSort(24, "Bonus", true, `px-3 py-3 detail-col ${dClass} bg-navy-900 text-pastis-500 border-r border-navy-700`);
+
+      headHTML += `
+          <th class="px-4 py-3 detail-col ${dClass} font-normal text-gray-500 border-r border-white/5">Forme</th>
+          ${thSort(33, "Réussite", true, `px-3 py-3 detail-col ${dClass} border-r border-navy-700`)}
+          ${thSort(36, "Favori", false, `px-4 py-3 detail-col ${dClass} text-left border-r border-white/5 min-w-[150px]`)}
+          ${thSort(40, "Finaliste", false, `px-4 py-3 detail-col ${dClass} text-left min-w-[150px]`)}
+        </tr>
+      `;
+      headContainer.innerHTML = headHTML;
+      
+      let html = '';
+      appData.classement.forEach((row) => {
+        const evolRaw = row[1], rang = row[2], joueur = row[3], total = row[25]; 
+        const bonsResultats = row[33];
+        const favori = row[36], statutFav = row[37], ptsFav = row[38];
+        const finaliste = row[40], statutFin = row[41], ptsFin = row[42];
+        
+        if(!joueur || joueur === "") return;
+
+        let evolBadge = styleEvolText(evolRaw);
+
+        let formeHTML = '<div class="flex items-center justify-center space-x-1">';
+        for(let i=27; i<=31; i++) {
+          let val = row[i];
+          if(val === "V" || val === "✅") formeHTML += `<div class="w-4 h-4 bg-green-500 rounded-sm shadow-sm"></div>`;
+          else if(val === "X" || val === "⬜") formeHTML += `<div class="w-4 h-4 bg-transparent border border-gray-500 rounded-sm"></div>`;
+          else formeHTML += `<div class="w-4 h-4 bg-transparent"></div>`;
+        }
+        formeHTML += '</div>';
+
+        let ptsColsHTML = '';
+        const addPtsCol = (idx, show) => {
+          if(show) {
+            let color = row[idx] > 0 ? 'text-white font-bold' : 'text-gray-600';
+            let border = idx === 16 ? 'border-r border-navy-700' : 'border-r border-white/5';
+            ptsColsHTML += `<td class="px-2 py-3 detail-col ${dClass} bg-navy-800 ${color} ${border} font-oswald text-base">${row[idx]}</td>`;
+          }
+        };
+
+        addPtsCol(4, phasesVisibility.showPts25);
+        addPtsCol(5, phasesVisibility.showPts20);
+        addPtsCol(6, phasesVisibility.showPts15);
+        addPtsCol(7, phasesVisibility.showPts14);
+        addPtsCol(8, phasesVisibility.showPts12);
+        addPtsCol(9, phasesVisibility.showPts10);
+        addPtsCol(10, phasesVisibility.showPts7);
+        addPtsCol(11, phasesVisibility.showPts6);
+        addPtsCol(12, phasesVisibility.showPts5);
+        addPtsCol(13, phasesVisibility.showPts4);
+        addPtsCol(14, phasesVisibility.showPts2);
+        addPtsCol(15, phasesVisibility.showPts1);
+        addPtsCol(16, phasesVisibility.showPts0);
+
+        let phasesColsHTML = '';
+        if(phasesVisibility.showPoules) phasesColsHTML += `<td class="px-3 py-3 detail-col ${dClass} bg-navy-900 border-r border-white/5 ${row[18]>0 ? 'text-white font-bold font-oswald text-base':'text-gray-600'}">${row[18]}</td>`;
+        if(phasesVisibility.show16e) phasesColsHTML += `<td class="px-3 py-3 detail-col ${dClass} bg-navy-900 border-r border-white/5 ${row[19]>0 ? 'text-white font-bold font-oswald text-base':'text-gray-600'}">${row[19]}</td>`;
+        if(phasesVisibility.show8e) phasesColsHTML += `<td class="px-3 py-3 detail-col ${dClass} bg-navy-900 border-r border-white/5 ${row[20]>0 ? 'text-white font-bold font-oswald text-base':'text-gray-600'}">${row[20]}</td>`;
+        if(phasesVisibility.show14) phasesColsHTML += `<td class="px-3 py-3 detail-col ${dClass} bg-navy-900 border-r border-white/5 ${row[21]>0 ? 'text-white font-bold font-oswald text-base':'text-gray-600'}">${row[21]}</td>`;
+        if(phasesVisibility.show12) phasesColsHTML += `<td class="px-3 py-3 detail-col ${dClass} bg-navy-900 border-r border-white/5 ${row[22]>0 ? 'text-white font-bold font-oswald text-base':'text-gray-600'}">${row[22]}</td>`;
+        if(phasesVisibility.showF) phasesColsHTML += `<td class="px-3 py-3 detail-col ${dClass} bg-navy-900 border-r border-navy-700 ${row[23]>0 ? 'text-white font-bold font-oswald text-base':'text-gray-600'}">${row[23]}</td>`;
+        if(phasesVisibility.showBonus) phasesColsHTML += `<td class="px-3 py-3 detail-col ${dClass} bg-navy-900 text-pastis-500 border-r border-navy-700 ${row[24]>0 ? 'font-bold font-oswald text-base':'text-gray-600'}">${row[24]}</td>`;
+
+        let favHTML = ""; let finHTML = "";
+        if (!isTournamentStarted) {
+          favHTML = `<div class="flex flex-col items-center justify-center text-gray-500"><span class="text-lg">🔒</span><span class="text-[9px] uppercase mt-1">Masqué</span></div>`;
+          finHTML = `<div class="flex flex-col items-center justify-center text-gray-500"><span class="text-lg">🔒</span><span class="text-[9px] uppercase mt-1">Masqué</span></div>`;
+        } else {
+          let stFavClass = getStatusClass(statutFav);
+          let stFinClass = getStatusClass(statutFin);
+          
+          favHTML = `
+            <div class="flex flex-col items-start justify-center">
+              <div class="flex items-center space-x-1.5"><span class="text-base emoji-flag">${getFlagOnly(favori)}</span><span class="font-bold text-sm whitespace-normal break-words leading-tight text-white">${getCleanName(favori)}</span></div>
+              <div class="flex items-center space-x-2 mt-0.5">
+                <span class="text-[10px] md:text-xs ${stFavClass} uppercase">${statutFav}</span>
+                ${ptsFav !== "" ? `<span class="text-[10px] md:text-xs bg-pastis-500 text-navy-900 px-1 rounded font-black">+${cleanPlus(ptsFav)}</span>` : ''}
+              </div>
+            </div>`;
+
+          finHTML = `
+            <div class="flex flex-col items-start justify-center">
+              <div class="flex items-center space-x-1.5"><span class="text-base emoji-flag">${getFlagOnly(finaliste)}</span><span class="font-bold text-sm whitespace-normal break-words leading-tight text-white">${getCleanName(finaliste)}</span></div>
+              <div class="flex items-center space-x-2 mt-0.5">
+                <span class="text-[10px] md:text-xs ${stFinClass} uppercase">${statutFin}</span>
+                ${ptsFin !== "" ? `<span class="text-[10px] md:text-xs bg-pastis-500 text-navy-900 px-1 rounded font-black">+${cleanPlus(ptsFin)}</span>` : ''}
+              </div>
+            </div>`;
+        }
+
+        html += `
+          <tr class="group hover:bg-navy-700 transition border-navy-700">
+            <td class="md:sticky md:left-0 z-10 md:z-20 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 font-oswald text-base w-[40px] min-w-[40px] max-w-[40px]">${evolBadge}</td>
+            <td class="sticky left-0 md:left-[40px] z-20 font-bold text-gray-400 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 font-oswald text-base w-[30px] md:w-[40px] min-w-[30px] md:min-w-[40px] max-w-[30px] md:max-w-[40px]">${rang}</td>
+            <td class="sticky left-[30px] md:left-[80px] z-20 px-1 md:px-2 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 w-[90px] md:w-[120px] min-w-[90px] md:min-w-[120px] max-w-[90px] md:max-w-[120px]">
+              <div onclick="goToPlayerProfile('${escapeJS(joueur)}')" class="truncate text-left font-bold text-white hover:text-pastis-500 cursor-pointer tracking-wide w-full">${joueur}</div>
+            </td>
+            <td class="sticky left-[120px] md:left-[200px] z-20 bg-navy-800 group-hover:bg-navy-700 px-1 md:px-4 py-3 text-pastis-500 font-bold text-sm md:text-xl font-oswald w-[40px] md:w-[60px] min-w-[40px] md:min-w-[60px] border-r-2 border-navy-600 shadow-[3px_0_5px_rgba(0,0,0,0.3)]">${total}</td>
+            
+            ${ptsColsHTML}
+            ${phasesColsHTML}
+            
+            <td class="px-4 py-3 detail-col ${dClass} border-r border-white/5">${formeHTML}</td>
+            <td class="px-3 py-3 detail-col ${dClass} font-bold font-oswald text-base text-green-400 tracking-wider border-r border-navy-700">${bonsResultats}</td>
+            <td class="px-4 py-3 detail-col ${dClass} text-left border-r border-white/5 min-w-[150px]">${favHTML}</td>
+            <td class="px-4 py-3 detail-col ${dClass} text-left min-w-[150px]">${finHTML}</td>
+          </tr>
+        `;
+      });
+      listContainer.innerHTML = html;
+      parseFlags();
+      setTimeout(syncScrollbarWidth, 100);
+    }
+
+    // --- JOUEURS ---
+    function populateJoueursSelect() {
+      const select = document.getElementById('select-joueur');
+      let options = '<option value="">-- Liste des joueurs --</option>';
+      let sortedPlayers = [...appData.classement].filter(r => r[3] && r[3] !== "").sort((a,b) => a[3].localeCompare(b[3]));
+      sortedPlayers.forEach(r => { options += `<option value="${r[3]}">${r[3]}</option>`; });
+      select.innerHTML = options;
+    }
+
+    function renderJoueurProfile(forcedJoueur = null) {
+      const select = document.getElementById('select-joueur');
+      if (forcedJoueur) select.value = forcedJoueur;
+      const joueur = select.value;
+      const headerDiv = document.getElementById('joueur-profile-header');
+      const historySec = document.getElementById('joueur-history-section');
+      
+      if(!joueur) { 
+        headerDiv.classList.add('hidden'); 
+        historySec.classList.add('hidden');
+        return; 
+      }
+
+      const cData = appData.classement.find(r => r[3] === joueur);
+      if(!cData) return;
+
+      const ptsJourFormatted = formatPoints(cData[2]); 
+      const evolJ1 = styleEvolText(cData[1]); 
+      const evolJ2 = styleEvolText(cData.evoJ2); 
+      
+      const rang = cData[2], total = cData[25], bonsResultats = cData[33];
+      const favori = cData[36], statutFav = cData[37], ptsFav = cData[38];
+      const finaliste = cData[40], statutFin = cData[41], ptsFin = cData[42];
+
+      // --- Récupération de la phrase du joueur ---
+      let phraseJoueur = "";
+      if (appData.infosJoueurs) {
+        const jInfo = appData.infosJoueurs.find(r => r[0] === joueur);
+        if (jInfo && jInfo[10]) {
+          phraseJoueur = jInfo[10].trim();
+        }
+      }
+      
+      // Construction de la phrase (Oswald, blanc, italique, centré, sans bloc)
+      let phraseHTML = phraseJoueur 
+        ? `<p class="text-white font-oswald italic text-center text-sm md:text-[15px] tracking-wide mt-3 mb-5 px-2 max-w-2xl mx-auto opacity-90">« ${phraseJoueur} »</p>` 
+        : ``; // Si pas de phrase, on ne met rien
+
+      let formeHTML = '';
+      for(let i=27; i<=31; i++) {
+        let val = cData[i];
+        if(val === "V" || val === "✅") formeHTML += `<div class="w-6 h-6 bg-green-500 rounded flex items-center justify-center text-xs font-bold shadow">V</div>`;
+        else if(val === "X" || val === "⬜") formeHTML += `<div class="w-6 h-6 border-2 border-gray-500 bg-transparent rounded"></div>`;
+        else formeHTML += `<div class="w-6 h-6 bg-transparent"></div>`;
+      }
+
+      let stFavClass = getStatusClass(statutFav);
+      let stFinClass = getStatusClass(statutFin);
+
+      let favContent = !isTournamentStarted ? `<div class="flex items-center space-x-2 mb-1"><span class="text-lg">🔒</span><span class="text-xs md:text-sm text-gray-500 italic">Masqué</span></div>` : `
+        <div class="flex items-center space-x-2 mb-1">
+          <span class="text-xl emoji-flag">${getFlagOnly(favori)}</span>
+          <span class="font-bold text-sm whitespace-normal break-words leading-tight text-white">${getCleanName(favori)}</span>
+        </div>
+        <div class="flex items-center space-x-2 mb-3">
+          <span class="text-[10px] md:text-xs ${stFavClass} uppercase font-bold">${statutFav}</span>
+          ${ptsFav !== "" ? `<span class="text-[10px] md:text-xs bg-pastis-500 text-navy-900 px-1 rounded font-black">+${cleanPlus(ptsFav)}</span>` : ''}
+        </div>
+      `;
+
+      let finContent = !isTournamentStarted ? `<div class="flex items-center space-x-2"><span class="text-lg">🔒</span><span class="text-xs md:text-sm text-gray-500 italic">Masqué</span></div>` : `
+        <div class="flex items-center space-x-2 mb-1">
+          <span class="text-xl emoji-flag">${getFlagOnly(finaliste)}</span>
+          <span class="font-bold text-sm whitespace-normal break-words leading-tight text-white">${getCleanName(finaliste)}</span>
+        </div>
+        <div class="flex items-center space-x-2">
+          <span class="text-[10px] md:text-xs ${stFinClass} uppercase font-bold">${statutFin}</span>
+          ${ptsFin !== "" ? `<span class="text-[10px] md:text-xs bg-pastis-500 text-navy-900 px-1 rounded font-black">+${cleanPlus(ptsFin)}</span>` : ''}
+        </div>
+      `;
+
+      let bestMatchHTML = '';
+      let bestPerfRank = -1;
+      let bestScore = -1;
+      let bestMatchObj = null;
+
+      appData.pronostics.forEach(p => {
+        if(p[0] === joueur && p[5] !== "" && p[6] !== "") {
+          const matchId = p[1], pts = parseInt(p[9]) || 0, textPerf = p[11] || "";
+          const matchData = appData.calendrier.find(r => r[0] == matchId);
+          if(!matchData || matchData[5] === "") return; // ScoreA
+          
+          let perfLevel = 0;
+          if(textPerf.includes("Expert")) perfLevel = 3;
+          else if(textPerf.includes("Bien vu")) perfLevel = 2;
+          else if(textPerf.includes("Trompé") || textPerf.includes("Ridicule") || textPerf.includes("sieste")) perfLevel = 0;
+          else perfLevel = 1;
+
+          if (perfLevel > bestPerfRank || (perfLevel === bestPerfRank && pts > bestScore)) {
+            bestPerfRank = perfLevel; bestScore = pts;
+            bestMatchObj = { match: matchData, prono: p };
+          }
+        }
+      });
+
+      if (bestMatchObj && bestScore > 0) {
+        bestMatchHTML = `
+          <div class="col-span-2 mt-4">
+            <h4 class="text-pastis-500 font-bold uppercase text-xs md:text-sm mb-1 flex items-center space-x-1"><span>MEILLEUR COUP</span></h4>
+            ${generatePlayerHistoryItemHTML(bestMatchObj.match, bestMatchObj.prono)}
+          </div>
+        `;
+      }
+
+      let jokersHTML = '';
+      let playerJokers = appData.pronostics.filter(p => p[0] === joueur && p[8] && String(p[8]).toLowerCase() === 'oui');
+      if (playerJokers.length > 0) {
+          jokersHTML = `<div class="col-span-2 mt-4">
+            <h4 class="text-pastis-500 font-bold uppercase text-xs md:text-sm mb-1 flex items-center space-x-1"><span>JOKERS</span><span class="bg-navy-700 text-white px-1.5 rounded ml-2">${playerJokers.length}/3</span></h4>
+            <div class="space-y-0">`; 
+          
+          playerJokers.forEach(j => {
+              const mData = appData.calendrier.find(m => m[0] == j[1]);
+              if(mData) {
+                  jokersHTML += generatePlayerHistoryItemHTML(mData, j);
+              }
+          });
+          jokersHTML += `</div></div>`;
+      }
+
+      // --- NOUVELLE STRUCTURE HTML DE L'EN-TÊTE ---
+      headerDiv.innerHTML = `
+        <div class="bg-gradient-to-br from-navy-800 to-navy-700 rounded-xl p-5 border border-navy-700 shadow-lg relative overflow-hidden">
+          <div class="absolute top-0 right-0 bg-pastis-500 text-navy-900 px-4 py-1 rounded-bl-lg font-black font-oswald text-xl shadow-md">${formatPoints(total)}</div>
+          
+          <h3 class="text-3xl font-oswald font-black mb-1 text-white uppercase tracking-wide">${joueur}</h3>
+          
+          ${phraseHTML}
+
+          <p class="text-gray-400 font-medium text-sm mb-4">Classement actuel : <span class="text-white font-bold bg-navy-900 px-2 py-0.5 rounded shadow-inner">#${rang}</span></p>
+
+          <div class="grid grid-cols-3 gap-2 mb-6">
+            <div class="bg-navy-900 p-2 rounded text-center border border-navy-700 flex flex-col justify-center items-center">
+              <span class="block text-xs md:text-sm text-gray-400 uppercase">Pts du Jour</span>
+              <span class="font-bold text-pastis-500 font-oswald text-lg md:text-xl leading-none mt-1 block">${ptsJourFormatted}</span>
+            </div>
+            <div class="bg-navy-900 p-2 rounded text-center border border-navy-700 flex flex-col justify-center items-center">
+              <span class="block text-xs md:text-sm text-gray-400 uppercase mb-1 text-center">Evolution vs J-1</span>
+              ${evolJ1}
+            </div>
+            <div class="bg-navy-900 p-2 rounded text-center border border-navy-700 flex flex-col justify-center items-center">
+              <span class="block text-xs md:text-sm text-gray-400 uppercase mb-1 text-center">Evolution vs J-2</span>
+              ${evolJ2}
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div class="bg-navy-900 p-3 rounded-lg border border-navy-700">
+              <span class="text-xs md:text-sm text-gray-400 block mb-2 uppercase">Forme & Réussite</span>
+              <div class="flex space-x-1 mb-3">${formeHTML}</div>
+              <span class="text-xs md:text-sm text-gray-400 block mb-1 uppercase">Bons résultats</span>
+              <span class="font-bold text-green-400 font-oswald text-xl">${bonsResultats}</span>
+            </div>
+            <div class="bg-navy-900 p-3 rounded-lg border border-navy-700 flex flex-col justify-center">
+              <span class="text-xs md:text-sm text-gray-400 block mb-1 uppercase">Favori</span>
+              ${favContent}
+              <span class="text-xs md:text-sm text-gray-400 block mb-1 uppercase border-t border-navy-700 pt-1 mt-1">Finaliste</span>
+              ${finContent}
+            </div>
+            ${bestMatchHTML}
+            ${jokersHTML}
+            
+            <div class="col-span-2 mt-4 bg-navy-900 p-3 rounded-lg border border-navy-700 shadow-inner">
+              <h4 class="text-pastis-500 font-bold uppercase text-xs md:text-sm mb-3">ÉVOLUTION DU CLASSEMENT</h4>
+              <div class="relative h-[200px] w-full">
+                <canvas id="playerEvolutionChart"></canvas>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      `;
+      headerDiv.classList.remove('hidden');
+      historySec.classList.remove('hidden');
+      
+      drawPlayerChart(joueur);
+
+      document.getElementById('filter-pts').value = 'all';
+      document.getElementById('filter-perf').value = 'all';
+      renderJoueurHistory();
+    }
+
+    function renderJoueurHistory() {
+      const joueur = document.getElementById('select-joueur').value;
+      const fPts = document.getElementById('filter-pts').value;
+      const fPerf = document.getElementById('filter-perf').value;
+      const fPhase = document.getElementById('filter-joueur-phase') ? document.getElementById('filter-joueur-phase').value : 'all';
+      const fTeam = document.getElementById('filter-joueur-team') ? document.getElementById('filter-joueur-team').value : 'all';
+      
+      let phasesOrder = [];
+      appData.calendrier.forEach(m => {
+        let p = m[8] ? m[8].trim() : "";
+        if(p && !phasesOrder.includes(p)) phasesOrder.push(p);
+      });
+
+      let phaseEnCours = null;
+      for(let i=0; i<phasesOrder.length; i++) {
+        let p = phasesOrder[i];
+        let hasUnplayed = appData.calendrier.some(m => m[8] && m[8].trim() === p && m[5] === "");
+        if(hasUnplayed) {
+          phaseEnCours = p;
+          break;
+        }
+      }
+
+      let pronosListHTML = '';
+      appData.calendrier.forEach(match => {
+        let idMatch = match[0];
+        let phaseMatch = match[8] ? match[8].trim() : "";
+        let eqA = match[3] || "";
+        let eqB = match[4] || "";
+        let prono = appData.pronostics.find(p => p[0] === joueur && p[1] === idMatch);
+        
+        let hasProno = prono && prono[5] !== "" && prono[6] !== "";
+        let isCurrentPhase = (phaseMatch === phaseEnCours);
+
+        if(hasProno || isCurrentPhase) {
+          if (!prono) prono = [joueur, idMatch, "", "", "", "", "", "", "non", "", "", ""];
+          
+          let points = prono[9] || "";
+          let textPerf = prono[11] || "";
+          
+          if (fPts !== 'all' && points.toString() !== fPts) return;
+          if (fPerf !== 'all' && (!textPerf || !textPerf.includes(fPerf))) return;
+          if (fPhase !== 'all' && phaseMatch !== fPhase) return;
+          if (fTeam !== 'all' && eqA !== fTeam && eqB !== fTeam) return;
+
+          pronosListHTML += generatePlayerHistoryItemHTML(match, prono);
+        }
+      });
+
+      if(pronosListHTML === '') pronosListHTML = '<p class="text-sm text-gray-500 italic mt-4 text-center">Aucun résultat correspondant aux filtres.</p>';
+      document.getElementById('joueur-history-list').innerHTML = pronosListHTML;
+      parseFlags();
+    }
+
+// --- MATCH DETAIL ---
+function openMatchDetails(idMatch) {
+  const match = appData.calendrier.find(r => r[0] == idMatch);
+  if(!match) return;
+
+  const date = match[1], time = match[2], phase = match[8], eqA = match[3], eqB = match[4];
+  const scoreA = match[5], scoreB = match[6], vainqueurTAB = match[7];
+  
+  const isbonus = match[9] && String(match[9]).toLowerCase() === "oui";
+  const groupName = match[10] || ""; 
+  const tvChannel = match[11] || ""; 
+  
+  const stat1 = match[13], statN = match[14], stat2 = match[15];
+  const jokerCount = match[17] || "";
+  
+  const isPlayed = (scoreA !== "" && scoreB !== "");
+  const isPhaseStarted = phasesStarted[phase] || false;
+
+  const backBtn = document.querySelector('#view-match > button');
+  if (backBtn) {
+    backBtn.className = "flex items-center justify-center text-pastis-500 hover:text-pastis-600 mb-8 font-medium bg-navy-800/80 backdrop-blur px-6 py-2 rounded-full w-fit mx-auto transition border border-navy-700 shadow-lg relative z-20";
+  }
+
+  let tabDetailHTML = vainqueurTAB !== "" ? `<p class="text-gray-400 font-bold text-sm mt-3 uppercase tracking-widest drop-shadow-md">Victoire ${vainqueurTAB} (TAB)</p>` : '';
+  const styles = getTeamDisplayStyles(eqA, eqB, scoreA, scoreB, vainqueurTAB);
+  
+  let tvHTML = tvChannel !== "" ? getTvLogoHTML(tvChannel) : '';
+
+  let fifaA = getFifaRank(eqA);
+  let fifaB = getFifaRank(eqB);
+  let logoA = getLogoUrl(eqA);
+  let logoB = getLogoUrl(eqB);
+
+  let logoHtmlA = logoA !== "" ? `<img src="${logoA}" loading="lazy" class="w-10 h-10 md:w-16 md:h-16 object-contain drop-shadow-xl ${styles.flagOpacityA}" alt="">` : "";
+  let logoHtmlB = logoB !== "" ? `<img src="${logoB}" loading="lazy" class="w-10 h-10 md:w-16 md:h-16 object-contain drop-shadow-xl ${styles.flagOpacityB}" alt="">` : "";
+
+  let groupText = groupName !== "" ? `<span class="mx-1 md:mx-2 text-gray-500">•</span><span class="text-gray-300 capitalize">${groupName.toLowerCase()}</span>` : "";
+
+  let maillotA = getMaillotUrl(eqA);
+  let maillotB = getMaillotUrl(eqB);
+
+  const viewMatch = document.getElementById('view-match');
+  viewMatch.className = "hidden animate-fade-in relative md:max-w-4xl md:mx-auto w-full z-10";
+  
+  let oldBg = document.getElementById('match-bg-maillots');
+  if (oldBg) oldBg.remove();
+
+  let bgMaillotsDesktop = `
+    <div id="match-bg-maillots" class="fixed top-[64px] bottom-0 left-0 right-0 z-0 pointer-events-none opacity-[0.35] mix-blend-luminosity hidden md:flex justify-between items-start px-0">
+      <div class="w-[45%] h-full flex items-start justify-start">
+        ${maillotA ? `<img src="${maillotA}" loading="lazy" class="w-full h-full object-cover drop-shadow-2xl" style="object-position: 100% 0%; -webkit-mask-image: linear-gradient(to right, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%); mask-image: linear-gradient(to right, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);">` : ''}
+      </div>
+      <div class="w-[45%] h-full flex items-start justify-end">
+        ${maillotB ? `<img src="${maillotB}" loading="lazy" class="w-full h-full object-cover drop-shadow-2xl" style="object-position: 0% 0%; -webkit-mask-image: linear-gradient(to left, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 80%); mask-image: linear-gradient(to left, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);">` : ''}
+      </div>
+    </div>
+  `;
+  viewMatch.insertAdjacentHTML('afterbegin', bgMaillotsDesktop);
+
+  let bgMaillotsMobile = ``;
+
+  let statsDetailHTML = '';
+  if (stat1 && stat1 !== "" && isPhaseStarted) {
+      let jokerBadge = (isbonus && jokerCount !== "") ? `
+        <div class="absolute left-1/2 ml-[130px] sm:ml-[160px] md:ml-[220px] pl-3 md:pl-5 bottom-0 mb-2 md:mb-3 flex flex-col items-center justify-end">
+          <span class="text-[7.5px] sm:text-[8px] md:text-[9px] text-pastis-500 uppercase tracking-widest font-bold mb-1 md:mb-1.5 whitespace-normal md:whitespace-nowrap text-center leading-[1.1] max-w-[65px] sm:max-w-[75px] md:max-w-none">Joker(s) sur ce match</span>
+          <div class="flex items-center justify-center bg-pastis-500 text-navy-900 text-sm md:text-base font-black px-2 md:px-3 py-0.5 rounded shadow-[0_0_8px_rgba(247,195,37,0.4)] min-w-[35px] border border-pastis-500 leading-none">
+            ${jokerCount}
+          </div>
+        </div>
+      ` : "";
+
+      statsDetailHTML = `
+        <div class="w-full flex justify-center mt-5 pt-4 border-t border-navy-700/50 relative z-10">
+          <div class="relative flex justify-center w-full px-2">
+
+            <div class="flex flex-col items-center flex-none bg-navy-900/60 backdrop-blur px-3 md:px-5 py-2 md:py-3 rounded-xl border border-navy-700 shadow-inner w-[260px] sm:w-[320px] md:w-[440px]">
+              <span class="text-[10px] md:text-xs text-gray-400 uppercase tracking-[0.2em] font-bold mb-1.5 md:mb-2 text-center w-full">Tendance</span>
+              
+              <div class="grid grid-cols-3 gap-1.5 md:gap-4 font-oswald w-full">
+                <div class="flex items-center justify-center px-1.5 py-0.5 rounded border border-navy-600 overflow-hidden">
+                  <span class="text-gray-400 text-[9px] md:text-[11px] mr-1 md:mr-1.5 uppercase truncate">${getCleanName(eqA)}</span>
+                  <span class="font-bold text-white text-sm md:text-base flex-shrink-0">${stat1}</span>
+                </div>
+                <div class="flex items-center justify-center px-1.5 py-0.5 rounded border border-navy-600 overflow-hidden">
+                  <span class="text-gray-400 text-[9px] md:text-[11px] mr-1 md:mr-1.5 uppercase">Nul</span>
+                  <span class="font-bold text-white text-sm md:text-base flex-shrink-0">${statN}</span>
+                </div>
+                <div class="flex items-center justify-center px-1.5 py-0.5 rounded border border-navy-600 overflow-hidden">
+                  <span class="text-gray-400 text-[9px] md:text-[11px] mr-1 md:mr-1.5 uppercase truncate">${getCleanName(eqB)}</span>
+                  <span class="font-bold text-white text-sm md:text-base flex-shrink-0">${stat2}</span>
+                </div>
+              </div>
+            </div>
+
+            ${jokerBadge}
+
+          </div>
+        </div>
+      `;
+  }
+
+  const headerEl = document.getElementById('match-header');
+  headerEl.className = `text-center mb-8 mt-2 relative flex flex-col justify-center min-h-[140px] md:min-h-[200px]`;
+
+  headerEl.innerHTML = `
+    ${bgMaillotsMobile}
+    <div class="relative z-10 w-full flex flex-col items-center">
+      
+      ${isbonus ? `<div class="bg-orange-600 text-white text-[10px] md:text-xs font-black px-4 py-1 rounded-full shadow-lg uppercase tracking-wider border border-orange-400 flex items-center gap-1 mb-4"><span>🔥</span> Match Bonus</div>` : ''}
+      
+      <div class="mb-5 text-xs md:text-sm font-semibold tracking-wider text-center flex items-center justify-center gap-1.5 md:gap-2 overflow-hidden px-4 py-1.5 bg-navy-900/50 backdrop-blur-md rounded-full shadow-sm w-fit mx-auto border border-navy-700/50">
+        <span class="text-gray-200 flex items-center uppercase whitespace-nowrap">${date} <span class="mx-2 text-gray-500">•</span> <span class="text-pastis-500">${time}</span> ${groupText}</span>
+        ${tvChannel !== "" ? `<span class="hidden md:inline mx-1 text-gray-500">•</span>` : ""}
+        ${tvHTML}
+      </div>
+      
+      <div class="flex justify-center items-center font-oswald w-full mt-2">
+        
+        <div class="flex-1 flex flex-col items-end justify-center pr-3 md:pr-6 min-w-0 drop-shadow-xl">
+          <div class="flex items-center justify-end w-full">
+            ${styles.iconA}
+            <span class="text-right text-xl md:text-4xl leading-tight tracking-wide whitespace-normal break-words ${styles.clsEqA} mr-3 md:mr-5">${getCleanName(eqA)}</span>
+            ${logoHtmlA}
+          </div>
+          ${fifaA !== "" ? `<span class="text-[9px] md:text-[12px] text-pastis-500 opacity-90 font-oswald tracking-widest uppercase mt-2 mr-12 md:mr-[85px]">FIFA #${fifaA}</span>` : ""}
+        </div>
+        
+        <div class="flex flex-col items-center justify-center min-w-[80px] md:min-w-[120px] flex-shrink-0 z-10 px-2 drop-shadow-2xl">
+          <div class="text-3xl md:text-5xl font-black bg-navy-900/90 backdrop-blur-md px-4 md:px-6 py-2 md:py-3 rounded-xl text-${isPlayed ? 'pastis-500' : 'gray-400'} border border-navy-700 shadow-[0_0_20px_rgba(0,0,0,0.5)]">
+            ${isPlayed ? scoreA + ' - ' + scoreB : 'VS'}
+          </div>
+          ${tabDetailHTML}
+        </div>
+        
+        <div class="flex-1 flex flex-col items-start justify-center pl-3 md:pl-6 min-w-0 drop-shadow-xl">
+          <div class="flex items-center justify-start w-full">
+            ${logoHtmlB}
+            <span class="text-left text-xl md:text-4xl leading-tight tracking-wide whitespace-normal break-words ${styles.clsEqB} ml-3 md:ml-5">${getCleanName(eqB)}</span>
+            ${styles.iconB}
+          </div>
+          ${fifaB !== "" ? `<span class="text-[9px] md:text-[12px] text-pastis-500 opacity-90 font-oswald tracking-widest uppercase mt-2 ml-12 md:ml-[85px]">FIFA #${fifaB}</span>` : ''}
+        </div>
+        
+      </div>
+      
+      ${statsDetailHTML}
+
+    </div>
+  `;
+
+  const pronosMatch = appData.pronostics.filter(r => r[1] == idMatch);
+  pronosMatch.sort((a, b) => {
+    const ptsA = parseInt(a[9]) || 0, ptsB = parseInt(b[9]) || 0;
+    if(ptsB !== ptsA) return ptsB - ptsA;
+    const infoA = appData.classement.find(c => c[3] === a[0]);
+    const infoB = appData.classement.find(c => c[3] === b[0]);
+    return (infoA ? parseInt(infoA[2]) : 999) - (infoB ? parseInt(infoB[2]) : 999);
+  });
+
+  const pronoContainer = document.getElementById('pronostics-list');
+  let pronoHTML = '';
+  
+  if(pronosMatch.length === 0) {
+    pronoHTML = `<li class="p-4 text-center text-gray-500 italic">Aucun pronostic enregistré.</li>`;
+  } else {
+    pronosMatch.forEach(p => {
+      const joueur = p[0], pronoA = p[5], pronoB = p[6], pTAB = p[7], isJoker = p[8] && String(p[8]).toLowerCase() === 'oui', points = p[9], textInfo = p[10], textPerf = p[11]; 
+      if(pronoA === "" || pronoB === "") return;
+
+      const infoJoueur = appData.classement.find(c => c[3] === joueur);
+      const rangJoueur = infoJoueur ? infoJoueur[2] : '-'; 
+      
+      let ptsBadge = "", btnInfo = "", pronoBloc = "", pTabHTML = "";
+      let jkrBadge = isJoker ? `<span class="joker-pulse bg-pastis-500 text-navy-900 text-[7px] md:text-[9px] font-black px-1 py-0.5 rounded shadow-sm whitespace-nowrap mb-0.5 mx-auto block w-max">🌟 JOKER</span>` : ``;
+
+      if(!isPhaseStarted && !isPlayed) {
+        pronoBloc = `<div class="font-black text-gray-500 text-lg">🔒</div>`;
+        btnInfo = `<button onclick="showTooltip(event, 'Pronostic masqué avant le début de la phase')" class="ml-2 w-6 h-6 flex items-center justify-center rounded-full bg-navy-700 text-white font-bold font-serif text-[10px] shadow-sm transition flex-shrink-0 relative z-20 pointer-events-auto">i</button>`;
+      } else {
+        ptsBadge = getPointsBadge(points);
+        btnInfo = `<button onclick="showTooltip(event, '${escapeJS(textInfo)}')" class="ml-2 w-6 h-6 flex items-center justify-center rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold font-serif text-[10px] shadow-sm transition flex-shrink-0 relative z-20 pointer-events-auto">i</button>`;
+        
+        let colorProno = isJoker ? 'text-pastis-500' : 'text-white';
+        pronoBloc = `<span class="font-black font-oswald tracking-widest text-base md:text-2xl ${colorProno}">${pronoA}-${pronoB}</span>`;
+        
+        pTabHTML = (pTAB && pTAB.trim() !== "") ? `<div class="text-[9px] text-pastis-500 font-bold uppercase mt-0.5">TAB: ${pTAB}</div>` : '';
+      }
+
+      let perfBadge = getPerformanceBadge(textPerf);
+
+      pronoHTML += `
+        <li class="flex items-center justify-between p-4 hover:bg-navy-700 transition border-b border-navy-700/50 last:border-0 relative bg-navy-800/80 backdrop-blur-sm">
+          <div class="flex items-center flex-1 pr-2 overflow-hidden">
+            <span class="text-[10px] md:text-sm font-black font-oswald text-white bg-navy-900 border border-navy-600 px-2 py-0.5 rounded-lg shadow-sm whitespace-nowrap mr-2 flex-shrink-0 flex items-center justify-center min-w-[30px]">#${rangJoueur}</span>
+            <span onclick="goToPlayerProfile('${escapeJS(joueur)}')" class="font-bold text-white hover:text-pastis-500 underline cursor-pointer truncate relative z-20 pointer-events-auto text-sm md:text-base">${joueur}</span>
+          </div>
+          <div class="flex flex-col flex-1 items-center justify-center">
+            ${jkrBadge}
+            ${pronoBloc}
+            ${pTabHTML}
+            </div>
+          <div class="w-[30%] flex flex-col items-end justify-center space-y-1">
+            ${isPlayed ? perfBadge : ''}
+            <div class="flex items-center justify-end space-x-1">
+              ${ptsBadge}
+              ${btnInfo}
+            </div>
+          </div>
+        </li>
+      `;
+    });
+  }
+  pronoContainer.innerHTML = pronoHTML;
+  parseFlags();
+  switchView('match');
+
+  const mainScrollContainer = document.querySelector('.main-scroll');
+  if (mainScrollContainer) {
+    mainScrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+  </script>
+</body>
+</html>
