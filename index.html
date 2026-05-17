@@ -2272,12 +2272,22 @@ function openMatchDetails(idMatch) {
 
 let bgMaillotsDesktop = `
     <div id="match-bg-maillots" class="fixed top-[64px] bottom-0 left-0 right-0 z-0 pointer-events-none opacity-[0.35] mix-blend-luminosity hidden md:flex justify-between items-start px-0">
-      <div class="w-[45%] h-full flex items-start justify-start">
-        ${maillotA ? `<img src="${maillotA}" loading="lazy" class="w-full h-full object-cover drop-shadow-2xl" style="object-position: 100% 0%; -webkit-mask-image: -webkit-linear-gradient(right, rgba(0,0,0,0) 0%, rgba(0,0,0,0.9) 100%); mask-image: linear-gradient(to right, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%); -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;">` : ''}
-      </div>
-      <div class="w-[45%] h-full flex items-start justify-end">
-        ${maillotB ? `<img src="${maillotB}" loading="lazy" class="w-full h-full object-cover drop-shadow-2xl" style="object-position: 0% 0%; -webkit-mask-image: -webkit-linear-gradient(left, rgba(0,0,0,0) 0%, rgba(0,0,0,0.9) 100%); mask-image: linear-gradient(to left, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%); -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;">` : ''}
-      </div>
+      <div class="w-[45%] h-full" style="
+        background-image: url('${maillotA}');
+        background-size: cover;
+        background-position: right top;
+        background-repeat: no-repeat;
+        -webkit-mask-image: linear-gradient(to right, black 0%, transparent 100%);
+        mask-image: linear-gradient(to right, black 0%, transparent 100%);
+      "></div>
+      <div class="w-[45%] h-full" style="
+        background-image: url('${maillotB}');
+        background-size: cover;
+        background-position: left top;
+        background-repeat: no-repeat;
+        -webkit-mask-image: linear-gradient(to left, black 0%, transparent 100%);
+        mask-image: linear-gradient(to left, black 0%, transparent 100%);
+      "></div>
     </div>
   `;
   viewMatch.insertAdjacentHTML('afterbegin', bgMaillotsDesktop);
