@@ -2286,6 +2286,15 @@ function openMatchDetails(idMatch) {
 
   let statsDetailHTML = '';
   if (stat1 && stat1 !== "" && isPhaseStarted) {
+      const real1N2detail = styles.real1N2;
+
+      let bg1d = real1N2detail === "1" ? "bg-pastis-500 text-navy-900 border-pastis-500 shadow-[0_0_10px_rgba(247,195,37,0.4)]" : "bg-navy-800 text-white border-navy-700 shadow-sm";
+      let lbl1d = real1N2detail === "1" ? "text-navy-900 opacity-70" : "text-gray-400";
+      let bgNd = real1N2detail === "N" ? "bg-pastis-500 text-navy-900 border-pastis-500 shadow-[0_0_10px_rgba(247,195,37,0.4)]" : "bg-navy-800 text-white border-navy-700 shadow-sm";
+      let lblNd = real1N2detail === "N" ? "text-navy-900 opacity-70" : "text-gray-400";
+      let bg2d = real1N2detail === "2" ? "bg-pastis-500 text-navy-900 border-pastis-500 shadow-[0_0_10px_rgba(247,195,37,0.4)]" : "bg-navy-800 text-white border-navy-700 shadow-sm";
+      let lbl2d = real1N2detail === "2" ? "text-navy-900 opacity-70" : "text-gray-400";
+
       let jokerBadge = (isbonus && jokerCount !== "") ? `
         <div class="absolute left-1/2 ml-[130px] sm:ml-[160px] md:ml-[220px] pl-3 md:pl-5 bottom-0 mb-2 md:mb-3 flex flex-col items-center justify-end">
           <span class="text-[7.5px] sm:text-[8px] md:text-[9px] text-pastis-500 uppercase tracking-widest font-bold mb-1 md:mb-1.5 whitespace-normal md:whitespace-nowrap text-center leading-[1.1] max-w-[65px] sm:max-w-[75px] md:max-w-none">Joker(s) sur ce match</span>
@@ -2303,17 +2312,17 @@ function openMatchDetails(idMatch) {
               <span class="text-[10px] md:text-xs text-gray-400 uppercase tracking-[0.2em] font-bold mb-1.5 md:mb-2 text-center w-full">Tendance</span>
               
               <div class="grid grid-cols-3 gap-1.5 md:gap-4 font-oswald w-full">
-                <div class="flex items-center justify-center px-1.5 py-0.5 rounded border border-navy-600 overflow-hidden">
-                  <span class="text-gray-400 text-[9px] md:text-[11px] mr-1 md:mr-1.5 uppercase truncate">${getCleanName(eqA)}</span>
-                  <span class="font-bold text-white text-sm md:text-base flex-shrink-0">${stat1}</span>
+                <div class="flex items-center justify-center px-1.5 py-0.5 rounded border ${bg1d} transition overflow-hidden">
+                  <span class="text-[9px] md:text-[11px] font-bold uppercase ${lbl1d} truncate mr-1 md:mr-1.5">${getCleanName(eqA)}</span>
+                  <span class="font-black text-sm md:text-base flex-shrink-0">${stat1}</span>
                 </div>
-                <div class="flex items-center justify-center px-1.5 py-0.5 rounded border border-navy-600 overflow-hidden">
-                  <span class="text-gray-400 text-[9px] md:text-[11px] mr-1 md:mr-1.5 uppercase">Nul</span>
-                  <span class="font-bold text-white text-sm md:text-base flex-shrink-0">${statN}</span>
+                <div class="flex items-center justify-center px-1.5 py-0.5 rounded border ${bgNd} transition overflow-hidden">
+                  <span class="text-[9px] md:text-[11px] font-bold uppercase ${lblNd} mr-1 md:mr-1.5">Nul</span>
+                  <span class="font-black text-sm md:text-base flex-shrink-0">${statN}</span>
                 </div>
-                <div class="flex items-center justify-center px-1.5 py-0.5 rounded border border-navy-600 overflow-hidden">
-                  <span class="text-gray-400 text-[9px] md:text-[11px] mr-1 md:mr-1.5 uppercase truncate">${getCleanName(eqB)}</span>
-                  <span class="font-bold text-white text-sm md:text-base flex-shrink-0">${stat2}</span>
+                <div class="flex items-center justify-center px-1.5 py-0.5 rounded border ${bg2d} transition overflow-hidden">
+                  <span class="text-[9px] md:text-[11px] font-bold uppercase ${lbl2d} truncate mr-1 md:mr-1.5">${getCleanName(eqB)}</span>
+                  <span class="font-black text-sm md:text-base flex-shrink-0">${stat2}</span>
                 </div>
               </div>
             </div>
