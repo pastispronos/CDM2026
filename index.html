@@ -406,58 +406,57 @@ function fetchData() {
     }
 
 function populateFilters() {
-      const teamSelect = document.getElementById('team-filter');
-      const phaseSelect = document.getElementById('phase-filter');
-      // Les nouveaux filtres de la vue Joueurs
-      const teamSelectJoueur = document.getElementById('filter-joueur-team');
-      const phaseSelectJoueur = document.getElementById('filter-joueur-phase');
+  const teamSelect = document.getElementById('team-filter');
+  const phaseSelect = document.getElementById('phase-filter');
+  const teamSelectJoueur = document.getElementById('filter-joueur-team');
+  const phaseSelectJoueur = document.getElementById('filter-joueur-phase');
 
-      // 1. Remplissage des Équipes
-      let teamOptions = '<option value="all">🌍 Toutes les équipes</option>';
-      let validTeams = appData.equipes.filter(e => e[0] && e[0].trim() !== "");
-      let uniqueTeams = [];
-      validTeams.forEach(t => { if(!uniqueTeams.some(x => x[0] === t[0])) uniqueTeams.push(t); });
-      uniqueTeams.sort((a,b) => a[0].localeCompare(b[0]));
-      uniqueTeams.forEach(t => { teamOptions += `<option value="${escapeJS(t[0])}">${getFlagOnly(t[0])} ${getCleanName(t[0])}</option>`; });
-      
-      if(teamSelect) teamSelect.innerHTML = teamOptions;
-      if(teamSelectJoueur) teamSelectJoueur.innerHTML = teamOptions;
+  // 1. Remplissage des Équipes — sans emoji dans les <option> (compat Windows)
+  let teamOptions = '<option value="all">Toutes les équipes</option>';
+  let validTeams = appData.equipes.filter(e => e[0] && e[0].trim() !== "");
+  let uniqueTeams = [];
+  validTeams.forEach(t => { if(!uniqueTeams.some(x => x[0] === t[0])) uniqueTeams.push(t); });
+  uniqueTeams.sort((a,b) => a[0].localeCompare(b[0]));
+  uniqueTeams.forEach(t => { teamOptions += `<option value="${escapeJS(t[0])}">${getCleanName(t[0])}</option>`; });
+  
+  if(teamSelect) teamSelect.innerHTML = teamOptions;
+  if(teamSelectJoueur) teamSelectJoueur.innerHTML = teamOptions;
 
-      // 2. Remplissage des Phases ET Détection de la Phase en cours
-      let phaseOptions = '<option value="all">🏆 Toutes les phases</option>';
-      let phasesOrder = [];
-      appData.calendrier.forEach(m => {
-        let p = m[8] ? m[8].trim() : "";
-        if(p && !phasesOrder.includes(p) && !p.toLowerCase().includes("vainqueur") && !p.toLowerCase().includes("finaliste")) {
-            phasesOrder.push(p);
-        }
-      });
-
-      let currentPhaseToSelect = "all";
-      let foundCurrent = false;
-
-      phasesOrder.forEach(p => {
-         let hasUnplayed = appData.calendrier.some(m => m[8] && m[8].trim() === p && m[5] === "");
-         if (hasUnplayed && !foundCurrent) {
-             currentPhaseToSelect = p;
-             foundCurrent = true;
-         }
-         phaseOptions += `<option value="${escapeJS(p)}">${p}</option>`;
-      });
-
-      if (!foundCurrent && phasesOrder.length > 0) {
-          currentPhaseToSelect = phasesOrder[phasesOrder.length - 1];
-      }
-
-      if(phaseSelect) {
-          phaseSelect.innerHTML = phaseOptions;
-          phaseSelect.value = escapeJS(currentPhaseToSelect);
-      }
-      if(phaseSelectJoueur) {
-          phaseSelectJoueur.innerHTML = phaseOptions;
-          phaseSelectJoueur.value = escapeJS(currentPhaseToSelect);
-      }
+  // 2. Remplissage des Phases
+  let phaseOptions = '<option value="all">Toutes les phases</option>';
+  let phasesOrder = [];
+  appData.calendrier.forEach(m => {
+    let p = m[8] ? m[8].trim() : "";
+    if(p && !phasesOrder.includes(p) && !p.toLowerCase().includes("vainqueur") && !p.toLowerCase().includes("finaliste")) {
+        phasesOrder.push(p);
     }
+  });
+
+  let currentPhaseToSelect = "all";
+  let foundCurrent = false;
+
+  phasesOrder.forEach(p => {
+     let hasUnplayed = appData.calendrier.some(m => m[8] && m[8].trim() === p && m[5] === "");
+     if (hasUnplayed && !foundCurrent) {
+         currentPhaseToSelect = p;
+         foundCurrent = true;
+     }
+     phaseOptions += `<option value="${escapeJS(p)}">${p}</option>`;
+  });
+
+  if (!foundCurrent && phasesOrder.length > 0) {
+      currentPhaseToSelect = phasesOrder[phasesOrder.length - 1];
+  }
+
+  if(phaseSelect) {
+      phaseSelect.innerHTML = phaseOptions;
+      phaseSelect.value = escapeJS(currentPhaseToSelect);
+  }
+  if(phaseSelectJoueur) {
+      phaseSelectJoueur.innerHTML = phaseOptions;
+      phaseSelectJoueur.value = escapeJS(currentPhaseToSelect);
+  }
+}
 
 function initApp(data, isCached = false) {
       appData = data;
@@ -1225,6 +1224,9 @@ function switchCalView(view) {
 }
 
     function switchView(viewName) {
+        if (viewName !== 'match') {
+    document.querySelector('.main-scroll').style.overflowY = 'scroll';
+  }
   currentView = viewName;
   ['classement', 'joueurs', 'calendrier', 'match', 'graph', 'duel', 'reglement'].forEach(v => document.getElementById('view-' + v).classList.add('hidden'));
   ['classement', 'joueurs', 'calendrier', 'graph', 'duel', 'reglement'].forEach(v => document.getElementById('nav-' + v).classList.remove('text-pastis-500'));
@@ -2003,8 +2005,22 @@ function generateMatchCardHTML(row, logicalTodayStr) {
       const cData = appData.classement.find(r => r[3] === joueur);
       if(!cData) return;
 
-      const ptsJourFormatted = formatPoints(cData[2]); 
-      const evolJ1 = styleEvolText(cData[1]); 
+      // Calcul des points du jour depuis les pronostics (col A=joueur, C=date, J=points)
+      const logicalToday = getLogicalToday();
+      let ptsJour = 0;
+      appData.pronostics.forEach(p => {
+        if (p[0] === joueur) {
+          // On récupère la date logique du match correspondant
+          const matchData = appData.calendrier.find(m => m[0] == p[1]);
+          if (matchData) {
+            const matchLogicalDate = getLogicalDate(matchData[1], matchData[2]);
+            if (matchLogicalDate === logicalToday) {
+              ptsJour += parseInt(p[9]) || 0;
+            }
+          }
+        }
+      });
+      const ptsJourFormatted = ptsJour > 0 ? formatPoints(ptsJour) : "0 point";      const evolJ1 = styleEvolText(cData[1]); 
       const evolJ2 = styleEvolText(cData.evoJ2); 
       
       const rang = cData[2], total = cData[25], bonsResultats = cData[33];
@@ -2447,6 +2463,7 @@ function openMatchDetails(idMatch) {
   }
   pronoContainer.innerHTML = pronoHTML;
   parseFlags();
+  document.querySelector('.main-scroll').style.overflowY = 'auto';
   switchView('match');
 
   const mainScrollContainer = document.querySelector('.main-scroll');
