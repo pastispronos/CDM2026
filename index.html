@@ -37,6 +37,15 @@
     .main-scroll::-webkit-scrollbar-thumb { background-color: #4A5D7E; border-radius: 4px; }
     .main-scroll::-webkit-scrollbar-thumb:hover { background-color: #F7D11A; }
 
+      /* Masque la scrollbar verticale UNIQUEMENT sur la vue match */
+    .main-scroll.match-view {
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
+    }
+    .main-scroll.match-view::-webkit-scrollbar {
+      display: none !important;
+    }
+  
     /* Masquer scrollbar des petites listes (ex: tags) */
     .no-scrollbar::-webkit-scrollbar { display: none !important; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -150,7 +159,7 @@
         <div id="top-scrollbar-content" class="h-[1px]"></div>
       </div>
       
-      <div id="main-table-container" class="bg-navy-800 rounded-b-xl md:rounded-t-none rounded-xl shadow-lg border border-navy-700 overflow-x-scroll overflow-y-auto max-h-[calc(100dvh-220px)] md:max-h-[calc(100vh-240px)] custom-scrollbar pb-3 relative z-10">
+      <div id="main-table-container" class="bg-navy-800 rounded-b-xl md:rounded-t-none rounded-xl shadow-lg border border-navy-700 overflow-x-scroll custom-scrollbar pb-3 relative z-10">
         <table class="min-w-full text-sm text-center whitespace-nowrap table-fixed">
           <thead id="classement-head" class="bg-navy-900 text-gray-400 text-[10px] md:text-xs uppercase font-semibold border-b border-navy-700 select-none sticky top-0 z-40 shadow-sm"></thead>
           <tbody id="classement-list" class="divide-y divide-navy-700"></tbody>
@@ -1990,201 +1999,223 @@ function generateMatchCardHTML(row, logicalTodayStr) {
       select.innerHTML = options;
     }
 
-    function renderJoueurProfile(forcedJoueur = null) {
-      const select = document.getElementById('select-joueur');
-      if (forcedJoueur) select.value = forcedJoueur;
-      const joueur = select.value;
-      const headerDiv = document.getElementById('joueur-profile-header');
-      const historySec = document.getElementById('joueur-history-section');
-      
-      if(!joueur) { 
-        headerDiv.classList.add('hidden'); 
-        historySec.classList.add('hidden');
-        return; 
-      }
+function renderJoueurProfile(forcedJoueur = null) {
+  const select = document.getElementById('select-joueur');
+  if (forcedJoueur) select.value = forcedJoueur;
+  const joueur = select.value;
+  const headerDiv = document.getElementById('joueur-profile-header');
+  const historySec = document.getElementById('joueur-history-section');
+  
+  if(!joueur) { 
+    headerDiv.classList.add('hidden'); 
+    historySec.classList.add('hidden');
+    return; 
+  }
 
-      const cData = appData.classement.find(r => r[3] === joueur);
-      if(!cData) return;
+  const cData = appData.classement.find(r => r[3] === joueur);
+  if(!cData) return;
 
-      // Calcul des points du jour depuis les pronostics (col A=joueur, C=date, J=points)
-      const logicalToday = getLogicalToday();
-      let ptsJour = 0;
-      appData.pronostics.forEach(p => {
-        if (p[0] === joueur) {
-          // On récupère la date logique du match correspondant
-          const matchData = appData.calendrier.find(m => m[0] == p[1]);
-          if (matchData) {
-            const matchLogicalDate = getLogicalDate(matchData[1], matchData[2]);
-            if (matchLogicalDate === logicalToday) {
-              ptsJour += parseInt(p[9]) || 0;
-            }
-          }
-        }
-      });
-      const ptsJourFormatted = ptsJour > 0 ? formatPoints(ptsJour) : "0 point";      const evolJ1 = styleEvolText(cData[1]); 
-      const evolJ2 = styleEvolText(cData.evoJ2); 
-      
-      const rang = cData[2], total = cData[25], bonsResultats = cData[33];
-      const favori = cData[36], statutFav = cData[37], ptsFav = cData[38];
-      const finaliste = cData[40], statutFin = cData[41], ptsFin = cData[42];
+  // --- POINTS DU JOUR & ÉVOLUTIONS depuis classementJour ---
+  // Structure attendue : col[0]=Joueur, col[1]=PtsJour, col[2]=EvoJ-1, col[3]=EvoJ-2
+  let ptsJour = 0;
+  let evolJ1Raw = "";
+  let evolJ2Raw = "";
 
-      // --- Récupération de la phrase du joueur ---
-      let phraseJoueur = "";
-      if (appData.infosJoueurs) {
-        const jInfo = appData.infosJoueurs.find(r => r[0] === joueur);
-        if (jInfo && jInfo[10]) {
-          phraseJoueur = jInfo[10].trim();
-        }
-      }
-      
-      // Construction de la phrase (Oswald, blanc, italique, centré, sans bloc)
-      let phraseHTML = phraseJoueur 
-        ? `<p class="text-white font-oswald italic text-center text-sm md:text-[15px] tracking-wide mt-3 mb-5 px-2 max-w-2xl mx-auto opacity-90">« ${phraseJoueur} »</p>` 
-        : ``; // Si pas de phrase, on ne met rien
-
-      let formeHTML = '';
-      for(let i=27; i<=31; i++) {
-        let val = cData[i];
-        if(val === "V" || val === "✅") formeHTML += `<div class="w-6 h-6 bg-green-500 rounded flex items-center justify-center text-xs font-bold shadow">V</div>`;
-        else if(val === "X" || val === "⬜") formeHTML += `<div class="w-6 h-6 border-2 border-gray-500 bg-transparent rounded"></div>`;
-        else formeHTML += `<div class="w-6 h-6 bg-transparent"></div>`;
-      }
-
-      let stFavClass = getStatusClass(statutFav);
-      let stFinClass = getStatusClass(statutFin);
-
-      let favContent = !isTournamentStarted ? `<div class="flex items-center space-x-2 mb-1"><span class="text-lg">🔒</span><span class="text-xs md:text-sm text-gray-500 italic">Masqué</span></div>` : `
-        <div class="flex items-center space-x-2 mb-1">
-          <span class="text-xl emoji-flag">${getFlagOnly(favori)}</span>
-          <span class="font-bold text-sm whitespace-normal break-words leading-tight text-white">${getCleanName(favori)}</span>
-        </div>
-        <div class="flex items-center space-x-2 mb-3">
-          <span class="text-[10px] md:text-xs ${stFavClass} uppercase font-bold">${statutFav}</span>
-          ${ptsFav !== "" ? `<span class="text-[10px] md:text-xs bg-pastis-500 text-navy-900 px-1 rounded font-black">+${cleanPlus(ptsFav)}</span>` : ''}
-        </div>
-      `;
-
-      let finContent = !isTournamentStarted ? `<div class="flex items-center space-x-2"><span class="text-lg">🔒</span><span class="text-xs md:text-sm text-gray-500 italic">Masqué</span></div>` : `
-        <div class="flex items-center space-x-2 mb-1">
-          <span class="text-xl emoji-flag">${getFlagOnly(finaliste)}</span>
-          <span class="font-bold text-sm whitespace-normal break-words leading-tight text-white">${getCleanName(finaliste)}</span>
-        </div>
-        <div class="flex items-center space-x-2">
-          <span class="text-[10px] md:text-xs ${stFinClass} uppercase font-bold">${statutFin}</span>
-          ${ptsFin !== "" ? `<span class="text-[10px] md:text-xs bg-pastis-500 text-navy-900 px-1 rounded font-black">+${cleanPlus(ptsFin)}</span>` : ''}
-        </div>
-      `;
-
-      let bestMatchHTML = '';
-      let bestPerfRank = -1;
-      let bestScore = -1;
-      let bestMatchObj = null;
-
-      appData.pronostics.forEach(p => {
-        if(p[0] === joueur && p[5] !== "" && p[6] !== "") {
-          const matchId = p[1], pts = parseInt(p[9]) || 0, textPerf = p[11] || "";
-          const matchData = appData.calendrier.find(r => r[0] == matchId);
-          if(!matchData || matchData[5] === "") return; // ScoreA
-          
-          let perfLevel = 0;
-          if(textPerf.includes("Expert")) perfLevel = 3;
-          else if(textPerf.includes("Bien vu")) perfLevel = 2;
-          else if(textPerf.includes("Trompé") || textPerf.includes("Ridicule") || textPerf.includes("sieste")) perfLevel = 0;
-          else perfLevel = 1;
-
-          if (perfLevel > bestPerfRank || (perfLevel === bestPerfRank && pts > bestScore)) {
-            bestPerfRank = perfLevel; bestScore = pts;
-            bestMatchObj = { match: matchData, prono: p };
-          }
-        }
-      });
-
-      if (bestMatchObj && bestScore > 0) {
-        bestMatchHTML = `
-          <div class="col-span-2 mt-4">
-            <h4 class="text-pastis-500 font-bold uppercase text-xs md:text-sm mb-1 flex items-center space-x-1"><span>MEILLEUR COUP</span></h4>
-            ${generatePlayerHistoryItemHTML(bestMatchObj.match, bestMatchObj.prono)}
-          </div>
-        `;
-      }
-
-      let jokersHTML = '';
-      let playerJokers = appData.pronostics.filter(p => p[0] === joueur && p[8] && String(p[8]).toLowerCase() === 'oui');
-      if (playerJokers.length > 0) {
-          jokersHTML = `<div class="col-span-2 mt-4">
-            <h4 class="text-pastis-500 font-bold uppercase text-xs md:text-sm mb-1 flex items-center space-x-1"><span>JOKERS</span><span class="bg-navy-700 text-white px-1.5 rounded ml-2">${playerJokers.length}/3</span></h4>
-            <div class="space-y-0">`; 
-          
-          playerJokers.forEach(j => {
-              const mData = appData.calendrier.find(m => m[0] == j[1]);
-              if(mData) {
-                  jokersHTML += generatePlayerHistoryItemHTML(mData, j);
-              }
-          });
-          jokersHTML += `</div></div>`;
-      }
-
-      // --- NOUVELLE STRUCTURE HTML DE L'EN-TÊTE ---
-      headerDiv.innerHTML = `
-        <div class="bg-gradient-to-br from-navy-800 to-navy-700 rounded-xl p-5 border border-navy-700 shadow-lg relative overflow-hidden">
-          <div class="absolute top-0 right-0 bg-pastis-500 text-navy-900 px-4 py-1 rounded-bl-lg font-black font-oswald text-xl shadow-md">${formatPoints(total)}</div>
-          
-          <h3 class="text-3xl font-oswald font-black mb-1 text-white uppercase tracking-wide">${joueur}</h3>
-          
-          ${phraseHTML}
-
-          <p class="text-gray-400 font-medium text-sm mb-4">Classement actuel : <span class="text-white font-bold bg-navy-900 px-2 py-0.5 rounded shadow-inner">#${rang}</span></p>
-
-          <div class="grid grid-cols-3 gap-2 mb-6">
-            <div class="bg-navy-900 p-2 rounded text-center border border-navy-700 flex flex-col justify-center items-center">
-              <span class="block text-xs md:text-sm text-gray-400 uppercase">Pts du Jour</span>
-              <span class="font-bold text-pastis-500 font-oswald text-lg md:text-xl leading-none mt-1 block">${ptsJourFormatted}</span>
-            </div>
-            <div class="bg-navy-900 p-2 rounded text-center border border-navy-700 flex flex-col justify-center items-center">
-              <span class="block text-xs md:text-sm text-gray-400 uppercase mb-1 text-center">Evolution vs J-1</span>
-              ${evolJ1}
-            </div>
-            <div class="bg-navy-900 p-2 rounded text-center border border-navy-700 flex flex-col justify-center items-center">
-              <span class="block text-xs md:text-sm text-gray-400 uppercase mb-1 text-center">Evolution vs J-2</span>
-              ${evolJ2}
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div class="bg-navy-900 p-3 rounded-lg border border-navy-700">
-              <span class="text-xs md:text-sm text-gray-400 block mb-2 uppercase">Forme & Réussite</span>
-              <div class="flex space-x-1 mb-3">${formeHTML}</div>
-              <span class="text-xs md:text-sm text-gray-400 block mb-1 uppercase">Bons résultats</span>
-              <span class="font-bold text-green-400 font-oswald text-xl">${bonsResultats}</span>
-            </div>
-            <div class="bg-navy-900 p-3 rounded-lg border border-navy-700 flex flex-col justify-center">
-              <span class="text-xs md:text-sm text-gray-400 block mb-1 uppercase">Favori</span>
-              ${favContent}
-              <span class="text-xs md:text-sm text-gray-400 block mb-1 uppercase border-t border-navy-700 pt-1 mt-1">Finaliste</span>
-              ${finContent}
-            </div>
-            ${bestMatchHTML}
-            ${jokersHTML}
-            
-            <div class="col-span-2 mt-4 bg-navy-900 p-3 rounded-lg border border-navy-700 shadow-inner">
-              <h4 class="text-pastis-500 font-bold uppercase text-xs md:text-sm mb-3">ÉVOLUTION DU CLASSEMENT</h4>
-              <div class="relative h-[200px] w-full">
-                <canvas id="playerEvolutionChart"></canvas>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      `;
-      headerDiv.classList.remove('hidden');
-      historySec.classList.remove('hidden');
-      
-      drawPlayerChart(joueur);
-
-      document.getElementById('filter-pts').value = 'all';
-      document.getElementById('filter-perf').value = 'all';
-      renderJoueurHistory();
+  if (appData.classementJour && appData.classementJour.length > 0) {
+    const cjData = appData.classementJour.find(r => r[0] === joueur);
+    if (cjData) {
+      ptsJour    = parseInt(cjData[1]) || 0;   // col B = pts du jour
+      evolJ1Raw  = cjData[2] || "";             // col C = evo J-1
+      evolJ2Raw  = cjData[3] || "";             // col D = evo J-2
     }
+  }
+
+  // Fallback : si classementJour vide, on recalcule depuis les pronostics (ancien comportement)
+  if (ptsJour === 0 && (!appData.classementJour || appData.classementJour.length === 0)) {
+    const logicalToday = getLogicalToday();
+    appData.pronostics.forEach(p => {
+      if (p[0] === joueur) {
+        const matchData = appData.calendrier.find(m => m[0] == p[1]);
+        if (matchData) {
+          const matchLogicalDate = getLogicalDate(matchData[1], matchData[2]);
+          if (matchLogicalDate === logicalToday) {
+            ptsJour += parseInt(p[9]) || 0;
+          }
+        }
+      }
+    });
+  }
+
+  // Fallback évolutions depuis historyEngine si classementJour n'a pas ces données
+  if (!evolJ1Raw && !evolJ2Raw) {
+    const evo = getPlayerEvolution(joueur);
+    evolJ1Raw = evo.j1;
+    evolJ2Raw = evo.j2;
+  }
+
+  const ptsJourFormatted = formatPoints(ptsJour);
+  const evolJ1 = styleEvolText(evolJ1Raw);
+  const evolJ2 = styleEvolText(evolJ2Raw);
+
+  const rang = cData[2], total = cData[25], bonsResultats = cData[33];
+  const favori = cData[36], statutFav = cData[37], ptsFav = cData[38];
+  const finaliste = cData[40], statutFin = cData[41], ptsFin = cData[42];
+
+  // --- Récupération de la phrase du joueur ---
+  let phraseJoueur = "";
+  if (appData.infosJoueurs) {
+    const jInfo = appData.infosJoueurs.find(r => r[0] === joueur);
+    if (jInfo && jInfo[10]) {
+      phraseJoueur = jInfo[10].trim();
+    }
+  }
+  
+  let phraseHTML = phraseJoueur 
+    ? `<p class="text-white font-oswald italic text-center text-sm md:text-[15px] tracking-wide mt-3 mb-5 px-2 max-w-2xl mx-auto opacity-90">« ${phraseJoueur} »</p>` 
+    : ``;
+
+  let formeHTML = '';
+  for(let i=27; i<=31; i++) {
+    let val = cData[i];
+    if(val === "V" || val === "✅") formeHTML += `<div class="w-6 h-6 bg-green-500 rounded flex items-center justify-center text-xs font-bold shadow">V</div>`;
+    else if(val === "X" || val === "⬜") formeHTML += `<div class="w-6 h-6 border-2 border-gray-500 bg-transparent rounded"></div>`;
+    else formeHTML += `<div class="w-6 h-6 bg-transparent"></div>`;
+  }
+
+  let stFavClass = getStatusClass(statutFav);
+  let stFinClass = getStatusClass(statutFin);
+
+  let favContent = !isTournamentStarted ? `<div class="flex items-center space-x-2 mb-1"><span class="text-lg">🔒</span><span class="text-xs md:text-sm text-gray-500 italic">Masqué</span></div>` : `
+    <div class="flex items-center space-x-2 mb-1">
+      <span class="text-xl emoji-flag">${getFlagOnly(favori)}</span>
+      <span class="font-bold text-sm whitespace-normal break-words leading-tight text-white">${getCleanName(favori)}</span>
+    </div>
+    <div class="flex items-center space-x-2 mb-3">
+      <span class="text-[10px] md:text-xs ${stFavClass} uppercase font-bold">${statutFav}</span>
+      ${ptsFav !== "" ? `<span class="text-[10px] md:text-xs bg-pastis-500 text-navy-900 px-1 rounded font-black">+${cleanPlus(ptsFav)}</span>` : ''}
+    </div>
+  `;
+
+  let finContent = !isTournamentStarted ? `<div class="flex items-center space-x-2"><span class="text-lg">🔒</span><span class="text-xs md:text-sm text-gray-500 italic">Masqué</span></div>` : `
+    <div class="flex items-center space-x-2 mb-1">
+      <span class="text-xl emoji-flag">${getFlagOnly(finaliste)}</span>
+      <span class="font-bold text-sm whitespace-normal break-words leading-tight text-white">${getCleanName(finaliste)}</span>
+    </div>
+    <div class="flex items-center space-x-2">
+      <span class="text-[10px] md:text-xs ${stFinClass} uppercase font-bold">${statutFin}</span>
+      ${ptsFin !== "" ? `<span class="text-[10px] md:text-xs bg-pastis-500 text-navy-900 px-1 rounded font-black">+${cleanPlus(ptsFin)}</span>` : ''}
+    </div>
+  `;
+
+  let bestMatchHTML = '';
+  let bestPerfRank = -1;
+  let bestScore = -1;
+  let bestMatchObj = null;
+
+  appData.pronostics.forEach(p => {
+    if(p[0] === joueur && p[5] !== "" && p[6] !== "") {
+      const matchId = p[1], pts = parseInt(p[9]) || 0, textPerf = p[11] || "";
+      const matchData = appData.calendrier.find(r => r[0] == matchId);
+      if(!matchData || matchData[5] === "") return;
+      
+      let perfLevel = 0;
+      if(textPerf.includes("Expert")) perfLevel = 3;
+      else if(textPerf.includes("Bien vu")) perfLevel = 2;
+      else if(textPerf.includes("Trompé") || textPerf.includes("Ridicule") || textPerf.includes("sieste")) perfLevel = 0;
+      else perfLevel = 1;
+
+      if (perfLevel > bestPerfRank || (perfLevel === bestPerfRank && pts > bestScore)) {
+        bestPerfRank = perfLevel; bestScore = pts;
+        bestMatchObj = { match: matchData, prono: p };
+      }
+    }
+  });
+
+  if (bestMatchObj && bestScore > 0) {
+    bestMatchHTML = `
+      <div class="col-span-2 mt-4">
+        <h4 class="text-pastis-500 font-bold uppercase text-xs md:text-sm mb-1 flex items-center space-x-1"><span>MEILLEUR COUP</span></h4>
+        ${generatePlayerHistoryItemHTML(bestMatchObj.match, bestMatchObj.prono)}
+      </div>
+    `;
+  }
+
+  let jokersHTML = '';
+  let playerJokers = appData.pronostics.filter(p => p[0] === joueur && p[8] && String(p[8]).toLowerCase() === 'oui');
+  if (playerJokers.length > 0) {
+    jokersHTML = `<div class="col-span-2 mt-4">
+      <h4 class="text-pastis-500 font-bold uppercase text-xs md:text-sm mb-1 flex items-center space-x-1"><span>JOKERS</span><span class="bg-navy-700 text-white px-1.5 rounded ml-2">${playerJokers.length}/3</span></h4>
+      <div class="space-y-0">`;
+    
+    playerJokers.forEach(j => {
+      const mData = appData.calendrier.find(m => m[0] == j[1]);
+      if(mData) {
+        jokersHTML += generatePlayerHistoryItemHTML(mData, j);
+      }
+    });
+    jokersHTML += `</div></div>`;
+  }
+
+  headerDiv.innerHTML = `
+    <div class="bg-gradient-to-br from-navy-800 to-navy-700 rounded-xl p-5 border border-navy-700 shadow-lg relative overflow-hidden">
+      <div class="absolute top-0 right-0 bg-pastis-500 text-navy-900 px-4 py-1 rounded-bl-lg font-black font-oswald text-xl shadow-md">${formatPoints(total)}</div>
+      
+      <h3 class="text-3xl font-oswald font-black mb-1 text-white uppercase tracking-wide">${joueur}</h3>
+      
+      ${phraseHTML}
+
+      <p class="text-gray-400 font-medium text-sm mb-4">Classement actuel : <span class="text-white font-bold bg-navy-900 px-2 py-0.5 rounded shadow-inner">#${rang}</span></p>
+
+      <div class="grid grid-cols-3 gap-2 mb-6">
+        <div class="bg-navy-900 p-2 rounded text-center border border-navy-700 flex flex-col justify-center items-center">
+          <span class="block text-xs md:text-sm text-gray-400 uppercase">Pts du Jour</span>
+          <span class="font-bold text-pastis-500 font-oswald text-lg md:text-xl leading-none mt-1 block">${ptsJourFormatted}</span>
+        </div>
+        <div class="bg-navy-900 p-2 rounded text-center border border-navy-700 flex flex-col justify-center items-center">
+          <span class="block text-xs md:text-sm text-gray-400 uppercase mb-1 text-center">Evolution vs J-1</span>
+          ${evolJ1}
+        </div>
+        <div class="bg-navy-900 p-2 rounded text-center border border-navy-700 flex flex-col justify-center items-center">
+          <span class="block text-xs md:text-sm text-gray-400 uppercase mb-1 text-center">Evolution vs J-2</span>
+          ${evolJ2}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="bg-navy-900 p-3 rounded-lg border border-navy-700">
+          <span class="text-xs md:text-sm text-gray-400 block mb-2 uppercase">Forme & Réussite</span>
+          <div class="flex space-x-1 mb-3">${formeHTML}</div>
+          <span class="text-xs md:text-sm text-gray-400 block mb-1 uppercase">Bons résultats</span>
+          <span class="font-bold text-green-400 font-oswald text-xl">${bonsResultats}</span>
+        </div>
+        <div class="bg-navy-900 p-3 rounded-lg border border-navy-700 flex flex-col justify-center">
+          <span class="text-xs md:text-sm text-gray-400 block mb-1 uppercase">Favori</span>
+          ${favContent}
+          <span class="text-xs md:text-sm text-gray-400 block mb-1 uppercase border-t border-navy-700 pt-1 mt-1">Finaliste</span>
+          ${finContent}
+        </div>
+        ${bestMatchHTML}
+        ${jokersHTML}
+        
+        <div class="col-span-2 mt-4 bg-navy-900 p-3 rounded-lg border border-navy-700 shadow-inner">
+          <h4 class="text-pastis-500 font-bold uppercase text-xs md:text-sm mb-3">ÉVOLUTION DU CLASSEMENT</h4>
+          <div class="relative h-[200px] w-full">
+            <canvas id="playerEvolutionChart"></canvas>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  `;
+  headerDiv.classList.remove('hidden');
+  historySec.classList.remove('hidden');
+  
+  drawPlayerChart(joueur);
+
+  document.getElementById('filter-pts').value = 'all';
+  document.getElementById('filter-perf').value = 'all';
+  renderJoueurHistory();
+}
 
     function renderJoueurHistory() {
       const joueur = document.getElementById('select-joueur').value;
