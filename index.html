@@ -2016,35 +2016,32 @@ function renderJoueurProfile(forcedJoueur = null) {
   if(!cData) return;
 
   // --- POINTS DU JOUR & ÉVOLUTIONS depuis classementJour ---
-  // Structure attendue : col[0]=Joueur, col[1]=PtsJour, col[2]=EvoJ-1, col[3]=EvoJ-2
-  let ptsJour = 0;
-  let evolJ1Raw = "";
-  let evolJ2Raw = "";
+// Structure : col[0]=Rang, col[1]=Joueur, col[2]=PtsJour, col[3]=PtsCumulés,
+//             col[4]=Classement, col[5]=PtsCumulésJ-1, col[6]=ClassementJ-1,
+//             col[7]=PtsCumulésJ-2, col[8]=ClassementJ-2, col[9]=EvoJ-1, col[10]=EvoJ-2
+let ptsJour = 0;
+let evolJ1Raw = "";
+let evolJ2Raw = "";
 
-  if (appData.classementJour && appData.classementJour.length > 0) {
-    const cjData = appData.classementJour.find(r => r[0] === joueur);
-    if (cjData) {
-      ptsJour    = parseInt(cjData[1]) || 0;   // col B = pts du jour
-      evolJ1Raw  = cjData[2] || "";             // col C = evo J-1
-      evolJ2Raw  = cjData[3] || "";             // col D = evo J-2
-    }
+if (appData.classementJour && appData.classementJour.length > 0) {
+  const cjData = appData.classementJour.find(r => r[1] === joueur);
+  if (cjData) {
+    ptsJour   = parseInt(cjData[2]) || 0;  // col C = Points du Jour
+    evolJ1Raw = cjData[9]  || "";           // col J = Évolution J-1
+    evolJ2Raw = cjData[10] || "";           // col K = Évolution J-2
   }
+}
 
-  // Fallback : si classementJour vide, on recalcule depuis les pronostics (ancien comportement)
-  if (ptsJour === 0 && (!appData.classementJour || appData.classementJour.length === 0)) {
-    const logicalToday = getLogicalToday();
-    appData.pronostics.forEach(p => {
-      if (p[0] === joueur) {
-        const matchData = appData.calendrier.find(m => m[0] == p[1]);
-        if (matchData) {
-          const matchLogicalDate = getLogicalDate(matchData[1], matchData[2]);
-          if (matchLogicalDate === logicalToday) {
-            ptsJour += parseInt(p[9]) || 0;
-          }
-        }
-      }
-    });
-  }
+// Fallback évolutions depuis historyEngine si classementJour vide
+if (!evolJ1Raw && !evolJ2Raw) {
+  const evo = getPlayerEvolution(joueur);
+  evolJ1Raw = evo.j1;
+  evolJ2Raw = evo.j2;
+}
+
+const ptsJourFormatted = formatPoints(ptsJour);
+const evolJ1 = styleEvolText(evolJ1Raw);
+const evolJ2 = styleEvolText(evolJ2Raw);
 
   // Fallback évolutions depuis historyEngine si classementJour n'a pas ces données
   if (!evolJ1Raw && !evolJ2Raw) {
