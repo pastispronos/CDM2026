@@ -2317,7 +2317,7 @@ function openMatchDetails(idMatch) {
   if (oldBg) oldBg.remove();
 
   let bgMaillotsDesktop = `
-    <div id="match-bg-maillots" class="fixed top-[64px] bottom-0 left-0 right-0 z-0 pointer-events-none opacity-[0.35] mix-blend-luminosity hidden md:flex justify-between items-start px-0" style="-webkit-transform: translateZ(0); transform: translateZ(0);">
+    <div id="match-bg-maillots" class="fixed top-[64px] bottom-0 left-0 right-0 z-0 pointer-events-none opacity-[0.20] hidden md:flex justify-between items-start px-0">
       <div class="w-[45%] h-full flex items-start justify-start">
         ${maillotA ? `<img src="${maillotA}" loading="lazy" class="w-full h-full object-cover drop-shadow-2xl" style="object-position: 100% 0%; -webkit-mask-image: linear-gradient(to right, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%); mask-image: linear-gradient(to right, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);">` : ''}
       </div>
