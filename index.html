@@ -1158,6 +1158,7 @@ function initApp(data, isCached = false) {
       if(!isPhaseStarted && !isPlayed) {
         pronoBloc = `<div class="font-black text-gray-500 text-sm md:text-lg leading-none">🔒</div>`;
         btnInfo = `<button onclick="showTooltip(event, 'Pronostic masqué avant le début de la phase')" class="ml-1 md:ml-2 w-4 h-4 md:w-5 md:h-5 flex items-center justify-center rounded-full bg-navy-700 text-white font-bold font-serif text-[9px] shadow transition flex-shrink-0 relative z-20 pointer-events-auto">i</button>`;
+        jkrBadge = ``;
       } else {
         ptsBadge = getPointsBadge(points);
         btnInfo = `<button onclick="showTooltip(event, '${escapeJS(textInfo)}')" class="ml-1 md:w-5 w-4 h-4 h-5 flex items-center justify-center rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold font-serif text-[9px] shadow transition flex-shrink-0 relative z-20 pointer-events-auto">i</button>`;
@@ -2341,7 +2342,8 @@ function openMatchDetails(idMatch) {
       let bg2d = real1N2detail === "2" ? "bg-pastis-500 text-navy-900 border-pastis-500 shadow-[0_0_10px_rgba(247,195,37,0.4)]" : "bg-navy-800 text-white border-navy-700 shadow-sm";
       let lbl2d = real1N2detail === "2" ? "text-navy-900 opacity-70" : "text-gray-400";
 
-      let jokerBadge = (isbonus && jokerCount !== "") ? `
+      // ✅ FIX : jokerBadge conditionné à isPhaseStarted
+      let jokerBadge = (isbonus && jokerCount !== "" && isPhaseStarted) ? `
         <div class="absolute left-1/2 ml-[130px] sm:ml-[160px] md:ml-[220px] pl-3 md:pl-5 bottom-0 mb-2 md:mb-3 flex flex-col items-center justify-end">
           <span class="text-[7.5px] sm:text-[8px] md:text-[9px] text-pastis-500 uppercase tracking-widest font-bold mb-1 md:mb-1.5 whitespace-normal md:whitespace-nowrap text-center leading-[1.1] max-w-[65px] sm:max-w-[75px] md:max-w-none">Joker(s) sur ce match</span>
           <div class="flex items-center justify-center bg-pastis-500 text-navy-900 text-sm md:text-base font-black px-2 md:px-3 py-0.5 rounded shadow-[0_0_8px_rgba(247,195,37,0.4)] min-w-[35px] border border-pastis-500 leading-none">
@@ -2452,7 +2454,9 @@ function openMatchDetails(idMatch) {
       const rangJoueur = infoJoueur ? infoJoueur[2] : '-'; 
       
       let ptsBadge = "", btnInfo = "", pronoBloc = "", pTabHTML = "";
-      let jkrBadge = isJoker ? `<span class="joker-pulse bg-pastis-500 text-navy-900 text-[7px] md:text-[9px] font-black px-1 py-0.5 rounded shadow-sm whitespace-nowrap mb-0.5 mx-auto block w-max">🌟 JOKER</span>` : ``;
+
+      // ✅ FIX : jkrBadge conditionné à isPhaseStarted
+      let jkrBadge = (isJoker && isPhaseStarted) ? `<span class="joker-pulse bg-pastis-500 text-navy-900 text-[7px] md:text-[9px] font-black px-1 py-0.5 rounded shadow-sm whitespace-nowrap mb-0.5 mx-auto block w-max">🌟 JOKER</span>` : ``;
 
       if(!isPhaseStarted && !isPlayed) {
         pronoBloc = `<div class="font-black text-gray-500 text-lg">🔒</div>`;
