@@ -2056,6 +2056,26 @@ function generateMatchCardHTML(row, logicalTodayStr) {
       select.innerHTML = options;
     }
 
+  function getCurrentJourneeLabel() {
+  // Trouve la dernière journée (colonne index 39) qui a au moins un match joué
+  let lastJournee = "";
+  appData.calendrier.forEach(m => {
+    let j = m[39] ? m[39].toString().trim() : "";
+    let scoreA = m[5] || "";
+    if (j !== "" && scoreA !== "") {
+      // Tri numérique : on garde la journée la plus haute
+      if (lastJournee === "") {
+        lastJournee = j;
+      } else {
+        let numCurrent = parseInt(j.replace(/\D/g, '')) || 0;
+        let numLast = parseInt(lastJournee.replace(/\D/g, '')) || 0;
+        if (numCurrent > numLast) lastJournee = j;
+      }
+    }
+  });
+  return lastJournee || "du Jour";
+}
+  
 function renderJoueurProfile(forcedJoueur = null) {
   const select = document.getElementById('select-joueur');
   if (forcedJoueur) select.value = forcedJoueur;
@@ -2072,37 +2092,38 @@ function renderJoueurProfile(forcedJoueur = null) {
   const cData = appData.classement.find(r => r[3] === joueur);
   if(!cData) return;
 
- // --- POINTS DU JOUR & JOURNÉE depuis classementJour ---
-// Structure classementJour : col[0]=Rang, col[1]=Joueur, col[2]=PtsJour,
-//                            col[4]=Classement, col[9]=EvoJ-1, col[10]=EvoJ-2
-// NOUVEAU : col[3] = Journée (ex: "J4") — à ajouter dans ta Sheet Classement_Jour
-let ptsJour = 0;
-let evolJ1Raw = "";
-let evolJ2Raw = "";
-let journeeLabel = "du Jour"; // valeur par défaut
+// --- POINTS DU JOUR & ÉVOLUTIONS depuis classementJour ---
+  let ptsJour = 0;
+  let evolJ1Raw = "";
+  let evolJ2Raw = "";
+  let journeeLabel = getCurrentJourneeLabel(); // ex: "J4"
+  let journeeJ1Label = "";
+  let journeeJ2Label = "";
 
-if (appData.classementJour && appData.classementJour.length > 0) {
-  const cjData = appData.classementJour.find(r => r[1] === joueur);
-  if (cjData) {
-    ptsJour    = parseInt(cjData[2]) || 0;
-    evolJ1Raw  = cjData[9]  || "";
-    evolJ2Raw  = cjData[10] || "";
-    // NOUVEAU : si col[3] contient "J4" par exemple
-    let jLabel = cjData[3] ? cjData[3].toString().trim() : "";
-    if (jLabel !== "") journeeLabel = jLabel;
+  // Calcul des labels J-1 et J-2 à partir de la journée courante
+  let numJournee = parseInt(journeeLabel.replace(/\D/g, '')) || 0;
+  if (numJournee > 1) journeeJ1Label = "J" + (numJournee - 1);
+  if (numJournee > 2) journeeJ2Label = "J" + (numJournee - 2);
+
+  if (appData.classementJour && appData.classementJour.length > 0) {
+    const cjData = appData.classementJour.find(r => r[1] === joueur);
+    if (cjData) {
+      ptsJour   = parseInt(cjData[2]) || 0;
+      evolJ1Raw = cjData[9]  || "";
+      evolJ2Raw = cjData[10] || "";
+    }
   }
-}
 
-// Fallback évolutions depuis historyEngine si classementJour vide
-if (!evolJ1Raw && !evolJ2Raw) {
-  const evo = getPlayerEvolution(joueur);
-  evolJ1Raw = evo.j1;
-  evolJ2Raw = evo.j2;
-}
+  // Fallback évolutions depuis historyEngine si classementJour vide
+  if (!evolJ1Raw && !evolJ2Raw) {
+    const evo = getPlayerEvolution(joueur);
+    evolJ1Raw = evo.j1;
+    evolJ2Raw = evo.j2;
+  }
 
-const ptsJourFormatted = formatPoints(ptsJour);
-const evolJ1 = styleEvolText(evolJ1Raw);
-const evolJ2 = styleEvolText(evolJ2Raw);
+  const ptsJourFormatted = formatPoints(ptsJour);
+  const evolJ1 = styleEvolText(evolJ1Raw);
+  const evolJ2 = styleEvolText(evolJ2Raw);
   const rang = cData[2], total = cData[25], bonsResultats = cData[33];
   const favori = cData[36], statutFav = cData[37], ptsFav = cData[38];
   const finaliste = cData[40], statutFin = cData[41], ptsFin = cData[42];
@@ -2209,18 +2230,17 @@ const evolJ2 = styleEvolText(evolJ2Raw);
       ${phraseHTML}
       <p class="text-gray-400 font-medium text-sm mb-4">Classement actuel : <span class="text-white font-bold bg-navy-900 px-2 py-0.5 rounded shadow-inner">#${rang}</span></p>
 
-      <div class="grid grid-cols-3 gap-2 mb-6">
+<div class="grid grid-cols-3 gap-2 mb-6">
         <div class="bg-navy-900 p-2 rounded text-center border border-navy-700 flex flex-col justify-center items-center">
-          <span class="block text-xs md:text<span class="block text-xs md:text-sm text-gray-400 uppercase">Pts ${journeeLabel}</span>
--sm text-gray-400 uppercase">Pts du Jour</span>
+          <span class="block text-xs md:text-sm text-gray-400 uppercase">Pts ${journeeLabel !== "du Jour" ? journeeLabel : "du Jour"}</span>
           <span class="font-bold text-pastis-500 font-oswald text-lg md:text-xl leading-none mt-1 block">${ptsJourFormatted}</span>
         </div>
         <div class="bg-navy-900 p-2 rounded text-center border border-navy-700 flex flex-col justify-center items-center">
-          <span class="block text-xs md:text-sm text-gray-400 uppercase mb-1 text-center">Evolution vs J-1</span>
+          <span class="block text-xs md:text-sm text-gray-400 uppercase mb-1 text-center">Évol vs ${journeeJ1Label || "J-1"}</span>
           ${evolJ1}
         </div>
         <div class="bg-navy-900 p-2 rounded text-center border border-navy-700 flex flex-col justify-center items-center">
-          <span class="block text-xs md:text-sm text-gray-400 uppercase mb-1 text-center">Evolution vs J-2</span>
+          <span class="block text-xs md:text-sm text-gray-400 uppercase mb-1 text-center">Évol vs ${journeeJ2Label || "J-2"}</span>
           ${evolJ2}
         </div>
       </div>
