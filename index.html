@@ -530,63 +530,28 @@ function initApp(data, isCached = false) {
       phasesVisibility.showF = colHasPoints(23);
       phasesVisibility.showBonus = colHasPoints(24);
 
-function buildHistoryEngine() {
-  historyData = {};
-  historyTimeline = [];
-  let playedMatches = appData.calendrier.filter(m => m[5] !== ""); // ScoreA = index 5
-  if (playedMatches.length === 0) return;
+      buildHistoryEngine(); 
 
-  // NOUVEAU : On groupe par colonne Journée (index 39) si elle existe,
-  // sinon fallback sur la date logique (ancien comportement)
-  const getMatchJournee = (m) => {
-    let j = m[39] ? m[39].toString().trim() : "";
-    return j !== "" ? j : getLogicalDate(m[1], m[2]);
-  };
-
-  let journeesSet = new Set();
-  playedMatches.forEach(m => journeesSet.add(getMatchJournee(m)));
-
-  // Tri : J1 < J2 < J3... (tri alphanumérique naturel)
-  historyTimeline = Array.from(journeesSet).sort((a, b) => {
-    // Si c'est le format "J1", "J12", etc. → tri numérique
-    let numA = parseInt(a.replace(/\D/g, ''));
-    let numB = parseInt(b.replace(/\D/g, ''));
-    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-    // Fallback : tri date DD/MM/YYYY
-    let [dA, mA, yA] = a.split('/');
-    let [dB, mB, yB] = b.split('/');
-    return new Date(yA, mA-1, dA) - new Date(yB, mB-1, dB);
-  });
-
-  appData.classement.forEach(c => {
-    if(c[3] && c[3] !== "") historyData[c[3]] = { points: [], ranks: [], cumul: 0 };
-  });
-
-  historyTimeline.forEach(journee => {
-    let matchIdsOnJournee = playedMatches
-      .filter(m => getMatchJournee(m) === journee)
-      .map(m => m[0]);
-
-    matchIdsOnJournee.forEach(mId => {
-      let pronosForMatch = appData.pronostics.filter(p => p[1] == mId);
-      pronosForMatch.forEach(p => {
-        let joueur = p[0], pts = parseInt(p[9]) || 0;
-        if(historyData[joueur] !== undefined) historyData[joueur].cumul += pts;
+      appData.classement.forEach(r => {
+        let evo = getPlayerEvolution(r[3]);
+        r[1] = evo.j1; 
+        r.evoJ2 = evo.j2; 
       });
-    });
 
-    let leaderboard = Object.keys(historyData).map(j => ({ joueur: j, pts: historyData[j].cumul }));
-    leaderboard.sort((a,b) => b.pts - a.pts);
-    let currentRank = 1;
-    for(let i=0; i<leaderboard.length; i++) {
-      if (i > 0 && leaderboard[i].pts < leaderboard[i-1].pts) currentRank = i + 1;
-      let j = leaderboard[i].joueur;
-      historyData[j].points.push(leaderboard[i].pts);
-      historyData[j].ranks.push(currentRank);
+      sortTableData(currentSort.col, true); 
+
+      // NOUVEAU : Initialisation des filtres et détection de la phase en cours
+      populateFilters();
+
+      renderClassement();
+      renderCalendrier();
+      populateJoueursSelect();
+      initGraphUI();
+      renderReglement(); 
+      
+      switchView(currentView);
+      if(currentView === 'calendrier') switchCalView(currentCalView); 
     }
-  });
-}
-
 
    // ==========================================
     // GÉNÉRATEUR RÈGLEMENT (Version Oswald Sans Alinéa)
@@ -633,12 +598,23 @@ function buildHistoryEngine() {
     function buildHistoryEngine() {
       historyData = {};
       historyTimeline = [];
-      let playedMatches = appData.calendrier.filter(m => m[5] !== ""); // ScoreA = 5
+      let playedMatches = appData.calendrier.filter(m => m[5] !== "");
       if (playedMatches.length === 0) return;
 
-      let datesSet = new Set();
-      playedMatches.forEach(m => datesSet.add(getLogicalDate(m[1], m[2])));
-      historyTimeline = Array.from(datesSet).sort((a,b) => {
+      // Groupe par colonne Journée (index 39) si remplie, sinon fallback date logique
+      const getMatchJournee = (m) => {
+        let j = m[39] ? m[39].toString().trim() : "";
+        return j !== "" ? j : getLogicalDate(m[1], m[2]);
+      };
+
+      let journeesSet = new Set();
+      playedMatches.forEach(m => journeesSet.add(getMatchJournee(m)));
+
+      // Tri : J1 < J2 < J3... (numérique), fallback tri date DD/MM/YYYY
+      historyTimeline = Array.from(journeesSet).sort((a, b) => {
+        let numA = parseInt(a.replace(/\D/g, ''));
+        let numB = parseInt(b.replace(/\D/g, ''));
+        if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
         let [dA, mA, yA] = a.split('/');
         let [dB, mB, yB] = b.split('/');
         return new Date(yA, mA-1, dA) - new Date(yB, mB-1, dB);
@@ -648,12 +624,15 @@ function buildHistoryEngine() {
         if(c[3] && c[3] !== "") historyData[c[3]] = { points: [], ranks: [], cumul: 0 };
       });
 
-      historyTimeline.forEach(date => {
-        let matchIdsOnDate = playedMatches.filter(m => getLogicalDate(m[1], m[2]) === date).map(m => m[0]);
-        matchIdsOnDate.forEach(mId => {
+      historyTimeline.forEach(journee => {
+        let matchIdsOnJournee = playedMatches
+          .filter(m => getMatchJournee(m) === journee)
+          .map(m => m[0]);
+
+        matchIdsOnJournee.forEach(mId => {
           let pronosForMatch = appData.pronostics.filter(p => p[1] == mId);
           pronosForMatch.forEach(p => {
-            let joueur = p[0], pts = parseInt(p[9]) || 0; 
+            let joueur = p[0], pts = parseInt(p[9]) || 0;
             if(historyData[joueur] !== undefined) historyData[joueur].cumul += pts;
           });
         });
@@ -668,6 +647,25 @@ function buildHistoryEngine() {
           historyData[j].ranks.push(currentRank);
         }
       });
+    }
+
+    // Retourne la dernière journée ayant des matchs joués (ex: "J4")
+    function getCurrentJourneeLabel() {
+      let lastJournee = "";
+      appData.calendrier.forEach(m => {
+        let j = m[39] ? m[39].toString().trim() : "";
+        let scoreA = m[5] || "";
+        if (j !== "" && scoreA !== "") {
+          if (lastJournee === "") {
+            lastJournee = j;
+          } else {
+            let numCurrent = parseInt(j.replace(/\D/g, '')) || 0;
+            let numLast = parseInt(lastJournee.replace(/\D/g, '')) || 0;
+            if (numCurrent > numLast) lastJournee = j;
+          }
+        }
+      });
+      return lastJournee || "du Jour";
     }
 
     function initGraphUI() {
@@ -726,10 +724,9 @@ function buildHistoryEngine() {
       if (chartInstance) chartInstance.destroy();
 
       const labels = historyTimeline.map(d => {
-      // Si format "J1", "J2", etc. → afficher tel quel
-      if (/^J\d+$/i.test(d.trim())) return d.trim().toUpperCase();
-      return shortDate(d); // fallback date
-    });
+        if (/^J\d+$/i.test(d.trim())) return d.trim().toUpperCase();
+        return shortDate(d);
+      });
 
       const datasets = selectedPlayersForChart.map((joueur, index) => {
         let dataArray = activeChartType === 'points' ? historyData[joueur].points : historyData[joueur].ranks;
@@ -769,7 +766,10 @@ function buildHistoryEngine() {
         return;
       }
 
-      const labels = historyTimeline.map(d => shortDate(d));
+      const labels = historyTimeline.map(d => {
+        if (/^J\d+$/i.test(d.trim())) return d.trim().toUpperCase();
+        return shortDate(d);
+      });
       const dataArray = historyData[joueur].ranks;
 
       playerChartInstance = new Chart(ctx, {
@@ -2056,26 +2056,6 @@ function generateMatchCardHTML(row, logicalTodayStr) {
       select.innerHTML = options;
     }
 
-  function getCurrentJourneeLabel() {
-  // Trouve la dernière journée (colonne index 39) qui a au moins un match joué
-  let lastJournee = "";
-  appData.calendrier.forEach(m => {
-    let j = m[39] ? m[39].toString().trim() : "";
-    let scoreA = m[5] || "";
-    if (j !== "" && scoreA !== "") {
-      // Tri numérique : on garde la journée la plus haute
-      if (lastJournee === "") {
-        lastJournee = j;
-      } else {
-        let numCurrent = parseInt(j.replace(/\D/g, '')) || 0;
-        let numLast = parseInt(lastJournee.replace(/\D/g, '')) || 0;
-        if (numCurrent > numLast) lastJournee = j;
-      }
-    }
-  });
-  return lastJournee || "du Jour";
-}
-  
 function renderJoueurProfile(forcedJoueur = null) {
   const select = document.getElementById('select-joueur');
   if (forcedJoueur) select.value = forcedJoueur;
@@ -2092,7 +2072,7 @@ function renderJoueurProfile(forcedJoueur = null) {
   const cData = appData.classement.find(r => r[3] === joueur);
   if(!cData) return;
 
-// --- POINTS DU JOUR & ÉVOLUTIONS depuis classementJour ---
+  // --- POINTS DU JOUR & ÉVOLUTIONS depuis classementJour ---
   let ptsJour = 0;
   let evolJ1Raw = "";
   let evolJ2Raw = "";
@@ -2100,7 +2080,7 @@ function renderJoueurProfile(forcedJoueur = null) {
   let journeeJ1Label = "";
   let journeeJ2Label = "";
 
-  // Calcul des labels J-1 et J-2 à partir de la journée courante
+  // Calcul des labels J-1 et J-2
   let numJournee = parseInt(journeeLabel.replace(/\D/g, '')) || 0;
   if (numJournee > 1) journeeJ1Label = "J" + (numJournee - 1);
   if (numJournee > 2) journeeJ2Label = "J" + (numJournee - 2);
@@ -2124,6 +2104,7 @@ function renderJoueurProfile(forcedJoueur = null) {
   const ptsJourFormatted = formatPoints(ptsJour);
   const evolJ1 = styleEvolText(evolJ1Raw);
   const evolJ2 = styleEvolText(evolJ2Raw);
+
   const rang = cData[2], total = cData[25], bonsResultats = cData[33];
   const favori = cData[36], statutFav = cData[37], ptsFav = cData[38];
   const finaliste = cData[40], statutFin = cData[41], ptsFin = cData[42];
@@ -2230,7 +2211,7 @@ function renderJoueurProfile(forcedJoueur = null) {
       ${phraseHTML}
       <p class="text-gray-400 font-medium text-sm mb-4">Classement actuel : <span class="text-white font-bold bg-navy-900 px-2 py-0.5 rounded shadow-inner">#${rang}</span></p>
 
-<div class="grid grid-cols-3 gap-2 mb-6">
+      <div class="grid grid-cols-3 gap-2 mb-6">
         <div class="bg-navy-900 p-2 rounded text-center border border-navy-700 flex flex-col justify-center items-center">
           <span class="block text-xs md:text-sm text-gray-400 uppercase">Pts ${journeeLabel !== "du Jour" ? journeeLabel : "du Jour"}</span>
           <span class="font-bold text-pastis-500 font-oswald text-lg md:text-xl leading-none mt-1 block">${ptsJourFormatted}</span>
