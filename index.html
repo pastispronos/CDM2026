@@ -1594,7 +1594,7 @@ function generateMatchCardHTML(row, logicalTodayStr) {
   // NOUVEAU : si LIVE, on force un liseré rouge prioritaire
   let cardHighlightClass;
   if (isLive) {
-    cardHighlightClass = `border-red-600/80 shadow-[0_0_12px_rgba(239,68,68,0.25)] hover:bg-navy-700 ${baseClass}`;
+    cardHighlightClass = `border-red-600/50 shadow-[0_0_12px_rgba(239,68,68,0.15)] hover:bg-navy-700 ${baseClass}`;
   } else if (matchLogicalDate === logicalTodayStr) {
     cardHighlightClass = `border-pastis-500 ring-2 ring-pastis-500 shadow-[0_0_15px_rgba(247,195,37,0.3)] hover:bg-navy-700 hover:shadow-[0_0_20px_rgba(247,195,37,0.5)] ${baseClass}`;
   } else {
