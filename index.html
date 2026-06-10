@@ -338,8 +338,14 @@
 
   <script>
     const API_URL = 'https://script.google.com/macros/s/AKfycbxXDUy7-rggkIafbQPDxShVFj5tV_E3GZ_P5sfytXRIOi0D6Mof0-mxEOsYnyu8M3k/exec?api=1';
-    let appData = { classement: [], calendrier: [], pronostics: [], equipes: [], chaines: [], reglement: [] };
-    let phasesStarted = {}; 
+    let appData = { classement: [], calendrier: [], pronostics: [], equipes: [], chaines: [], reglement: [], joueursMasques: [] };
+
+    // 🔒 Renvoie true si le joueur est marqué "Masqué" (colonne T de la feuille Joueurs)
+    function estJoueurMasque(nom) {
+      if (!nom || !appData.joueursMasques) return false;
+      const cible = nom.toString().trim().toUpperCase();
+      return appData.joueursMasques.some(m => (m || "").toString().trim().toUpperCase() === cible);
+    }    let phasesStarted = {}; 
     let phasesVisibility = {}; 
     let isTournamentStarted = false; 
     let currentView = 'calendrier'; 
@@ -2075,9 +2081,9 @@ function generateMatchCardHTML(row, logicalTodayStr) {
         if(phasesVisibility.showBonus) phasesColsHTML += `<td class="px-3 py-3 detail-col ${dClass} bg-navy-900 text-pastis-500 border-r border-navy-700 ${row[24]>0 ? 'font-bold font-oswald text-base':'text-gray-600'}">${row[24]}</td>`;
 
         let favHTML = ""; let finHTML = "";
-        if (!isTournamentStarted) {
-          favHTML = `<div class="flex flex-col items-center justify-center text-gray-500"><span class="text-lg">🔒</span><span class="text-[9px] uppercase mt-1">Masqué</span></div>`;
-          finHTML = `<div class="flex flex-col items-center justify-center text-gray-500"><span class="text-lg">🔒</span><span class="text-[9px] uppercase mt-1">Masqué</span></div>`;
+        if (!isTournamentStarted || estJoueurMasque(joueur)) {
+          favHTML = `<div class="flex flex-col items-center justify-center text-gray-500"><span class="text-lg">🔒</span><span class="text-[9px] uppercase mt-1 text-center leading-tight">Favoris<br>masqués</span></div>`;
+          finHTML = `<div class="flex flex-col items-center justify-center text-gray-500"><span class="text-lg">🔒</span><span class="text-[9px] uppercase mt-1 text-center leading-tight">Favoris<br>masqués</span></div>`;
         } else {
           let stFavClass = getStatusClass(statutFav);
           let stFinClass = getStatusClass(statutFin);
@@ -2209,8 +2215,8 @@ function renderJoueurProfile(forcedJoueur = null) {
   const stFavClass = getStatusClass(statutFav);
   const stFinClass = getStatusClass(statutFin);
 
-  const favContent = !isTournamentStarted 
-    ? `<div class="flex items-center space-x-2 mb-1"><span class="text-lg">🔒</span><span class="text-xs md:text-sm text-gray-500 italic">Masqué</span></div>` 
+  const favContent = (!isTournamentStarted || estJoueurMasque(joueur))
+    ? `<div class="flex items-center space-x-2 mb-1"><span class="text-lg">🔒</span><span class="text-xs md:text-sm text-gray-500 italic">Favoris masqués</span></div>` 
     : `
       <div class="flex items-center space-x-2 mb-1">
         <span class="text-xl emoji-flag">${getFlagOnly(favori)}</span>
@@ -2222,8 +2228,8 @@ function renderJoueurProfile(forcedJoueur = null) {
       </div>
     `;
 
-  const finContent = !isTournamentStarted 
-    ? `<div class="flex items-center space-x-2"><span class="text-lg">🔒</span><span class="text-xs md:text-sm text-gray-500 italic">Masqué</span></div>` 
+const finContent = (!isTournamentStarted || estJoueurMasque(joueur))
+    ? `<div class="flex items-center space-x-2"><span class="text-lg">🔒</span><span class="text-xs md:text-sm text-gray-500 italic">Favoris masqués</span></div>` 
     : `
       <div class="flex items-center space-x-2 mb-1">
         <span class="text-xl emoji-flag">${getFlagOnly(finaliste)}</span>
