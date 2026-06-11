@@ -941,8 +941,15 @@ function initApp(data, isCached = false) {
           let colorProno1 = (isJoker1 && isPhaseStarted) ? 'text-pastis-500' : 'text-white';
           let colorProno2 = (isJoker2 && isPhaseStarted) ? 'text-pastis-500' : 'text-white';
 
-          let pronoBloc1 = p1 && p1[5] !== "" ? `<span class="font-black text-base md:text-xl font-oswald ${colorProno1}">${p1[5]}-${p1[6]}</span>${jkrBadge1}` : `<span class="text-gray-600">-</span>`;
-          let pronoBloc2 = p2 && p2[5] !== "" ? `${jkrBadge2}<span class="font-black text-base md:text-xl font-oswald ${colorProno2}">${p2[5]}-${p2[6]}</span>` : `<span class="text-gray-600">-</span>`;
+          let revealPronos = isPhaseStarted || isPlayed,
+            let lockBlock = `<span class="font-black text-gray-500 text-lg leading-none">🔒</span>`;
+          
+          let pronoBloc1 = !revealPronos
+          ? lockBlock
+            :p1 && p1[5] !== "" ? `<span class="font-black text-base md:text-xl font-oswald ${colorProno1}">${p1[5]}-${p1[6]}</span>${jkrBadge1}` : `<span class="text-gray-600">-</span>`;
+          let pronoBloc2 = !revealPronos
+          ? lockBlock
+            :p2 && p2[5] !== "" ? `${jkrBadge2}<span class="font-black text-base md:text-xl font-oswald ${colorProno2}">${p2[5]}-${p2[6]}</span>` : `<span class="text-gray-600">-</span>`;
           
           let badge1 = (isPlayed && p1 && p1[5] !== "") ? getPointsBadge(pts1Raw) : '';
           let badge2 = (isPlayed && p2 && p2[5] !== "") ? getPointsBadge(pts2Raw) : '';
