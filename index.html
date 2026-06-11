@@ -569,9 +569,9 @@ function initApp(data, isCached = false) {
 
       const colHasPoints = (idx) => appData.classement.some(r => parseInt(r[idx]) > 0);
 
-      phasesVisibility.showPts25 = isPoulesFinished && colHasPoints(4);
-      phasesVisibility.showPts20 = isPoulesFinished && colHasPoints(5);
-      phasesVisibility.showPts15 = isPoulesFinished && colHasPoints(6);
+      phasesVisibility.showPts25 = isPoulesFinished || colHasPoints(4);
+      phasesVisibility.showPts20 = isPoulesFinished || colHasPoints(5);
+      phasesVisibility.showPts15 = isPoulesFinished || colHasPoints(6);
       phasesVisibility.showPts14 = colHasPoints(7);
       phasesVisibility.showPts12 = colHasPoints(8);
       phasesVisibility.showPts10 = colHasPoints(9);
