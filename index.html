@@ -2595,7 +2595,7 @@ ${(() => {
   if(pronosMatch.length === 0) {
     pronoHTML = `<li class="p-4 text-center text-gray-500 italic">Aucun pronostic enregistré.</li>`;
   } else {
-    pronosMatch.forEach(p => {
+pronosMatch.forEach(p => {
       const joueur = p[0], pronoA = p[5], pronoB = p[6], pTAB = p[7], isJoker = p[8] && String(p[8]).toLowerCase() === 'oui', points = p[9], textInfo = p[10], textPerf = p[11]; 
       if(pronoA === "" || pronoB === "") return;
 
@@ -2603,6 +2603,7 @@ ${(() => {
       const rangJoueur = infoJoueur ? infoJoueur[2] : '-'; 
       
       let ptsBadge = "", btnInfo = "", pronoBloc = "", pTabHTML = "";
+      let flagLeft = "", flagRight = "";
 
       // ✅ FIX : jkrBadge conditionné à isPhaseStarted
       let jkrBadge = (isJoker && isPhaseStarted) ? `<span class="joker-pulse bg-pastis-500 text-navy-900 text-[7px] md:text-[9px] font-black px-1 py-0.5 rounded shadow-sm whitespace-nowrap mb-0.5 mx-auto block w-max">🌟 JOKER</span>` : ``;
@@ -2618,22 +2619,35 @@ ${(() => {
         pronoBloc = `<span class="font-black font-oswald tracking-widest text-base md:text-2xl ${colorProno}">${pronoA}-${pronoB}</span>`;
         
         pTabHTML = (pTAB && pTAB.trim() !== "") ? `<div class="text-[9px] text-pastis-500 font-bold uppercase mt-0.5">TAB: ${pTAB}</div>` : '';
+
+        // 🏳️ Drapeau du vainqueur pronostiqué — visible sur PC uniquement (hidden md:inline-block)
+        const pA = parseInt(pronoA) || 0;
+        const pB = parseInt(pronoB) || 0;
+        if (pA > pB) {
+          flagLeft = `<span class="emoji-flag hidden md:inline-block text-2xl mr-2 align-middle">${getFlagOnly(eqA)}</span>`;
+        } else if (pB > pA) {
+          flagRight = `<span class="emoji-flag hidden md:inline-block text-2xl ml-2 align-middle">${getFlagOnly(eqB)}</span>`;
+        }
       }
 
       let perfBadge = getPerformanceBadge(textPerf);
 
       pronoHTML += `
         <li class="flex items-center justify-between p-4 hover:bg-navy-700 transition border-b border-navy-700/50 last:border-0 relative bg-navy-800/80 backdrop-blur-sm">
-          <div class="flex items-center flex-1 pr-2 overflow-hidden">
+          <div class="flex items-center flex-1 min-w-0 pr-2 overflow-hidden">
             <span class="text-[10px] md:text-sm font-black font-oswald text-white bg-navy-900 border border-navy-600 px-2 py-0.5 rounded-lg shadow-sm whitespace-nowrap mr-2 flex-shrink-0 flex items-center justify-center min-w-[30px]">#${rangJoueur}</span>
-            <span onclick="goToPlayerProfile('${escapeJS(joueur)}')" class="font-bold text-white hover:text-pastis-500 underline cursor-pointer truncate relative z-20 pointer-events-auto text-sm md:text-base">${joueur}</span>
+            <span onclick="goToPlayerProfile('${escapeJS(joueur)}')" class="font-bold text-white hover:text-pastis-500 underline cursor-pointer truncate relative z-20 pointer-events-auto text-[13px] md:text-base">${joueur}</span>
           </div>
-          <div class="flex flex-col flex-1 items-center justify-center">
+          <div class="flex flex-col items-center justify-center flex-shrink-0 px-2 md:px-4">
             ${jkrBadge}
-            ${pronoBloc}
-            ${pTabHTML}
+            <div class="flex items-center justify-center whitespace-nowrap">
+              ${flagLeft}
+              ${pronoBloc}
+              ${flagRight}
             </div>
-          <div class="w-[30%] flex flex-col items-end justify-center space-y-1">
+            ${pTabHTML}
+          </div>
+          <div class="flex flex-col items-end justify-center flex-shrink-0 pl-1 space-y-1">
             ${isPlayed ? perfBadge : ''}
             <div class="flex items-center justify-end space-x-1">
               ${ptsBadge}
@@ -2643,7 +2657,6 @@ ${(() => {
         </li>
       `;
     });
-  }
   pronoContainer.innerHTML = pronoHTML;
   parseFlags();
   document.querySelector('.main-scroll').classList.add('match-view');
