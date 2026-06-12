@@ -125,7 +125,7 @@
   <div class="max-w-7xl w-full mx-auto px-4 py-3 flex justify-between items-center">
     
     <div class="flex-1 flex items-center justify-start">
-      <img src="https://lh3.googleusercontent.com/d/1x6zPLarU8YmCHqDTKaqr22jX5p5neFpz" alt="Pastis Prono" class="h-10 md:h-14 w-auto object-contain cursor-pointer hover:opacity-80 transition transform hover:scale-105" onclick="switchView('calendrier')" title="Retour à l'accueil">
+      <img src="https://lh3.googleusercontent.com/d/1x6zPLarU8YmCHqDTKaqr22jX5p5neFpz" alt="Pastis Prono" class="h-10 md:h-14 w-auto object-contain cursor-pointer hover:opacity-80 transition transform hover:scale-105" onclick="retourAccueil()" title="Retour à l'accueil">
     </div>
     
     <div class="flex-[2] flex justify-center items-center">
@@ -309,7 +309,7 @@
 
 <nav class="w-full bg-navy-900/80 backdrop-blur-xl border-t border-navy-700/50 pb-[env(safe-area-inset-bottom,0.5rem)] pt-1 z-[100] flex-none shadow-[0_-10px_25px_rgba(0,0,0,0.5)]">
     <div class="w-full max-w-7xl mx-auto grid grid-cols-6 gap-0">
-      <button onclick="switchView('calendrier')" id="nav-calendrier" class="py-2 flex flex-col items-center justify-center text-pastis-500 transition">
+      <button onclick="retourAccueil()" id="nav-calendrier" class="py-2 flex flex-col items-center justify-center text-pastis-500 transition">
         <div class="text-xl md:text-2xl mb-0.5">📅</div>
         <span class="text-[9px] md:text-sm font-semibold tracking-wide">Matchs</span>
       </button>
@@ -348,7 +348,8 @@
     }    let phasesStarted = {}; 
     let phasesVisibility = {}; 
     let isTournamentStarted = false; 
-    let currentView = 'calendrier'; 
+    let currentView = 'calendrier';
+    let isInitialLoad = true; // Atterrissage auto sur les matchs du jour au 1er chargement uniquement
     let lastOpenedMatchId = null;
     let livePollTimer = null;
     let currentCalView = 'all'; // Garde en mémoire le sous-menu actif
@@ -613,8 +614,18 @@ function initApp(data, isCached = false) {
       if(currentView === 'calendrier') switchCalView(currentCalView);
 
       setupLivePolling(); // NOUVEAU : (ré)arme le rafraîchissement auto live
-    }
 
+      // --- Atterrissage direct sur les matchs du jour (uniquement au tout premier chargement) ---
+      // On ne le fait PAS lors des rafraîchissements live (silentRefresh) pour ne pas voler le scroll de l'utilisateur.
+      if (isInitialLoad && currentView === 'calendrier' && currentCalView === 'all') {
+        setTimeout(() => {
+          const todayCard = document.querySelector('[data-today="1"]');
+          if (todayCard) todayCard.scrollIntoView({ behavior: 'auto', block: 'center' });
+        }, isCached ? 50 : 120);
+      }
+      if (!isCached) isInitialLoad = false; // après le 1er fetch réseau, plus d'auto-scroll
+    }
+    
    // ==========================================
     // GÉNÉRATEUR RÈGLEMENT (Version Oswald Sans Alinéa)
     // ==========================================
@@ -1046,7 +1057,15 @@ function initApp(data, isCached = false) {
     // ==========================================
     // UTILITAIRES & DESIGNS (Logos TV, Badges...)
     // ==========================================
-function scrollToToday() {
+function retourAccueil() {
+  switchView('calendrier');
+  switchCalView('all'); // on force la sous-vue "Tous" = page d'accueil
+  setTimeout(() => {
+    const todayCard = document.querySelector('[data-today="1"]');
+    if (todayCard) todayCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 120);
+}
+    function scrollToToday() {
       // Si on n'est pas sur la bonne vue, on switch de force
       if (currentView !== 'calendrier' || currentCalView !== 'all') {
         switchView('calendrier');
