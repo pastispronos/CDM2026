@@ -2632,7 +2632,7 @@ pronosMatch.forEach(p => {
 
       let perfBadge = getPerformanceBadge(textPerf);
 
-      pronoHTML += `
+pronoHTML += `
         <li class="flex items-center justify-between p-4 hover:bg-navy-700 transition border-b border-navy-700/50 last:border-0 relative bg-navy-800/80 backdrop-blur-sm">
           <div class="flex items-center flex-1 min-w-0 pr-2 overflow-hidden">
             <span class="text-[10px] md:text-sm font-black font-oswald text-white bg-navy-900 border border-navy-600 px-2 py-0.5 rounded-lg shadow-sm whitespace-nowrap mr-2 flex-shrink-0 flex items-center justify-center min-w-[30px]">#${rangJoueur}</span>
@@ -2647,7 +2647,7 @@ pronosMatch.forEach(p => {
             </div>
             ${pTabHTML}
           </div>
-          <div class="flex flex-col items-end justify-center flex-shrink-0 pl-1 space-y-1">
+          <div class="flex flex-col items-end justify-center flex-1 min-w-0 pl-1 space-y-1">
             ${isPlayed ? perfBadge : ''}
             <div class="flex items-center justify-end space-x-1">
               ${ptsBadge}
