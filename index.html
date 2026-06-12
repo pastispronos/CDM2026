@@ -2656,8 +2656,10 @@ pronosMatch.forEach(p => {
           </div>
         </li>
       `;
-    });
+});
+  }
   pronoContainer.innerHTML = pronoHTML;
+  parseFlags();
   parseFlags();
   document.querySelector('.main-scroll').classList.add('match-view');
   switchView('match');
