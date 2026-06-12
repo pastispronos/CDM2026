@@ -2620,13 +2620,13 @@ pronosMatch.forEach(p => {
         
         pTabHTML = (pTAB && pTAB.trim() !== "") ? `<div class="text-[9px] text-pastis-500 font-bold uppercase mt-0.5">TAB: ${pTAB}</div>` : '';
 
-        // 🏳️ Drapeau du vainqueur pronostiqué — visible sur PC uniquement (hidden md:inline-block)
+        // 🏳️ Drapeau du vainqueur pronostiqué — visible sur PC uniquement
         const pA = parseInt(pronoA) || 0;
         const pB = parseInt(pronoB) || 0;
         if (pA > pB) {
-          flagLeft = `<span class="emoji-flag hidden md:inline-block text-2xl mr-2 align-middle">${getFlagOnly(eqA)}</span>`;
+          flagLeft = `<span class="emoji-flag text-2xl">${getFlagOnly(eqA)}</span>`;
         } else if (pB > pA) {
-          flagRight = `<span class="emoji-flag hidden md:inline-block text-2xl ml-2 align-middle">${getFlagOnly(eqB)}</span>`;
+          flagRight = `<span class="emoji-flag text-2xl">${getFlagOnly(eqB)}</span>`;
         }
       }
 
@@ -2638,12 +2638,12 @@ pronosMatch.forEach(p => {
             <span class="text-[10px] md:text-sm font-black font-oswald text-white bg-navy-900 border border-navy-600 px-2 py-0.5 rounded-lg shadow-sm whitespace-nowrap mr-2 flex-shrink-0 flex items-center justify-center min-w-[30px]">#${rangJoueur}</span>
             <span onclick="goToPlayerProfile('${escapeJS(joueur)}')" class="font-bold text-white hover:text-pastis-500 underline cursor-pointer truncate relative z-20 pointer-events-auto text-[13px] md:text-base">${joueur}</span>
           </div>
-          <div class="flex flex-col items-center justify-center flex-shrink-0 px-2 md:px-4">
+          <div class="flex flex-col items-center justify-center flex-shrink-0 w-[90px] md:w-[160px]">
             ${jkrBadge}
-            <div class="flex items-center justify-center whitespace-nowrap">
-              ${flagLeft}
-              ${pronoBloc}
-              ${flagRight}
+            <div class="flex items-center justify-center">
+              <span class="hidden md:flex items-center justify-end w-10 flex-shrink-0">${flagLeft}</span>
+              <span class="flex items-center justify-center min-w-[48px] md:min-w-[60px] text-center">${pronoBloc}</span>
+              <span class="hidden md:flex items-center justify-start w-10 flex-shrink-0">${flagRight}</span>
             </div>
             ${pTabHTML}
           </div>
@@ -2656,7 +2656,7 @@ pronosMatch.forEach(p => {
           </div>
         </li>
       `;
-});
+    });
   }
   pronoContainer.innerHTML = pronoHTML;
   parseFlags();
