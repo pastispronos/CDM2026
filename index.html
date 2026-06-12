@@ -1046,24 +1046,24 @@ function initApp(data, isCached = false) {
     // ==========================================
     // UTILITAIRES & DESIGNS (Logos TV, Badges...)
     // ==========================================
-    function scrollToToday() {
+function scrollToToday() {
       // Si on n'est pas sur la bonne vue, on switch de force
       if (currentView !== 'calendrier' || currentCalView !== 'all') {
         switchView('calendrier');
         switchCalView('all');
         // Un délai millimétré pour laisser le DOM afficher les éléments
         setTimeout(() => {
-          const todayCard = document.querySelector('.border-pastis-500');
+          const todayCard = document.querySelector('[data-today="1"]');
           if (todayCard) todayCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
           else showTooltip(null, "Aucun match prévu aujourd'hui !");
         }, 300);
       } else {
-        const todayCard = document.querySelector('.border-pastis-500');
+        const todayCard = document.querySelector('[data-today="1"]');
         if (todayCard) todayCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
         else showTooltip(null, "Aucun match prévu aujourd'hui !");
       }
     }
-
+    
     let tooltipTimeout;
     function showTooltip(event, message) {
       if(event) event.stopPropagation(); 
@@ -1620,7 +1620,7 @@ if (isLive) {
   let bonusBadgeHTML = isbonus ? `<div class="absolute -top-3 left-4 md:left-6 bg-orange-600 text-white text-[8px] md:text-[10px] font-black px-2 py-0.5 rounded-full shadow-md z-10 uppercase tracking-wider border border-orange-400 flex items-center gap-1"><span>🔥</span> Match Bonus</div>` : "";
 
   return `
-    <div onclick="openMatchDetails('${idMatch}')" class="rounded-xl p-2 md:pt-3 md:px-3 md:pb-3 border relative cursor-pointer mb-3 md:mb-4 ${cardHighlightClass}">
+    <div onclick="openMatchDetails('${idMatch}')" ${matchLogicalDate === logicalTodayStr ? 'data-today="1"' : ''} class="rounded-xl p-2 md:pt-3 md:px-3 md:pb-3 border relative cursor-pointer mb-3 md:mb-4 ${cardHighlightClass}">
       ${bonusBadgeHTML}
       ${badgeHighlightHTML}
 
