@@ -791,7 +791,7 @@ function initApp(data, isCached = false) {
       drawChart();
     }
 
-    function drawChart() {
+function drawChart() {
       if (!document.getElementById('evolutionChart')) return;
       const ctx = document.getElementById('evolutionChart').getContext('2d');
       if (chartInstance) chartInstance.destroy();
@@ -820,7 +820,16 @@ function initApp(data, isCached = false) {
           responsive: true, maintainAspectRatio: false,
           plugins: {
             legend: { position: 'bottom', labels: { color: '#fff', usePointStyle: true, boxWidth: 8, padding: 15 } },
-            tooltip: { mode: 'index', intersect: false, backgroundColor: '#212E55', titleColor: '#F7D11A', bodyColor: '#fff', bodyFont: { weight: 'bold' } }
+            tooltip: {
+              mode: 'index', intersect: false,
+              backgroundColor: '#212E55', titleColor: '#F7D11A', bodyColor: '#fff', bodyFont: { weight: 'bold' },
+              itemSort: (a, b) => {
+                if (activeChartType === 'rank') {
+                  return (a.parsed.y ?? Infinity) - (b.parsed.y ?? Infinity);
+                }
+                return (b.parsed.y ?? -Infinity) - (a.parsed.y ?? -Infinity);
+              }
+            }
           },
           scales: { x: { grid: { display: false }, ticks: { color: '#9ca3af', font: { size: 10 } } }, y: yAxisConfig },
           interaction: { mode: 'nearest', axis: 'x', intersect: false }
