@@ -66,6 +66,7 @@
     }
     .joker-pulse { animation: pulse-gold 2s infinite; border: 1px solid #F7D11A; }
     .bracket-col { display: flex; flex-direction: column; justify-content: space-around; height: 100%; }
+    .tend-active { box-shadow: 0 0 0 2px #F7D11A, 0 0 14px rgba(247,209,26,0.55) !important; }
   /* ===== Indicateur match EN DIRECT ===== */
 @keyframes blink-red {
   0%, 100% { opacity: 1; transform: scale(1); }
@@ -291,8 +292,13 @@
         ⬅️ Retour au calendrier
       </button>
       <div id="match-header" class="bg-gradient-to-br from-navy-800 to-navy-700 rounded-xl p-4 md:p-6 text-center shadow-lg border border-navy-700 mb-6 mt-4 relative"></div>
-      <h3 class="text-md font-oswald font-bold text-gray-300 mb-3 uppercase tracking-wider text-lg flex justify-between">
-        <span>Pronostics</span>
+      <h3 class="font-oswald font-bold text-gray-300 mb-3 uppercase tracking-wider text-lg flex items-center justify-between gap-2 flex-wrap relative z-20">
+        <span class="flex items-center gap-2">Pronostics
+          <span id="prono-filter-count" onclick="resetMatchFilters()" class="hidden cursor-pointer text-[10px] normal-case font-bold bg-pastis-500 text-navy-900 px-2 py-0.5 rounded-full tracking-normal hover:brightness-110 transition"></span>
+        </span>
+        <select id="select-prono-joueur" onchange="setPronoJoueurFilter(this.value)" class="bg-navy-800 border border-navy-700 text-white text-xs md:text-sm font-medium rounded-lg px-2 md:px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-pastis-500 normal-case tracking-normal max-w-[160px] md:max-w-[220px] cursor-pointer">
+          <option value="">👤 Tous les joueurs</option>
+        </select>
       </h3>
       <div class="bg-navy-800 rounded-xl overflow-hidden shadow-lg border border-navy-700">
         <ul id="pronostics-list" class="divide-y divide-navy-700"></ul>
@@ -339,6 +345,7 @@
   <script>
     const API_URL = 'https://script.google.com/macros/s/AKfycbxXDUy7-rggkIafbQPDxShVFj5tV_E3GZ_P5sfytXRIOi0D6Mof0-mxEOsYnyu8M3k/exec?api=1';
     let appData = { classement: [], calendrier: [], pronostics: [], equipes: [], chaines: [], reglement: [], joueursMasques: [] };
+    let matchFilter = { idMatch: null, tendance: null, joueur: '' };
 
     // 🔒 Renvoie true si le joueur est marqué "Masqué" (colonne T de la feuille Joueurs)
     function estJoueurMasque(nom) {
@@ -2442,12 +2449,151 @@ const finContent = (!isTournamentStarted || estJoueurMasque(joueur))
       document.getElementById('joueur-history-list').innerHTML = pronosListHTML;
       parseFlags();
     }
+// --- FILTRES DE LA VUE MATCH ---
+function pronoTendance(p) {
+  const a = parseInt(p[5]), b = parseInt(p[6]);
+  if (isNaN(a) || isNaN(b)) return null;
+  if (a > b) return '1';
+  if (b > a) return '2';
+  return 'N';
+}
 
+function toggleTendanceFilter(t) {
+  matchFilter.tendance = (matchFilter.tendance === t) ? null : t; // re-clic = on enlève
+  renderMatchPronos();
+}
+
+function setPronoJoueurFilter(val) {
+  matchFilter.joueur = val || '';
+  renderMatchPronos();
+}
+
+function resetMatchFilters() {
+  matchFilter.tendance = null;
+  matchFilter.joueur = '';
+  const sel = document.getElementById('select-prono-joueur');
+  if (sel) sel.value = '';
+  renderMatchPronos();
+}
+
+function updatePronoFilterUI(visibleCount) {
+  ['1', 'N', '2'].forEach(t => {
+    const el = document.getElementById('tend-cell-' + t);
+    if (el) el.classList.toggle('tend-active', matchFilter.tendance === t);
+  });
+  const badge = document.getElementById('prono-filter-count');
+  if (!badge) return;
+  if (matchFilter.tendance || matchFilter.joueur) {
+    badge.textContent = visibleCount + ' affiché' + (visibleCount > 1 ? 's' : '') + ' ✕';
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+}
+
+function renderMatchPronos() {
+  const idMatch = matchFilter.idMatch;
+  const match = appData.calendrier.find(r => r[0] == idMatch);
+  if (!match) return;
+
+  const eqA = match[3], eqB = match[4];
+  const scoreA = match[5], scoreB = match[6];
+  const phase = match[8];
+  const isPlayed = (scoreA !== "" && scoreB !== "");
+  const isPhaseStarted = phasesStarted[phase] || false;
+
+  // Pronos valides du match + application des filtres
+  let pronosMatch = appData.pronostics.filter(r => r[1] == idMatch && r[5] !== "" && r[6] !== "");
+  if (matchFilter.joueur)   pronosMatch = pronosMatch.filter(p => p[0] === matchFilter.joueur);
+  if (matchFilter.tendance) pronosMatch = pronosMatch.filter(p => pronoTendance(p) === matchFilter.tendance);
+
+  // Tri : points décroissants, puis rang au classement
+  pronosMatch.sort((a, b) => {
+    const ptsA = parseInt(a[9]) || 0, ptsB = parseInt(b[9]) || 0;
+    if (ptsB !== ptsA) return ptsB - ptsA;
+    const infoA = appData.classement.find(c => c[3] === a[0]);
+    const infoB = appData.classement.find(c => c[3] === b[0]);
+    return (infoA ? parseInt(infoA[2]) : 999) - (infoB ? parseInt(infoB[2]) : 999);
+  });
+
+  const pronoContainer = document.getElementById('pronostics-list');
+  let pronoHTML = '';
+
+  if (pronosMatch.length === 0) {
+    pronoHTML = `<li class="p-4 text-center text-gray-500 italic">${(matchFilter.tendance || matchFilter.joueur) ? 'Aucun prono ne correspond à ce filtre.' : 'Aucun pronostic enregistré.'}</li>`;
+  } else {
+    pronosMatch.forEach(p => {
+      const joueur = p[0], pronoA = p[5], pronoB = p[6], pTAB = p[7], isJoker = p[8] && String(p[8]).toLowerCase() === 'oui', points = p[9], textInfo = p[10], textPerf = p[11];
+      if (pronoA === "" || pronoB === "") return;
+
+      const infoJoueur = appData.classement.find(c => c[3] === joueur);
+      const rangJoueur = infoJoueur ? infoJoueur[2] : '-';
+
+      let ptsBadge = "", btnInfo = "", pronoBloc = "", pTabHTML = "";
+      let flagLeft = "", flagRight = "";
+
+      let jkrBadge = (isJoker && isPhaseStarted) ? `<span class="joker-pulse bg-pastis-500 text-navy-900 text-[7px] md:text-[9px] font-black px-1 py-0.5 rounded shadow-sm whitespace-nowrap mb-0.5 mx-auto block w-max">🌟 JOKER</span>` : ``;
+
+      if (!isPhaseStarted && !isPlayed) {
+        pronoBloc = `<div class="font-black text-gray-500 text-lg">🔒</div>`;
+        btnInfo = `<button onclick="showTooltip(event, 'Pronostic masqué avant le début de la phase')" class="ml-2 w-6 h-6 flex items-center justify-center rounded-full bg-navy-700 text-white font-bold font-serif text-[10px] shadow-sm transition flex-shrink-0 relative z-20 pointer-events-auto">i</button>`;
+      } else {
+        ptsBadge = getPointsBadge(points);
+        btnInfo = `<button onclick="showTooltip(event, '${escapeJS(textInfo)}')" class="ml-2 w-6 h-6 flex items-center justify-center rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold font-serif text-[10px] shadow-sm transition flex-shrink-0 relative z-20 pointer-events-auto">i</button>`;
+
+        let colorProno = isJoker ? 'text-pastis-500' : 'text-white';
+        pronoBloc = `<span class="font-black font-oswald tracking-widest text-base md:text-2xl ${colorProno}">${pronoA}-${pronoB}</span>`;
+
+        pTabHTML = (pTAB && pTAB.trim() !== "") ? `<div class="text-[9px] text-pastis-500 font-bold uppercase mt-0.5">TAB: ${pTAB}</div>` : '';
+
+        const pA = parseInt(pronoA) || 0;
+        const pB = parseInt(pronoB) || 0;
+        if (pA > pB) flagLeft = `<span class="emoji-flag text-2xl">${getFlagOnly(eqA)}</span>`;
+        else if (pB > pA) flagRight = `<span class="emoji-flag text-2xl">${getFlagOnly(eqB)}</span>`;
+      }
+
+      let perfBadge = getPerformanceBadge(textPerf);
+
+      pronoHTML += `
+        <li class="flex items-center justify-between p-4 hover:bg-navy-700 transition border-b border-navy-700/50 last:border-0 relative bg-navy-800/80 backdrop-blur-sm">
+          <div class="flex items-center flex-1 min-w-0 pr-2 overflow-hidden">
+            <span class="text-[10px] md:text-sm font-black font-oswald text-white bg-navy-900 border border-navy-600 px-2 py-0.5 rounded-lg shadow-sm whitespace-nowrap mr-2 flex-shrink-0 flex items-center justify-center min-w-[30px]">#${rangJoueur}</span>
+            <span onclick="goToPlayerProfile('${escapeJS(joueur)}')" class="font-bold text-white hover:text-pastis-500 underline cursor-pointer truncate relative z-20 pointer-events-auto text-[11px] md:text-base">${joueur}</span>
+          </div>
+          <div class="flex flex-col items-center justify-center flex-shrink-0 w-[90px] md:w-[160px]">
+            ${jkrBadge}
+            <div class="flex items-center justify-center">
+              <span class="hidden md:flex items-center justify-end w-10 flex-shrink-0">${flagLeft}</span>
+              <span class="flex items-center justify-center min-w-[48px] md:min-w-[60px] text-center">${pronoBloc}</span>
+              <span class="hidden md:flex items-center justify-start w-10 flex-shrink-0">${flagRight}</span>
+            </div>
+            ${pTabHTML}
+          </div>
+          <div class="flex flex-col items-end justify-center flex-1 min-w-0 pl-1 space-y-1">
+            ${isPlayed ? perfBadge : ''}
+            <div class="flex items-center justify-end space-x-1">
+              ${ptsBadge}
+              ${btnInfo}
+            </div>
+          </div>
+        </li>
+      `;
+    });
+  }
+  pronoContainer.innerHTML = pronoHTML;
+  parseFlags();
+  updatePronoFilterUI(pronosMatch.length);
+}
 // --- MATCH DETAIL ---
 function openMatchDetails(idMatch) {
   const match = appData.calendrier.find(r => r[0] == idMatch);
   if(!match) return;
   lastOpenedMatchId = idMatch; // NOUVEAU : pour le rafraîchissement live de la fiche
+  if (matchFilter.idMatch !== idMatch) {
+    matchFilter = { idMatch: idMatch, tendance: null, joueur: '' }; // nouveau match → on réinitialise
+  } else {
+    matchFilter.idMatch = idMatch; // même match (refresh live) → on garde les filtres
+  }
 
   const date = match[1], time = match[2], phase = match[8], eqA = match[3], eqB = match[4];
   const scoreA = match[5], scoreB = match[6], vainqueurTAB = match[7];
@@ -2531,18 +2677,16 @@ function openMatchDetails(idMatch) {
           <div class="relative flex justify-center w-full px-2">
 
             <div class="flex flex-col items-center flex-none bg-navy-900/60 backdrop-blur px-3 md:px-5 py-2 md:py-3 rounded-xl border border-navy-700 shadow-inner w-[260px] sm:w-[320px] md:w-[440px]">
-              <span class="text-[10px] md:text-xs text-gray-400 uppercase tracking-[0.2em] font-bold mb-1.5 md:mb-2 text-center w-full">Tendance</span>
-              
+<span class="text-[10px] md:text-xs text-gray-400 uppercase tracking-[0.2em] font-bold mb-0.5 text-center w-full">Tendance</span>
+              <span class="text-[8px] md:text-[9px] text-pastis-500/70 normal-case tracking-normal font-semibold mb-1.5 md:mb-2 flex items-center justify-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>Cliquez pour filtrer</span>              
               <div class="grid grid-cols-3 gap-1.5 md:gap-4 font-oswald w-full">
-                <div class="flex items-center justify-center px-1.5 py-0.5 rounded border ${bg1d} transition overflow-hidden">
-                  <span class="text-[9px] md:text-[11px] font-bold uppercase ${lbl1d} truncate mr-1 md:mr-1.5">${getCleanName(eqA)}</span>
+<div id="tend-cell-N" onclick="toggleTendanceFilter('N')" title="Filtrer : pronos sur le nul" class="flex items-center justify-center px-1.5 py-0.5 rounded border ${bgNd} transition overflow-hidden cursor-pointer hover:brightness-110 active:scale-95 relative z-20">                  <span class="text-[9px] md:text-[11px] font-bold uppercase ${lbl1d} truncate mr-1 md:mr-1.5">${getCleanName(eqA)}</span>
                   <span class="font-black text-sm md:text-base flex-shrink-0">${stat1}</span>
                 </div>
-                <div class="flex items-center justify-center px-1.5 py-0.5 rounded border ${bgNd} transition overflow-hidden">
-                  <span class="text-[9px] md:text-[11px] font-bold uppercase ${lblNd} mr-1 md:mr-1.5">Nul</span>
+<div id="tend-cell-N" onclick="toggleTendanceFilter('N')" title="Filtrer : pronos sur le nul" class="flex items-center justify-center px-1.5 py-0.5 rounded border ${bgNd} transition overflow-hidden cursor-pointer hover:brightness-110 active:scale-95 relative z-20">                  <span class="text-[9px] md:text-[11px] font-bold uppercase ${lblNd} mr-1 md:mr-1.5">Nul</span>
                   <span class="font-black text-sm md:text-base flex-shrink-0">${statN}</span>
                 </div>
-                <div class="flex items-center justify-center px-1.5 py-0.5 rounded border ${bg2d} transition overflow-hidden">
+                <div id="tend-cell-2" onclick="toggleTendanceFilter('2')" title="Filtrer : pronos pour ${getCleanName(eqB)}" class="flex items-center justify-center px-1.5 py-0.5 rounded border ${bg2d} transition overflow-hidden cursor-pointer hover:brightness-110 active:scale-95 relative z-20">
                   <span class="text-[9px] md:text-[11px] font-bold uppercase ${lbl2d} truncate mr-1 md:mr-1.5">${getCleanName(eqB)}</span>
                   <span class="font-black text-sm md:text-base flex-shrink-0">${stat2}</span>
                 </div>
@@ -2617,85 +2761,21 @@ ${(() => {
     </div>
   `;
 
-  const pronosMatch = appData.pronostics.filter(r => r[1] == idMatch);
-  pronosMatch.sort((a, b) => {
-    const ptsA = parseInt(a[9]) || 0, ptsB = parseInt(b[9]) || 0;
-    if(ptsB !== ptsA) return ptsB - ptsA;
-    const infoA = appData.classement.find(c => c[3] === a[0]);
-    const infoB = appData.classement.find(c => c[3] === b[0]);
-    return (infoA ? parseInt(infoA[2]) : 999) - (infoB ? parseInt(infoB[2]) : 999);
-  });
-
-  const pronoContainer = document.getElementById('pronostics-list');
-  let pronoHTML = '';
-  
-  if(pronosMatch.length === 0) {
-    pronoHTML = `<li class="p-4 text-center text-gray-500 italic">Aucun pronostic enregistré.</li>`;
-  } else {
-pronosMatch.forEach(p => {
-      const joueur = p[0], pronoA = p[5], pronoB = p[6], pTAB = p[7], isJoker = p[8] && String(p[8]).toLowerCase() === 'oui', points = p[9], textInfo = p[10], textPerf = p[11]; 
-      if(pronoA === "" || pronoB === "") return;
-
-      const infoJoueur = appData.classement.find(c => c[3] === joueur);
-      const rangJoueur = infoJoueur ? infoJoueur[2] : '-'; 
-      
-      let ptsBadge = "", btnInfo = "", pronoBloc = "", pTabHTML = "";
-      let flagLeft = "", flagRight = "";
-
-      // ✅ FIX : jkrBadge conditionné à isPhaseStarted
-      let jkrBadge = (isJoker && isPhaseStarted) ? `<span class="joker-pulse bg-pastis-500 text-navy-900 text-[7px] md:text-[9px] font-black px-1 py-0.5 rounded shadow-sm whitespace-nowrap mb-0.5 mx-auto block w-max">🌟 JOKER</span>` : ``;
-
-      if(!isPhaseStarted && !isPlayed) {
-        pronoBloc = `<div class="font-black text-gray-500 text-lg">🔒</div>`;
-        btnInfo = `<button onclick="showTooltip(event, 'Pronostic masqué avant le début de la phase')" class="ml-2 w-6 h-6 flex items-center justify-center rounded-full bg-navy-700 text-white font-bold font-serif text-[10px] shadow-sm transition flex-shrink-0 relative z-20 pointer-events-auto">i</button>`;
-      } else {
-        ptsBadge = getPointsBadge(points);
-        btnInfo = `<button onclick="showTooltip(event, '${escapeJS(textInfo)}')" class="ml-2 w-6 h-6 flex items-center justify-center rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold font-serif text-[10px] shadow-sm transition flex-shrink-0 relative z-20 pointer-events-auto">i</button>`;
-        
-        let colorProno = isJoker ? 'text-pastis-500' : 'text-white';
-        pronoBloc = `<span class="font-black font-oswald tracking-widest text-base md:text-2xl ${colorProno}">${pronoA}-${pronoB}</span>`;
-        
-        pTabHTML = (pTAB && pTAB.trim() !== "") ? `<div class="text-[9px] text-pastis-500 font-bold uppercase mt-0.5">TAB: ${pTAB}</div>` : '';
-
-        // 🏳️ Drapeau du vainqueur pronostiqué — visible sur PC uniquement
-        const pA = parseInt(pronoA) || 0;
-        const pB = parseInt(pronoB) || 0;
-        if (pA > pB) {
-          flagLeft = `<span class="emoji-flag text-2xl">${getFlagOnly(eqA)}</span>`;
-        } else if (pB > pA) {
-          flagRight = `<span class="emoji-flag text-2xl">${getFlagOnly(eqB)}</span>`;
-        }
-      }
-
-      let perfBadge = getPerformanceBadge(textPerf);
-
-pronoHTML += `
-        <li class="flex items-center justify-between p-4 hover:bg-navy-700 transition border-b border-navy-700/50 last:border-0 relative bg-navy-800/80 backdrop-blur-sm">
-          <div class="flex items-center flex-1 min-w-0 pr-2 overflow-hidden">
-            <span class="text-[10px] md:text-sm font-black font-oswald text-white bg-navy-900 border border-navy-600 px-2 py-0.5 rounded-lg shadow-sm whitespace-nowrap mr-2 flex-shrink-0 flex items-center justify-center min-w-[30px]">#${rangJoueur}</span>
-            <span onclick="goToPlayerProfile('${escapeJS(joueur)}')" class="font-bold text-white hover:text-pastis-500 underline cursor-pointer truncate relative z-20 pointer-events-auto text-[11px] md:text-base">${joueur}</span>
-          </div>
-          <div class="flex flex-col items-center justify-center flex-shrink-0 w-[90px] md:w-[160px]">
-            ${jkrBadge}
-            <div class="flex items-center justify-center">
-              <span class="hidden md:flex items-center justify-end w-10 flex-shrink-0">${flagLeft}</span>
-              <span class="flex items-center justify-center min-w-[48px] md:min-w-[60px] text-center">${pronoBloc}</span>
-              <span class="hidden md:flex items-center justify-start w-10 flex-shrink-0">${flagRight}</span>
-            </div>
-            ${pTabHTML}
-          </div>
-          <div class="flex flex-col items-end justify-center flex-1 min-w-0 pl-1 space-y-1">
-            ${isPlayed ? perfBadge : ''}
-            <div class="flex items-center justify-end space-x-1">
-              ${ptsBadge}
-              ${btnInfo}
-            </div>
-          </div>
-        </li>
-      `;
-    });
+// Remplit le menu déroulant avec tous les joueurs ayant pronostiqué ce match (trié alpha)
+  const selProno = document.getElementById('select-prono-joueur');
+  if (selProno) {
+    let joueursMatch = appData.pronostics
+      .filter(r => r[1] == idMatch && r[5] !== "" && r[6] !== "")
+      .map(p => p[0])
+      .sort((a, b) => a.localeCompare(b));
+    let opts = '<option value="">👤 Tous les joueurs</option>';
+    joueursMatch.forEach(nom => { opts += `<option value="${nom}">${nom}</option>`; });
+    selProno.innerHTML = opts;
+    selProno.value = matchFilter.joueur || '';
   }
-  pronoContainer.innerHTML = pronoHTML;
+
+  // Rendu de la liste (filtres tendance + joueur appliqués)
+  renderMatchPronos();
   parseFlags();
   parseFlags();
   document.querySelector('.main-scroll').classList.add('match-view');
