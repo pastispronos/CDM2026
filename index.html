@@ -2071,8 +2071,10 @@ function renderClassement() {
         const bonsResultats = row[33];
         const favori = row[36], statutFav = row[37], ptsFav = row[38];
         const finaliste = row[40], statutFin = row[41], ptsFin = row[42];
-        const jokers = (row[34] || ""); // ★ AJOUT JOKERS : colonne AI (n°35 → indice 34)        
-        if(!joueur || joueur === "") return;
+        const jokerRaw   = (row[34] || "");              // ★ JOKERS AI : "★☆☆ +3 pts"
+        const jokerParts = jokerRaw.split(" +");
+        const jokerStars = jokerParts[0] || "";
+        const jokerBonus = jokerParts.length > 1 ? "+" + jokerParts[1] : "";        if(!joueur || joueur === "") return;
 
         let evolBadge = styleEvolText(evolRaw);
 
@@ -2152,8 +2154,12 @@ function renderClassement() {
               <div onclick="goToPlayerProfile('${escapeJS(joueur)}')" class="truncate text-left font-bold text-white hover:text-pastis-500 cursor-pointer tracking-wide w-full">${joueur}</div>
             </td>
             <td class="sticky left-[120px] md:left-[200px] z-20 bg-navy-800 group-hover:bg-navy-700 px-1 md:px-4 py-3 text-pastis-500 font-bold text-sm md:text-xl font-oswald w-[40px] md:w-[60px] min-w-[40px] md:min-w-[60px] border-r-2 border-navy-600 shadow-[3px_0_5px_rgba(0,0,0,0.3)]">${total}</td>
-            <td class="px-2 md:px-3 py-3 text-center text-pastis-500 text-base tracking-widest whitespace-nowrap bg-navy-800 group-hover:bg-navy-700 border-r border-white/5">${jokers}</td>
-            
+            <td class="px-2 md:px-3 py-3 text-center whitespace-nowrap bg-navy-800 group-hover:bg-navy-700 border-r border-white/5">
+              <div class="flex flex-col items-center leading-tight">
+                <span class="text-pastis-500 text-base tracking-widest">${jokerStars}</span>
+                ${jokerBonus ? `<span class="text-[10px] font-bold text-pastis-500/80 mt-0.5">${jokerBonus}</span>` : ''}
+              </div>
+            </td>            
             ${ptsColsHTML}
             ${phasesColsHTML}
             
