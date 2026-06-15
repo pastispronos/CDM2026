@@ -1649,8 +1649,8 @@ if (isLive) {
     cardHighlightClass = `border-navy-700 hover:border-blue-400 hover:bg-navy-700 hover:shadow-[0_0_15px_rgba(96,165,250,0.2)] transition-all ${baseClass}`;
   }
 
-// Badge de carte unifié : même gabarit (épaisseur/forme) pour LIVE et Matchs du jour
-  const BADGE_BASE = "absolute -top-2 -right-2 text-[9px] font-black px-2.5 py-0.5 rounded-full shadow-sm z-10 uppercase tracking-wider leading-none flex items-center";
+// Badge de carte : hauteur FIXE identique → même épaisseur garantie (LIVE = Matchs du jour)
+  const BADGE_BASE = "absolute -top-2 -right-2 h-[18px] px-2.5 rounded-full shadow-sm z-10 text-[9px] font-black uppercase tracking-wider leading-none flex items-center justify-center";
 
   let badgeHighlightHTML = isLive
     ? `<div class="${BADGE_BASE} gap-1.5 bg-red-500 text-white border border-red-400/60"><span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>Live</div>`
