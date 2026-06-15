@@ -1649,9 +1649,14 @@ if (isLive) {
     cardHighlightClass = `border-navy-700 hover:border-blue-400 hover:bg-navy-700 hover:shadow-[0_0_15px_rgba(96,165,250,0.2)] transition-all ${baseClass}`;
   }
 
+// Badge de carte unifié : même gabarit (épaisseur/forme) pour LIVE et Matchs du jour
+  const BADGE_BASE = "absolute -top-2 -right-2 text-[9px] font-black px-2.5 py-0.5 rounded-full shadow-sm z-10 uppercase tracking-wider leading-none flex items-center";
+
   let badgeHighlightHTML = isLive
-    ? `<div class="absolute -top-2 -right-2 bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-md z-10 uppercase tracking-wider flex items-center gap-1"><span class="relative w-2 h-2"><span class="live-dot" style="top:0;right:0;width:8px;height:8px;"></span></span> Live</div>`
-    : (matchLogicalDate === logicalTodayStr ? `<div class="absolute -top-2 -right-2 bg-pastis-500 text-navy-900 text-[9px] font-black px-2 py-0.5 rounded-full shadow-md z-10 uppercase tracking-wider">Match(s) du jour</div>` : "");
+    ? `<div class="${BADGE_BASE} gap-1.5 bg-red-500 text-white border border-red-400/60"><span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>Live</div>`
+    : (matchLogicalDate === logicalTodayStr
+        ? `<div class="${BADGE_BASE} bg-pastis-500 text-navy-900 border border-pastis-600/60">Match(s) du jour</div>`
+        : "");
   let bonusBadgeHTML = isbonus ? `<div class="absolute -top-3 left-4 md:left-6 bg-orange-600 text-white text-[8px] md:text-[10px] font-black px-2 py-0.5 rounded-full shadow-md z-10 uppercase tracking-wider border border-orange-400 flex items-center gap-1"><span>🔥</span> Match Bonus</div>` : "";
 
   return `
