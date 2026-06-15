@@ -1639,14 +1639,14 @@ if (isLive) {
 
   let baseClass = isbonus ? "bg-gradient-to-r from-orange-900/10 via-navy-800 to-orange-900/10" : "bg-navy-800";
 
-  // NOUVEAU : si LIVE, on force un liseré rouge prioritaire
+// Liseré de carte : MÊME épaisseur (border-2) pour LIVE et Matchs du jour
   let cardHighlightClass;
   if (isLive) {
-    cardHighlightClass = `border-red-600/50 shadow-[0_0_12px_rgba(239,68,68,0.15)] hover:bg-navy-700 ${baseClass}`;
+    cardHighlightClass = `border-2 border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.18)] hover:bg-navy-700 ${baseClass}`;
   } else if (matchLogicalDate === logicalTodayStr) {
-    cardHighlightClass = `border-pastis-500 ring-2 ring-pastis-500 shadow-[0_0_15px_rgba(247,195,37,0.3)] hover:bg-navy-700 hover:shadow-[0_0_20px_rgba(247,195,37,0.5)] ${baseClass}`;
+    cardHighlightClass = `border-2 border-pastis-500 shadow-[0_0_10px_rgba(247,195,37,0.22)] hover:bg-navy-700 hover:shadow-[0_0_16px_rgba(247,195,37,0.4)] ${baseClass}`;
   } else {
-    cardHighlightClass = `border-navy-700 hover:border-blue-400 hover:bg-navy-700 hover:shadow-[0_0_15px_rgba(96,165,250,0.2)] transition-all ${baseClass}`;
+    cardHighlightClass = `border border-navy-700 hover:border-blue-400 hover:bg-navy-700 hover:shadow-[0_0_15px_rgba(96,165,250,0.2)] transition-all ${baseClass}`;
   }
 
 // Badge de carte : hauteur FIXE identique → même épaisseur garantie (LIVE = Matchs du jour)
@@ -1660,7 +1660,7 @@ if (isLive) {
   let bonusBadgeHTML = isbonus ? `<div class="absolute -top-3 left-4 md:left-6 bg-orange-600 text-white text-[8px] md:text-[10px] font-black px-2 py-0.5 rounded-full shadow-md z-10 uppercase tracking-wider border border-orange-400 flex items-center gap-1"><span>🔥</span> Match Bonus</div>` : "";
 
   return `
-    <div onclick="openMatchDetails('${idMatch}')" ${matchLogicalDate === logicalTodayStr ? 'data-today="1"' : ''} class="rounded-xl p-2 md:pt-3 md:px-3 md:pb-3 border relative cursor-pointer mb-3 md:mb-4 ${cardHighlightClass}">
+<div onclick="openMatchDetails('${idMatch}')" ${matchLogicalDate === logicalTodayStr ? 'data-today="1"' : ''} class="rounded-xl p-2 md:pt-3 md:px-3 md:pb-3 relative cursor-pointer mb-3 md:mb-4 ${cardHighlightClass}">
       ${bonusBadgeHTML}
       ${badgeHighlightHTML}
 
