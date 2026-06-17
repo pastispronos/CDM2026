@@ -2317,17 +2317,15 @@ const finContent = (!isTournamentStarted || estJoueurMasque(joueur))
     }
   });
 
-  // Les 3 meilleurs : perfLevel décroissant puis points décroissants, uniquement les coups positifs
+  // Les 3 meilleurs : au moins 5 points — perfLevel décroissant puis points décroissants
   const top3 = [...perfsJoueur]
-    .filter(x => x.pts > 0)
+    .filter(x => x.pts >= 5)
     .sort((a, b) => (b.perfLevel - a.perfLevel) || (b.pts - a.pts))
     .slice(0, 3);
 
-  const topIds = new Set(top3.map(x => x.matchId));
-
-  // Les 3 pires : perfLevel croissant puis points croissants, en excluant ceux déjà dans le top 3
+  // Les 3 pires : moins de 5 points — perfLevel croissant puis points croissants
   const worst3 = [...perfsJoueur]
-    .filter(x => !topIds.has(x.matchId))
+    .filter(x => x.pts < 5)
     .sort((a, b) => (a.perfLevel - b.perfLevel) || (a.pts - b.pts))
     .slice(0, 3);
 
@@ -2352,6 +2350,7 @@ const finContent = (!isTournamentStarted || estJoueurMasque(joueur))
       </div>
     `;
   }
+  
   // --- Jokers ---
   let jokersHTML = '';
   const playerJokers = appData.pronostics.filter(p => p[0] === joueur && p[8] && String(p[8]).toLowerCase() === 'oui');
