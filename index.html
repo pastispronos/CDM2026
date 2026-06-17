@@ -2297,38 +2297,61 @@ const finContent = (!isTournamentStarted || estJoueurMasque(joueur))
       </div>
     `;
 
-  // --- Meilleur coup ---
+// --- Top 3 meilleurs coups & 3 pires inspirations ---
   let bestMatchHTML = '';
-  let bestPerfRank = -1, bestScore = -1, bestMatchObj = null;
+  const perfsJoueur = [];
 
   appData.pronostics.forEach(p => {
-    if(p[0] === joueur && p[5] !== "" && p[6] !== "") {
+    if (p[0] === joueur && p[5] !== "" && p[6] !== "") {
       const matchId = p[1], pts = parseInt(p[9]) || 0, textPerf = p[11] || "";
       const matchData = appData.calendrier.find(r => r[0] == matchId);
-      if(!matchData || matchData[5] === "") return;
-      
+      if (!matchData || matchData[5] === "") return;
+
       let perfLevel = 0;
-      if(textPerf.includes("Expert")) perfLevel = 3;
-      else if(textPerf.includes("Bien vu")) perfLevel = 2;
-      else if(textPerf.includes("Trompé") || textPerf.includes("Ridicule") || textPerf.includes("sieste")) perfLevel = 0;
+      if (textPerf.includes("Expert")) perfLevel = 3;
+      else if (textPerf.includes("Bien vu")) perfLevel = 2;
+      else if (textPerf.includes("Trompé") || textPerf.includes("Ridicule") || textPerf.includes("sieste")) perfLevel = 0;
       else perfLevel = 1;
 
-      if (perfLevel > bestPerfRank || (perfLevel === bestPerfRank && pts > bestScore)) {
-        bestPerfRank = perfLevel; bestScore = pts;
-        bestMatchObj = { match: matchData, prono: p };
-      }
+      perfsJoueur.push({ matchId, match: matchData, prono: p, pts, perfLevel });
     }
   });
 
-  if (bestMatchObj && bestScore > 0) {
-    bestMatchHTML = `
+  // Les 3 meilleurs : perfLevel décroissant puis points décroissants, uniquement les coups positifs
+  const top3 = [...perfsJoueur]
+    .filter(x => x.pts > 0)
+    .sort((a, b) => (b.perfLevel - a.perfLevel) || (b.pts - a.pts))
+    .slice(0, 3);
+
+  const topIds = new Set(top3.map(x => x.matchId));
+
+  // Les 3 pires : perfLevel croissant puis points croissants, en excluant ceux déjà dans le top 3
+  const worst3 = [...perfsJoueur]
+    .filter(x => !topIds.has(x.matchId))
+    .sort((a, b) => (a.perfLevel - b.perfLevel) || (a.pts - b.pts))
+    .slice(0, 3);
+
+  if (top3.length > 0) {
+    let itemsTop = '';
+    top3.forEach(x => { itemsTop += generatePlayerHistoryItemHTML(x.match, x.prono); });
+    bestMatchHTML += `
       <div class="col-span-2 mt-4">
-        <h4 class="text-pastis-500 font-bold uppercase text-xs md:text-sm mb-1 flex items-center space-x-1"><span>MEILLEUR COUP</span></h4>
-        ${generatePlayerHistoryItemHTML(bestMatchObj.match, bestMatchObj.prono)}
+        <h4 class="text-pastis-500 font-bold uppercase text-xs md:text-sm mb-1 flex items-center space-x-1"><span>Les trois meilleurs coups</span></h4>
+        ${itemsTop}
       </div>
     `;
   }
 
+  if (worst3.length > 0) {
+    let itemsWorst = '';
+    worst3.forEach(x => { itemsWorst += generatePlayerHistoryItemHTML(x.match, x.prono); });
+    bestMatchHTML += `
+      <div class="col-span-2 mt-4">
+        <h4 class="text-pastis-500 font-bold uppercase text-xs md:text-sm mb-1 flex items-center space-x-1"><span>Les trois pires inspirations</span></h4>
+        ${itemsWorst}
+      </div>
+    `;
+  }
   // --- Jokers ---
   let jokersHTML = '';
   const playerJokers = appData.pronostics.filter(p => p[0] === joueur && p[8] && String(p[8]).toLowerCase() === 'oui');
