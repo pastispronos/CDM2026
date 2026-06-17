@@ -369,6 +369,7 @@
     let playerChartInstance = null;
     let activeChartType = 'points'; 
     let selectedPlayersForChart = [];
+    let filterJoueurGroupe = 'all';
     const chartColors = ['#F7D11A', '#3b82f6', '#ef4444', '#10b981', '#8b5cf6', '#f97316', '#ec4899', '#06b6d4', '#84cc16', '#6366f1'];
     window.onload = function() { 
       displayHeaderDate();
@@ -2376,6 +2377,8 @@ const finContent = (!isTournamentStarted || estJoueurMasque(joueur))
     jokersHTML += `</div></div>`;
   }
 
+  const groupeStatsHTML = buildGroupeStatsHTML(joueur);
+  
   headerDiv.innerHTML = `
     <div class="bg-gradient-to-br from-navy-800 to-navy-700 rounded-xl p-5 border border-navy-700 shadow-lg relative overflow-hidden">
       <div class="absolute top-0 right-0 bg-pastis-500 text-navy-900 px-4 py-1 rounded-bl-lg font-black font-oswald text-xl shadow-md">${formatPoints(total)}</div>
@@ -2414,7 +2417,9 @@ const finContent = (!isTournamentStarted || estJoueurMasque(joueur))
         </div>
         ${bestMatchHTML}
         ${jokersHTML}
+
         
+      ${groupeStatsHTML}
         <div class="col-span-2 mt-4 bg-navy-900 p-3 rounded-lg border border-navy-700 shadow-inner">
           <h4 class="text-pastis-500 font-bold uppercase text-xs md:text-sm mb-3">ÉVOLUTION DU CLASSEMENT</h4>
           <div class="relative h-[200px] w-full">
@@ -2431,16 +2436,91 @@ const finContent = (!isTournamentStarted || estJoueurMasque(joueur))
   drawPlayerChart(joueur);
   document.getElementById('filter-pts').value = 'all';
   document.getElementById('filter-perf').value = 'all';
+  filterJoueurGroupe = 'all';
   renderJoueurHistory();
 }
 
-    function renderJoueurHistory() {
+    // Construit les 12 blocs "points par groupe" + place /participants, cliquables pour filtrer
+    function buildGroupeStatsHTML(joueur) {
+      // Groupe de chaque match (col K = index 10)
+      const matchGroupe = {};
+      appData.calendrier.forEach(m => {
+        const g = (m[10] || '').trim();
+        if (g) matchGroupe[m[0]] = g;
+      });
+
+      // Points cumulés par joueur et par groupe
+      const acc = {};
+      appData.pronostics.forEach(p => {
+        const g = matchGroupe[p[1]];
+        if (!g) return;
+        const j = p[0];
+        if (!acc[j]) acc[j] = {};
+        acc[j][g] = (acc[j][g] || 0) + (parseInt(p[9]) || 0);
+      });
+
+      // Groupes dans l'ordre d'apparition (A -> L)
+      const groupes = [];
+      appData.calendrier.forEach(m => {
+        const g = (m[10] || '').trim();
+        if (g && !groupes.includes(g)) groupes.push(g);
+      });
+      if (groupes.length === 0) return '';
+
+      // Participants (liste du classement)
+      const participants = appData.classement.map(r => r[3]).filter(Boolean);
+
+      let blocs = '';
+      groupes.forEach(g => {
+        const pts = (acc[joueur] && acc[joueur][g]) || 0;
+        let nbAuDessus = 0;
+        participants.forEach(pl => {
+          const plPts = (acc[pl] && acc[pl][g]) || 0;
+          if (plPts > pts) nbAuDessus++;
+        });
+        const rang = nbAuDessus + 1;
+        const rangTxt = rang === 1 ? '1er' : rang + 'e';
+
+        blocs += `
+          <button onclick="toggleGroupeFilter('${escapeJS(g)}')" data-groupe="${g}"
+            class="groupe-block bg-navy-900 border border-navy-700 rounded px-1.5 py-1 text-center transition hover:border-pastis-500">
+            <span class="block text-[9px] text-gray-400 uppercase leading-tight truncate">${g}</span>
+            <span class="block text-[11px] md:text-xs font-bold text-white leading-tight">${pts} <span class="text-gray-500 font-normal">pts</span> <span class="text-pastis-500">(${rangTxt})</span></span>
+          </button>
+        `;
+      });
+
+      return `
+        <div class="col-span-2 mt-4 bg-navy-900/60 p-3 rounded-lg border border-navy-700">
+          <h4 class="text-pastis-500 font-bold uppercase text-xs md:text-sm mb-3">Points par groupe <span class="text-gray-500 normal-case font-normal">· cliquez pour filtrer</span></h4>
+          <div class="grid grid-cols-3 md:grid-cols-6 gap-1.5">${blocs}</div>
+        </div>
+      `;
+    }
+
+    // Active/désactive le filtre groupe et met à jour le surlignage des blocs
+    function toggleGroupeFilter(groupe) {
+      filterJoueurGroupe = (filterJoueurGroupe === groupe) ? 'all' : groupe;
+      document.querySelectorAll('.groupe-block').forEach(b => {
+        const actif = b.dataset.groupe === filterJoueurGroupe;
+        b.classList.toggle('bg-navy-700', actif);
+        b.classList.toggle('bg-navy-900', !actif);
+        b.classList.toggle('border-pastis-500', actif);
+        b.classList.toggle('border-navy-700', !actif);
+      });
+      renderJoueurHistory();
+      const hist = document.getElementById('joueur-history-list');
+      if (hist) hist.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    
+function renderJoueurHistory() {
       const joueur = document.getElementById('select-joueur').value;
       const fPts = document.getElementById('filter-pts').value;
       const fPerf = document.getElementById('filter-perf').value;
       const fPhase = document.getElementById('filter-joueur-phase') ? document.getElementById('filter-joueur-phase').value : 'all';
       const fTeam = document.getElementById('filter-joueur-team') ? document.getElementById('filter-joueur-team').value : 'all';
-      
+      const fGroupe = filterJoueurGroupe;
+
       let phasesOrder = [];
       appData.calendrier.forEach(m => {
         let p = m[8] ? m[8].trim() : "";
@@ -2461,23 +2541,25 @@ const finContent = (!isTournamentStarted || estJoueurMasque(joueur))
       appData.calendrier.forEach(match => {
         let idMatch = match[0];
         let phaseMatch = match[8] ? match[8].trim() : "";
+        let groupeMatch = (match[10] || "").trim();
         let eqA = match[3] || "";
         let eqB = match[4] || "";
         let prono = appData.pronostics.find(p => p[0] === joueur && p[1] === idMatch);
-        
+
         let hasProno = prono && prono[5] !== "" && prono[6] !== "";
         let isCurrentPhase = (phaseMatch === phaseEnCours);
 
         if(hasProno || isCurrentPhase) {
           if (!prono) prono = [joueur, idMatch, "", "", "", "", "", "", "non", "", "", ""];
-          
+
           let points = prono[9] || "";
           let textPerf = prono[11] || "";
-          
+
           if (fPts !== 'all' && points.toString() !== fPts) return;
           if (fPerf !== 'all' && (!textPerf || !textPerf.includes(fPerf))) return;
           if (fPhase !== 'all' && phaseMatch !== fPhase) return;
           if (fTeam !== 'all' && eqA !== fTeam && eqB !== fTeam) return;
+          if (fGroupe !== 'all' && groupeMatch !== fGroupe) return;
 
           pronosListHTML += generatePlayerHistoryItemHTML(match, prono);
         }
