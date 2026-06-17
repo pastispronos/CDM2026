@@ -2317,13 +2317,24 @@ const finContent = (!isTournamentStarted || estJoueurMasque(joueur))
     }
   });
 
+  // Carte d'historique préfixée d'un numéro de classement (1, 2, 3)
+  const rankedItemHTML = (rang, x) => {
+    const card = generatePlayerHistoryItemHTML(x.match, x.prono).replace('relative mt-2 shadow-sm', 'relative shadow-sm');
+    return `
+      <div class="flex items-center space-x-2 mt-2">
+        <div class="flex-shrink-0 w-5 md:w-6 text-center font-oswald font-black text-pastis-500 text-base md:text-xl leading-none">${rang}</div>
+        <div class="flex-1 min-w-0">${card}</div>
+      </div>
+    `;
+  };
+
   // Les 3 meilleurs : au moins 5 points — perfLevel décroissant puis points décroissants
   const top3 = [...perfsJoueur]
     .filter(x => x.pts >= 5)
     .sort((a, b) => (b.perfLevel - a.perfLevel) || (b.pts - a.pts))
     .slice(0, 3);
 
-  // Les 3 pires : moins de 5 points — perfLevel croissant puis points croissants
+  // Les 3 pires : moins de 5 points — perfLevel croissant puis points croissants (le pire en n°1)
   const worst3 = [...perfsJoueur]
     .filter(x => x.pts < 5)
     .sort((a, b) => (a.perfLevel - b.perfLevel) || (a.pts - b.pts))
@@ -2331,7 +2342,7 @@ const finContent = (!isTournamentStarted || estJoueurMasque(joueur))
 
   if (top3.length > 0) {
     let itemsTop = '';
-    top3.forEach(x => { itemsTop += generatePlayerHistoryItemHTML(x.match, x.prono); });
+    top3.forEach((x, i) => { itemsTop += rankedItemHTML(i + 1, x); });
     bestMatchHTML += `
       <div class="col-span-2 mt-4">
         <h4 class="text-pastis-500 font-bold uppercase text-xs md:text-sm mb-1 flex items-center space-x-1"><span>Les trois meilleurs coups</span></h4>
@@ -2342,7 +2353,7 @@ const finContent = (!isTournamentStarted || estJoueurMasque(joueur))
 
   if (worst3.length > 0) {
     let itemsWorst = '';
-    worst3.forEach(x => { itemsWorst += generatePlayerHistoryItemHTML(x.match, x.prono); });
+    worst3.forEach((x, i) => { itemsWorst += rankedItemHTML(i + 1, x); });
     bestMatchHTML += `
       <div class="col-span-2 mt-4">
         <h4 class="text-pastis-500 font-bold uppercase text-xs md:text-sm mb-1 flex items-center space-x-1"><span>Les trois pires inspirations</span></h4>
