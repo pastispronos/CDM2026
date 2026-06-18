@@ -250,11 +250,10 @@
       <div id="joueur-profile-header" class="hidden space-y-4"></div>
       
 <div id="joueur-history-section" class="hidden mt-6">
-        <button onclick="ppOpenMesPronos()" class="w-full mb-3 bg-pastis-500 text-navy-900 font-bold rounded-lg px-3 py-2.5 text-sm hover:bg-pastis-600 transition flex items-center justify-center gap-2">
-          ✏️ Rentrer / modifier mes pronos pour le prochain tour
-        </button>
-  <div class="flex justify-between items-center mb-2">
-          <h3 class="text-md font-oswald font-bold text-gray-300 uppercase tracking-wider text-lg">Historique complet</h3>
+        <div class="mb-3">
+          <button onclick="ppOpenMesPronos()" class="inline-flex items-center gap-1.5 bg-pastis-500 text-navy-900 font-bold rounded-lg px-3 py-1.5 text-xs hover:bg-pastis-600 transition">
+            ✏️ Rentrer / modifier mes pronos
+          </button>
         </div>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4 bg-navy-800 p-2 rounded-lg border border-navy-700 shadow-sm relative z-20">
           <select id="filter-pts" onchange="renderJoueurHistory()" class="bg-navy-900 border border-navy-700 text-gray-300 text-[10px] md:text-sm rounded p-2 focus:ring-pastis-500 font-semibold appearance-none">
@@ -3003,7 +3002,8 @@ ${(() => {
   }
 }
 /* ============================================================
-   🔓 MES PRONOS — saisie / modification depuis l'app (v2)
+   🔓 MES PRONOS — saisie / modification depuis l'app (v3)
+   Identité = joueur sélectionné en haut (#select-joueur)
    ============================================================ */
 (function () {
   const POST_URL = API_URL.split('?')[0];
@@ -3016,6 +3016,8 @@ ${(() => {
   const esc = s => (s || '').toString().replace(/"/g, '&quot;');
   const cssId = s => (s || '').toString().replace(/[^a-zA-Z0-9]/g, '_');
   const cleanName = t => (typeof getCleanName === 'function') ? getCleanName(t) : (t || '');
+  const ppCurrentJoueur = () => { const s = document.getElementById('select-joueur'); return s ? s.value : ''; };
+  const ppMatchSession = () => { const c = ppCurrentJoueur(); return ppSession && c && ppSession.joueur.toUpperCase() === c.toUpperCase(); };
 
   function ppToursOrder() {
     const seen = [];
@@ -3041,43 +3043,51 @@ ${(() => {
   // ---------- Barre repliée (défaut) ----------
   function ppRenderBar() {
     const m = ppMount(); if (!m) return;
-    const who = ppSession ? ` — ${esc(ppSession.joueur)}` : '';
+    const who = ppMatchSession() ? ` — ${esc(ppSession.joueur)}` : '';
     m.innerHTML = `
       <button onclick="ppOpenMesPronos()" class="w-full bg-navy-800 border border-navy-700 hover:border-pastis-500 rounded-lg px-4 py-3 text-sm text-gray-300 hover:text-white transition flex items-center justify-center gap-2">
         <span class="text-pastis-500">🔓</span> Rentrer / modifier mes pronos${who}
       </button>`;
   }
 
-  // ---------- Connexion (compacte, alphabétique) ----------
+  // ---------- Connexion (mot de passe seul) ----------
   function ppRenderLogin() {
     const m = ppMount(); if (!m) return;
-    const names = (appData.classement || []).map(r => r[3]).filter(Boolean).sort((a, b) => a.localeCompare(b, 'fr'));
-    let opts = '<option value="">-- Ton nom --</option>';
-    names.forEach(n => opts += `<option value="${esc(n)}">${n}</option>`);
+    const cur = ppCurrentJoueur();
+    if (!cur) {
+      m.innerHTML = `
+        <div class="bg-navy-800 border border-navy-700 rounded-lg p-3">
+          <div class="flex items-center justify-between mb-1">
+            <h3 class="font-oswald font-bold text-white uppercase tracking-wide text-xs flex items-center gap-2"><span class="text-pastis-500">🔓</span> Mes pronos</h3>
+            <button onclick="ppCollapse()" class="text-gray-500 hover:text-white text-xs">▲ Réduire</button>
+          </div>
+          <p class="text-[11px] text-gray-400">Sélectionne d'abord ton nom dans la liste tout en haut, puis reviens ici.</p>
+        </div>`;
+      return;
+    }
     m.innerHTML = `
       <div class="bg-navy-800 border border-navy-700 rounded-lg p-3">
         <div class="flex items-center justify-between mb-2">
-          <h3 class="font-oswald font-bold text-white uppercase tracking-wide text-xs flex items-center gap-2"><span class="text-pastis-500">🔓</span> Mes pronos</h3>
+          <h3 class="font-oswald font-bold text-white uppercase tracking-wide text-xs flex items-center gap-2"><span class="text-pastis-500">🔓</span> Mes pronos — ${esc(cur)}</h3>
           <button onclick="ppCollapse()" class="text-gray-500 hover:text-white text-xs">▲ Réduire</button>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          <select id="pp-login-nom" class="bg-navy-900 border border-navy-700 text-white rounded px-3 py-2 text-sm appearance-none">${opts}</select>
-          <input id="pp-login-mdp" type="password" placeholder="Mot de passe" class="bg-navy-900 border border-navy-700 text-white rounded px-3 py-2 text-sm"/>
-          <button id="pp-login-btn" class="bg-pastis-500 text-navy-900 font-bold rounded px-3 py-2 text-sm hover:bg-pastis-600 transition">Connexion</button>
+        <div class="flex gap-2">
+          <input id="pp-login-mdp" type="password" placeholder="Ton mot de passe" class="flex-1 min-w-0 bg-navy-900 border border-navy-700 text-white rounded px-3 py-2 text-sm"/>
+          <button id="pp-login-btn" class="bg-pastis-500 text-navy-900 font-bold rounded px-4 py-2 text-sm hover:bg-pastis-600 transition whitespace-nowrap">Connexion</button>
         </div>
         <p id="pp-login-msg" class="text-[11px] mt-2 h-4 text-gray-400">Tu ne modifies que les tours pas encore commencés.</p>
       </div>`;
-    const sel = document.getElementById('select-joueur');
-    if (sel && sel.value && names.includes(sel.value)) document.getElementById('pp-login-nom').value = sel.value;
     document.getElementById('pp-login-btn').onclick = ppLogin;
     document.getElementById('pp-login-mdp').addEventListener('keydown', e => { if (e.key === 'Enter') ppLogin(); });
+    setTimeout(() => { const i = document.getElementById('pp-login-mdp'); if (i) i.focus(); }, 50);
   }
 
   function ppLogin() {
-    const nom = document.getElementById('pp-login-nom').value;
+    const nom = ppCurrentJoueur();
     const mdp = document.getElementById('pp-login-mdp').value;
     const msg = document.getElementById('pp-login-msg');
-    if (!nom || !mdp) { msg.textContent = 'Choisis ton nom et entre ton mot de passe.'; msg.className = 'text-[11px] mt-2 text-yellow-400'; return; }
+    if (!nom) { msg.textContent = "Sélectionne ton nom en haut."; msg.className = 'text-[11px] mt-2 text-yellow-400'; return; }
+    if (!mdp) { msg.textContent = 'Entre ton mot de passe.'; msg.className = 'text-[11px] mt-2 text-yellow-400'; return; }
     msg.textContent = 'Connexion...'; msg.className = 'text-[11px] mt-2 text-gray-400';
     ppPost({ action: 'login', joueur: nom, mdp: mdp }).then(d => {
       if (!d.ok) {
@@ -3202,7 +3212,7 @@ ${(() => {
     }).catch(() => ppSaveMsg('Erreur réseau.', 'text-red-400'));
   }
 
-  // ---------- Contrôles d'ouverture/repli ----------
+  // ---------- Ouverture / repli ----------
   window.ppOpenMesPronos = function () {
     ppCollapsed = false;
     ppRenderMesPronos(true);
@@ -3215,15 +3225,20 @@ ${(() => {
 
   window.ppRenderMesPronos = function (force) {
     const m = ppMount(); if (!m) return;
-    if (!force && !ppCollapsed && ppSession && document.getElementById('pp-save')) return; // ne pas écraser une saisie
     if (ppCollapsed) return ppRenderBar();
-    if (ppSession) ppRenderGrid(); else ppRenderLogin();
+    const matches = ppMatchSession();
+    if (!force && matches && document.getElementById('pp-save')) return; // saisie en cours, on n'écrase pas
+    if (matches) ppRenderGrid(); else ppRenderLogin();
   };
 
-  // Branchement auto
+  // Branchements auto : init + changement de joueur en haut
   if (typeof initApp === 'function') {
-    const _initApp = initApp;
-    initApp = function () { const r = _initApp.apply(this, arguments); try { window.ppRenderMesPronos(); } catch (e) {} return r; };
+    const _i = initApp;
+    initApp = function () { const r = _i.apply(this, arguments); try { window.ppRenderMesPronos(); } catch (e) {} return r; };
+  }
+  if (typeof renderJoueurProfile === 'function') {
+    const _r = renderJoueurProfile;
+    renderJoueurProfile = function () { const r = _r.apply(this, arguments); try { window.ppRenderMesPronos(); } catch (e) {} return r; };
   }
 })();
   </script>
