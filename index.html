@@ -2091,8 +2091,16 @@ function renderClassement() {
       headContainer.innerHTML = headHTML;
       
       let html = '';
+let ppLastTotal = null; // mémorise le total de la ligne précédente (ex-æquo)
       appData.classement.forEach((row) => {
-        const evolRaw = row[1], rang = row[2], joueur = row[3], total = row[25]; 
+        const evolRaw = row[1], joueur = row[3], total = row[25];
+        // Ex-æquo : on affiche "-" si le total est identique au joueur juste au-dessus
+        const totalNum = parseFloat((total || "").toString().replace(/\s/g, '').replace(',', '.'));
+        let rang = row[2];
+        if (ppLastTotal !== null && !isNaN(totalNum) && totalNum === ppLastTotal) {
+          rang = "-";
+        }
+        if (!isNaN(totalNum)) ppLastTotal = totalNum;
         const bonsResultats = row[33];
         const favori = row[36], statutFav = row[37], ptsFav = row[38];
         const finaliste = row[40], statutFin = row[41], ptsFin = row[42];
