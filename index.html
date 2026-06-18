@@ -2419,15 +2419,17 @@ const finContent = (!isTournamentStarted || estJoueurMasque(joueur))
         ${jokersHTML}
 
         
-      ${groupeStatsHTML}
+      
         <div class="col-span-2 mt-4 bg-navy-900 p-3 rounded-lg border border-navy-700 shadow-inner">
           <h4 class="text-pastis-500 font-bold uppercase text-xs md:text-sm mb-3">ÉVOLUTION DU CLASSEMENT</h4>
           <div class="relative h-[200px] w-full">
             <canvas id="playerEvolutionChart"></canvas>
           </div>
         </div>
+            ${groupeStatsHTML}
       </div>
     </div>
+
   `;
 
   headerDiv.classList.remove('hidden');
