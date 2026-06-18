@@ -1321,7 +1321,7 @@ function retourAccueil() {
         <div class="flex items-center justify-between bg-navy-800 p-2 md:p-3 rounded-lg border border-navy-700 relative mt-2 shadow-sm">
           <div class="text-[9px] md:text-sm text-gray-400 w-[10%] leading-tight">${shortDate(date)}${bonusIcon}</div>
           
-          <div class="w-[35%] flex flex-col justify-center px-1 font-oswald tracking-wide min-w-0">
+          <div onclick="openMatchDetails('${idMatch}')" class="w-[35%] flex flex-col justify-center px-1 font-oswald tracking-wide min-w-0 cursor-pointer hover:opacity-80 transition">
             <div class="flex flex-row items-center space-x-1.5 min-w-0">
               <span class="${styles.flagOpacityA} emoji-flag">${getFlagOnly(eqA)}</span>
               <span class="whitespace-normal break-words leading-tight text-xs md:text-lg ${styles.clsEqA}">${getCleanName(eqA)}</span>
