@@ -943,7 +943,7 @@ statsContainer.innerHTML = `
 
       let html = '';
       appData.calendrier.forEach(match => {
-        let idMatch = match[0], date = match[1], eqA = match[3], eqB = match[4];
+        let idMatch = match[0], date = match[1], eqA = match[3], eqB = match[4], phase = match[8];
         let scoreA = match[5], scoreB = match[6];
         const isPlayed = (scoreA !== "" && scoreB !== "");
         const isPhaseStarted = phasesStarted[phase] || false;
