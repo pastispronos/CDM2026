@@ -2339,16 +2339,15 @@ const finContent = (!isTournamentStarted || estJoueurMasque(joueur))
     `;
   };
 
-  // Meilleurs : meilleure position relative d'abord (à égalité, le plus de points)
+// Meilleurs : au moins 5 pts — meilleure position relative d'abord (à égalité, le plus de points)
   const top3 = [...perfsJoueur]
+    .filter(x => x.pts >= 5)
     .sort((a, b) => (b.pct - a.pct) || (b.pts - a.pts))
     .slice(0, 3);
 
-  const topIds = new Set(top3.map(x => x.matchId));
-
-  // Pires : pire position relative d'abord (à égalité, le moins de points), hors top 3
+  // Pires : moins de 5 pts — pire position relative d'abord (à égalité, le moins de points)
   const worst3 = [...perfsJoueur]
-    .filter(x => !topIds.has(x.matchId))
+    .filter(x => x.pts < 5)
     .sort((a, b) => (a.pct - b.pct) || (a.pts - b.pts))
     .slice(0, 3);
 
