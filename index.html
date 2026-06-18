@@ -2363,20 +2363,20 @@ const finContent = (!isTournamentStarted || estJoueurMasque(joueur))
     `;
   }
   
-  // --- Jokers ---
-  let jokersHTML = '';
-  const playerJokers = appData.pronostics.filter(p => p[0] === joueur && p[8] && String(p[8]).toLowerCase() === 'oui');
-  if (isTournamentStarted && playerJokers.length > 0) {
-    let itemJokers = '';
-        playerJokers.forEach(j => {
-        const mData = appData.calendrier.find(m => m[0] == j[1]);
-        if(mData) itemJokers += rankedItemHTML('',{ matcj: mData, prono: j });
-        }),
-    jokersHTML = `<div class="col-span-2 mt-4">
-      <h4 class="text-pastis-500 font-bold uppercase text-xs md:text-sm mb-1 flex items-center space-x-1"><span>JOKERS</span><span class="bg-navy-700 text-white px-1.5 rounded ml-2">${playerJokers.length}/3</span></h4>
-      ${itemJokers}
-      </div>`;
-  }
+// --- Jokers ---
+let jokersHTML = '';
+const playerJokers = appData.pronostics.filter(p => p[0] === joueur && p[8] && String(p[8]).toLowerCase() === 'oui');
+if (isTournamentStarted && playerJokers.length > 0) {
+  let itemJokers = '';
+  playerJokers.forEach(j => {
+    const mData = appData.calendrier.find(m => m[0] == j[1]);
+    if(mData) itemJokers += rankedItemHTML('',{ matcj: mData, prono: j });
+  }); // ✅ Point-virgule
+  jokersHTML = `<div class="col-span-2 mt-4">
+    <h4 class="text-pastis-500 font-bold uppercase text-xs md:text-sm mb-1 flex items-center space-x-1"><span>JOKERS</span><span class="bg-navy-700 text-white px-1.5 rounded ml-2">${playerJokers.length}/3</span></h4>
+    ${itemJokers}
+  </div>`;
+}
 
   const groupeStatsHTML = buildGroupeStatsHTML(joueur);
   
