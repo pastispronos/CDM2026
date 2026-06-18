@@ -2302,19 +2302,29 @@ const finContent = (!isTournamentStarted || estJoueurMasque(joueur))
   let bestMatchHTML = '';
   const perfsJoueur = [];
 
+  // Points de TOUS les participants par match (pour situer le joueur sur chaque match)
+  const ptsParMatch = {};
+  appData.pronostics.forEach(p => {
+    const v = parseInt(p[9]);
+    if (isNaN(v)) return;
+    if (!ptsParMatch[p[1]]) ptsParMatch[p[1]] = [];
+    ptsParMatch[p[1]].push(v);
+  });
+
   appData.pronostics.forEach(p => {
     if (p[0] === joueur && p[5] !== "" && p[6] !== "") {
-      const matchId = p[1], pts = parseInt(p[9]) || 0, textPerf = p[11] || "";
+      const matchId = p[1], pts = parseInt(p[9]) || 0;
       const matchData = appData.calendrier.find(r => r[0] == matchId);
-      if (!matchData || matchData[5] === "") return;
+      if (!matchData || matchData[5] === "") return; // match non joué
 
-      let perfLevel = 0;
-      if (textPerf.includes("Expert")) perfLevel = 3;
-      else if (textPerf.includes("Bien vu")) perfLevel = 2;
-      else if (textPerf.includes("Trompé") || textPerf.includes("Ridicule") || textPerf.includes("sieste")) perfLevel = 0;
-      else perfLevel = 1;
+      // Position relative parmi tous les participants sur ce match (0 = pire, 1 = meilleur)
+      const pop = ptsParMatch[matchId] || [pts];
+      let moins = 0, egal = 0;
+      pop.forEach(v => { if (v < pts) moins++; else if (v === pts) egal++; });
+      const autres = pop.length - 1;
+      const pct = autres > 0 ? (moins + (egal - 1) * 0.5) / autres : 0.5;
 
-      perfsJoueur.push({ matchId, match: matchData, prono: p, pts, perfLevel });
+      perfsJoueur.push({ matchId, match: matchData, prono: p, pts, pct });
     }
   });
 
@@ -2329,16 +2339,17 @@ const finContent = (!isTournamentStarted || estJoueurMasque(joueur))
     `;
   };
 
-  // Les 3 meilleurs : au moins 5 points — perfLevel décroissant puis points décroissants
+  // Meilleurs : meilleure position relative d'abord (à égalité, le plus de points)
   const top3 = [...perfsJoueur]
-    .filter(x => x.pts >= 5)
-    .sort((a, b) => (b.perfLevel - a.perfLevel) || (b.pts - a.pts))
+    .sort((a, b) => (b.pct - a.pct) || (b.pts - a.pts))
     .slice(0, 3);
 
-  // Les 3 pires : moins de 5 points — perfLevel croissant puis points croissants (le pire en n°1)
+  const topIds = new Set(top3.map(x => x.matchId));
+
+  // Pires : pire position relative d'abord (à égalité, le moins de points), hors top 3
   const worst3 = [...perfsJoueur]
-    .filter(x => x.pts < 5)
-    .sort((a, b) => (a.perfLevel - b.perfLevel) || (a.pts - b.pts))
+    .filter(x => !topIds.has(x.matchId))
+    .sort((a, b) => (a.pct - b.pct) || (a.pts - b.pts))
     .slice(0, 3);
 
   if (top3.length > 0) {
