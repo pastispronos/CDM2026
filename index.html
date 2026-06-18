@@ -345,7 +345,7 @@
   <script>
     const API_URL = 'https://script.google.com/macros/s/AKfycbxXDUy7-rggkIafbQPDxShVFj5tV_E3GZ_P5sfytXRIOi0D6Mof0-mxEOsYnyu8M3k/exec?api=1';
     let appData = { classement: [], calendrier: [], pronostics: [], equipes: [], chaines: [], reglement: [], joueursMasques: [] };
-    let matchFilter = { idMatch: null, tendance: null, joueur: '' };
+    let matchFilter = { idMatch: null, tendance: null, joueur: '', joker: false };
 
     // 🔒 Renvoie true si le joueur est marqué "Masqué" (colonne T de la feuille Joueurs)
     function estJoueurMasque(nom) {
@@ -1580,12 +1580,12 @@ if (isLive) {
     let bg2 = styles.real1N2 === "2" ? "bg-pastis-500 text-navy-900 border-pastis-500 shadow-[0_0_10px_rgba(247,195,37,0.4)]" : "bg-navy-800 text-white border-navy-700 shadow-sm";
     let lbl2 = styles.real1N2 === "2" ? "text-navy-900 opacity-70" : "text-gray-400";
 
-    let jokerHTML = "";
+let jokerHTML = "";
     if (isbonus && jokerCount !== "") {
       jokerHTML = `
-        <div class="absolute left-1/2 ml-[115px] sm:ml-[140px] md:ml-[190px] pl-2 md:pl-4 bottom-0 flex flex-col items-center justify-end">
+        <div id="joker-filter-btn" onclick="toggleJokerFilter()" class="absolute left-1/2 ml-[115px] sm:ml-[140px] md:ml-[190px] pl-2 md:pl-4 bottom-0 flex flex-col items-center justify-end cursor-pointer select-none hover:brightness-110 active:scale-95 transition z-20">
           <span class="text-[7px] sm:text-[8px] md:text-[9px] text-pastis-500 uppercase tracking-widest font-bold mb-1 md:mb-1.5 whitespace-normal md:whitespace-nowrap text-center leading-[1.1] max-w-[60px] sm:max-w-[70px] md:max-w-none">Joker(s) sur ce match</span>
-          <div class="flex items-center justify-center bg-pastis-500 text-navy-900 text-sm md:text-base font-black px-2 md:px-3 py-0.5 rounded shadow-[0_0_8px_rgba(247,195,37,0.4)] min-w-[35px] border border-pastis-500 leading-none">
+          <div id="joker-filter-box" class="flex items-center justify-center bg-pastis-500 text-navy-900 text-sm md:text-base font-black px-2 md:px-3 py-0.5 rounded shadow-[0_0_8px_rgba(247,195,37,0.4)] min-w-[35px] border border-pastis-500 leading-none transition">
             ${jokerCount}
           </div>
         </div>
@@ -2587,6 +2587,12 @@ function toggleTendanceFilter(t) {
   renderMatchPronos();
 }
 
+function toggleJokerFilter() {
+  matchFilter.joker = !matchFilter.joker; // re-clic = on enlève
+  renderMatchPronos();
+}
+
+
 function setPronoJoueurFilter(val) {
   matchFilter.joueur = val || '';
   renderMatchPronos();
@@ -2595,6 +2601,7 @@ function setPronoJoueurFilter(val) {
 function resetMatchFilters() {
   matchFilter.tendance = null;
   matchFilter.joueur = '';
+  matchFilter.joker = false
   const sel = document.getElementById('select-prono-joueur');
   if (sel) sel.value = '';
   renderMatchPronos();
@@ -2603,9 +2610,17 @@ function resetMatchFilters() {
 function updatePronoFilterUI(visibleCount) {
   refreshTendanceCells(); // peint les 3 cellules selon filtre actif (or) / résultat réel (vert)
 
+  // Surlignage du filtre "Joker(s) sur ce match"
+  const jokerBox = document.getElementById('joker-filter-box');
+  if (jokerBox) {
+    jokerBox.classList.toggle('ring-2', matchFilter.joker);
+    jokerBox.classList.toggle('ring-white', matchFilter.joker);
+    jokerBox.classList.toggle('scale-105', matchFilter.joker);
+  }
+
   const badge = document.getElementById('prono-filter-count');
   if (!badge) return;
-  if (matchFilter.tendance || matchFilter.joueur) {
+  if (matchFilter.tendance || matchFilter.joueur || matchFilter.joker) {
     badge.textContent = visibleCount + ' affiché' + (visibleCount > 1 ? 's' : '') + ' ✕';
     badge.classList.remove('hidden');
   } else {
@@ -2657,6 +2672,7 @@ function renderMatchPronos() {
   let pronosMatch = appData.pronostics.filter(r => r[1] == idMatch && r[5] !== "" && r[6] !== "");
   if (matchFilter.joueur)   pronosMatch = pronosMatch.filter(p => p[0] === matchFilter.joueur);
   if (matchFilter.tendance) pronosMatch = pronosMatch.filter(p => pronoTendance(p) === matchFilter.tendance);
+  if (matchFilter.joker) pronosMatch = pronosMatch.filter(p => p[8] && String(p[8]).toLowerCase()==='oui');
 
   // Tri : points décroissants, puis rang au classement
   pronosMatch.sort((a, b) => {
@@ -2671,7 +2687,7 @@ function renderMatchPronos() {
   let pronoHTML = '';
 
   if (pronosMatch.length === 0) {
-    pronoHTML = `<li class="p-4 text-center text-gray-500 italic">${(matchFilter.tendance || matchFilter.joueur) ? 'Aucun prono ne correspond à ce filtre.' : 'Aucun pronostic enregistré.'}</li>`;
+    pronoHTML = `<li class="p-4 text-center text-gray-500 italic">${(matchFilter.tendance || matchFilter.joueur || matchFilter.joker) ? 'Aucun prono ne correspond à ce filtre.' : 'Aucun pronostic enregistré.'}</li>`;
   } else {
     pronosMatch.forEach(p => {
       const joueur = p[0], pronoA = p[5], pronoB = p[6], pTAB = p[7], isJoker = p[8] && String(p[8]).toLowerCase() === 'oui', points = p[9], textInfo = p[10], textPerf = p[11];
@@ -2741,7 +2757,7 @@ function openMatchDetails(idMatch) {
   if(!match) return;
   lastOpenedMatchId = idMatch; // NOUVEAU : pour le rafraîchissement live de la fiche
   if (matchFilter.idMatch !== idMatch) {
-    matchFilter = { idMatch: idMatch, tendance: null, joueur: '' }; // nouveau match → on réinitialise
+    matchFilter = { idMatch: idMatch, tendance: null, joueur: '', joker: false }; // nouveau match → on réinitialise
   } else {
     matchFilter.idMatch = idMatch; // même match (refresh live) → on garde les filtres
   }
