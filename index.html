@@ -167,7 +167,7 @@
             </span>
             
             <select id="phase-filter" onchange="renderCalendrier()" class="bg-navy-800 text-gray-200 text-[10px] md:text-xs font-bold border border-navy-600 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-pastis-500 max-w-[130px] md:max-w-[160px] truncate cursor-pointer shadow-sm appearance-none flex-shrink-0">
-               <option value="all">🏆 Toutes les phases</option>
+               <option value="all">🏆 Tous les tours</option>
             </select>
             
             <select id="team-filter" onchange="renderCalendrier()" class="bg-navy-800 text-gray-200 text-[10px] md:text-xs font-bold border border-navy-600 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-pastis-500 max-w-[130px] md:max-w-[180px] truncate cursor-pointer shadow-sm appearance-none flex-shrink-0">
@@ -247,12 +247,13 @@
       <select id="select-joueur" onchange="renderJoueurProfile()" class="w-full bg-navy-800 border border-navy-700 text-white rounded-lg px-4 py-3 mb-6 focus:ring-pastis-500 focus:border-pastis-500 font-semibold text-lg appearance-none shadow relative z-20">
         <option value="">-- Liste des joueurs --</option>
       </select>
-      <!-- 🔓 Mes pronos depuis l'app -->
-      <div id="pp-mespronos-mount" class="mb-6"></div>
       <div id="joueur-profile-header" class="hidden space-y-4"></div>
       
-      <div id="joueur-history-section" class="hidden mt-6">
-        <div class="flex justify-between items-center mb-2">
+<div id="joueur-history-section" class="hidden mt-6">
+        <button onclick="ppOpenMesPronos()" class="w-full mb-3 bg-pastis-500 text-navy-900 font-bold rounded-lg px-3 py-2.5 text-sm hover:bg-pastis-600 transition flex items-center justify-center gap-2">
+          ✏️ Rentrer / modifier mes pronos pour le prochain tour
+        </button>
+  <div class="flex justify-between items-center mb-2">
           <h3 class="text-md font-oswald font-bold text-gray-300 uppercase tracking-wider text-lg">Historique complet</h3>
         </div>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4 bg-navy-800 p-2 rounded-lg border border-navy-700 shadow-sm relative z-20">
@@ -280,14 +281,17 @@
             <option value="Ridicule">🥶 Ridicule</option>
           </select>
           <select id="filter-joueur-phase" onchange="renderJoueurHistory()" class="bg-navy-900 border border-navy-700 text-gray-300 text-[10px] md:text-sm rounded p-2 focus:ring-pastis-500 font-semibold appearance-none">
-             <option value="all">Toutes les phases</option>
+             <option value="all">Tous les tours</option>
           </select>
           <select id="filter-joueur-team" onchange="renderJoueurHistory()" class="bg-navy-900 border border-navy-700 text-gray-300 text-[10px] md:text-sm rounded p-2 focus:ring-pastis-500 font-semibold appearance-none">
              <option value="all">Toutes les équipes</option>
           </select>
         </div>
-        <div id="joueur-history-list" class="space-y-1.5 md:space-y-2"></div>
+<div id="joueur-history-list" class="space-y-1.5 md:space-y-2"></div>
       </div>
+
+      <!-- 🔓 Mes pronos (connexion + saisie) — en bas, replié par défaut -->
+      <div id="pp-mespronos-mount" class="mt-8"></div>
     </section>
 
     <section id="view-match" class="hidden animate-fade-in relative">
@@ -531,7 +535,7 @@ function populateFilters() {
   if(teamSelectJoueur) teamSelectJoueur.innerHTML = teamOptions;
 
   // 2. Remplissage des Phases
-  let phaseOptions = '<option value="all">Toutes les phases</option>';
+  let phaseOptions = '<option value="all">Tous les tours</option>';
   let phasesOrder = [];
   appData.calendrier.forEach(m => {
     let p = m[8] ? m[8].trim() : "";
@@ -1313,7 +1317,7 @@ function retourAccueil() {
 
       if(!isPhaseStarted && !isPlayed) {
         pronoBloc = `<div class="font-black text-gray-500 text-sm md:text-lg leading-none">🔒</div>`;
-        btnInfo = `<button onclick="showTooltip(event, 'Pronostic masqué avant le début de la phase')" class="ml-1 md:ml-2 w-4 h-4 md:w-5 md:h-5 flex items-center justify-center rounded-full bg-navy-700 text-white font-bold font-serif text-[9px] shadow transition flex-shrink-0 relative z-20 pointer-events-auto">i</button>`;
+        btnInfo = `<button onclick="showTooltip(event, 'Pronostic masqué avant le début du tour')" class="ml-1 md:ml-2 w-4 h-4 md:w-5 md:h-5 flex items-center justify-center rounded-full bg-navy-700 text-white font-bold font-serif text-[9px] shadow transition flex-shrink-0 relative z-20 pointer-events-auto">i</button>`;
         jkrBadge = ``;
       } else {
         ptsBadge = getPointsBadge(points);
@@ -2724,7 +2728,7 @@ function renderMatchPronos() {
 
       if (!isPhaseStarted && !isPlayed) {
         pronoBloc = `<div class="font-black text-gray-500 text-lg">🔒</div>`;
-        btnInfo = `<button onclick="showTooltip(event, 'Pronostic masqué avant le début de la phase')" class="ml-2 w-6 h-6 flex items-center justify-center rounded-full bg-navy-700 text-white font-bold font-serif text-[10px] shadow-sm transition flex-shrink-0 relative z-20 pointer-events-auto">i</button>`;
+        btnInfo = `<button onclick="showTooltip(event, 'Pronostic masqué avant le début du tour')" class="ml-2 w-6 h-6 flex items-center justify-center rounded-full bg-navy-700 text-white font-bold font-serif text-[10px] shadow-sm transition flex-shrink-0 relative z-20 pointer-events-auto">i</button>`;
       } else {
         ptsBadge = getPointsBadge(points);
         btnInfo = `<button onclick="showTooltip(event, '${escapeJS(textInfo)}')" class="ml-2 w-6 h-6 flex items-center justify-center rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold font-serif text-[10px] shadow-sm transition flex-shrink-0 relative z-20 pointer-events-auto">i</button>`;
@@ -2998,21 +3002,22 @@ ${(() => {
     mainScrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
-    /* ============================================================
-   🔓 MES PRONOS — saisie / modification depuis l'app
+/* ============================================================
+   🔓 MES PRONOS — saisie / modification depuis l'app (v2)
    ============================================================ */
 (function () {
-  const POST_URL = API_URL.split('?')[0];   // même déploiement, sans ?api=1
-  let ppSession = null;                      // { joueur, mdp, pronos, phasesVerrouillees, jokersMax }
+  const POST_URL = API_URL.split('?')[0];
+  let ppSession = null;
+  let ppCollapsed = true;
 
   try { const s = sessionStorage.getItem('ppSession'); if (s) ppSession = JSON.parse(s); } catch (e) {}
 
   const ppMount = () => document.getElementById('pp-mespronos-mount');
-  const esc     = s => (s || '').toString().replace(/"/g, '&quot;');
-  const cssId   = s => (s || '').toString().replace(/[^a-zA-Z0-9]/g, '_');
+  const esc = s => (s || '').toString().replace(/"/g, '&quot;');
+  const cssId = s => (s || '').toString().replace(/[^a-zA-Z0-9]/g, '_');
   const cleanName = t => (typeof getCleanName === 'function') ? getCleanName(t) : (t || '');
 
-  function ppPhasesOrder() {
+  function ppToursOrder() {
     const seen = [];
     (appData.calendrier || []).forEach(r => {
       const ph = (r[8] || '').trim();
@@ -3023,8 +3028,7 @@ ${(() => {
 
   function ppPost(payload) {
     return fetch(POST_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload)
     }).then(r => r.json());
   }
@@ -3034,28 +3038,37 @@ ${(() => {
     if (e) { e.textContent = t; e.className = 'text-xs mt-2 text-center ' + cls; }
   }
 
-  // ---------- Écran connexion ----------
+  // ---------- Barre repliée (défaut) ----------
+  function ppRenderBar() {
+    const m = ppMount(); if (!m) return;
+    const who = ppSession ? ` — ${esc(ppSession.joueur)}` : '';
+    m.innerHTML = `
+      <button onclick="ppOpenMesPronos()" class="w-full bg-navy-800 border border-navy-700 hover:border-pastis-500 rounded-lg px-4 py-3 text-sm text-gray-300 hover:text-white transition flex items-center justify-center gap-2">
+        <span class="text-pastis-500">🔓</span> Rentrer / modifier mes pronos${who}
+      </button>`;
+  }
+
+  // ---------- Connexion (compacte, alphabétique) ----------
   function ppRenderLogin() {
     const m = ppMount(); if (!m) return;
-    let opts = '<option value="">-- Choisis ton nom --</option>';
-    (appData.classement || []).map(r => r[3]).filter(Boolean)
-      .forEach(n => opts += `<option value="${esc(n)}">${n}</option>`);
+    const names = (appData.classement || []).map(r => r[3]).filter(Boolean).sort((a, b) => a.localeCompare(b, 'fr'));
+    let opts = '<option value="">-- Ton nom --</option>';
+    names.forEach(n => opts += `<option value="${esc(n)}">${n}</option>`);
     m.innerHTML = `
-      <div class="bg-navy-800 border border-navy-700 rounded-lg p-4">
-        <div class="flex items-center gap-2 mb-3">
-          <span class="text-pastis-500 text-lg">🔓</span>
-          <h3 class="font-oswald font-bold text-white uppercase tracking-wide text-sm">Remplir / modifier mes pronos</h3>
+      <div class="bg-navy-800 border border-navy-700 rounded-lg p-3">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="font-oswald font-bold text-white uppercase tracking-wide text-xs flex items-center gap-2"><span class="text-pastis-500">🔓</span> Mes pronos</h3>
+          <button onclick="ppCollapse()" class="text-gray-500 hover:text-white text-xs">▲ Réduire</button>
         </div>
-        <p class="text-gray-400 text-xs mb-3">Connecte-toi avec ton mot de passe perso. Tu ne peux modifier que les phases pas encore commencées.</p>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <select id="pp-login-nom" class="bg-navy-900 border border-navy-700 text-white rounded px-3 py-2 text-sm appearance-none">${opts}</select>
           <input id="pp-login-mdp" type="password" placeholder="Mot de passe" class="bg-navy-900 border border-navy-700 text-white rounded px-3 py-2 text-sm"/>
-          <button id="pp-login-btn" class="bg-pastis-500 text-navy-900 font-bold rounded px-3 py-2 text-sm hover:bg-pastis-600 transition">Se connecter</button>
+          <button id="pp-login-btn" class="bg-pastis-500 text-navy-900 font-bold rounded px-3 py-2 text-sm hover:bg-pastis-600 transition">Connexion</button>
         </div>
-        <p id="pp-login-msg" class="text-xs mt-2 h-4"></p>
+        <p id="pp-login-msg" class="text-[11px] mt-2 h-4 text-gray-400">Tu ne modifies que les tours pas encore commencés.</p>
       </div>`;
     const sel = document.getElementById('select-joueur');
-    if (sel && sel.value) document.getElementById('pp-login-nom').value = sel.value;
+    if (sel && sel.value && names.includes(sel.value)) document.getElementById('pp-login-nom').value = sel.value;
     document.getElementById('pp-login-btn').onclick = ppLogin;
     document.getElementById('pp-login-mdp').addEventListener('keydown', e => { if (e.key === 'Enter') ppLogin(); });
   }
@@ -3064,17 +3077,17 @@ ${(() => {
     const nom = document.getElementById('pp-login-nom').value;
     const mdp = document.getElementById('pp-login-mdp').value;
     const msg = document.getElementById('pp-login-msg');
-    if (!nom || !mdp) { msg.textContent = 'Choisis ton nom et entre ton mot de passe.'; msg.className = 'text-xs mt-2 text-yellow-400'; return; }
-    msg.textContent = 'Connexion...'; msg.className = 'text-xs mt-2 text-gray-400';
+    if (!nom || !mdp) { msg.textContent = 'Choisis ton nom et entre ton mot de passe.'; msg.className = 'text-[11px] mt-2 text-yellow-400'; return; }
+    msg.textContent = 'Connexion...'; msg.className = 'text-[11px] mt-2 text-gray-400';
     ppPost({ action: 'login', joueur: nom, mdp: mdp }).then(d => {
       if (!d.ok) {
         const txt = { BAD_PASSWORD: 'Mot de passe incorrect.', PAS_DE_MDP: "Aucun mot de passe défini pour toi (demande à l'orga).", JOUEUR_INCONNU: 'Joueur introuvable.' }[d.error] || ('Erreur : ' + d.error);
-        msg.textContent = txt; msg.className = 'text-xs mt-2 text-red-400'; return;
+        msg.textContent = txt; msg.className = 'text-[11px] mt-2 text-red-400'; return;
       }
       ppSession = { joueur: d.joueur, mdp: mdp, pronos: d.pronos || {}, phasesVerrouillees: d.phasesVerrouillees || {}, jokersMax: d.jokersMax || 3 };
       try { sessionStorage.setItem('ppSession', JSON.stringify(ppSession)); } catch (e) {}
       ppRenderGrid();
-    }).catch(() => { msg.textContent = 'Erreur réseau.'; msg.className = 'text-xs mt-2 text-red-400'; });
+    }).catch(() => { msg.textContent = 'Erreur réseau.'; msg.className = 'text-[11px] mt-2 text-red-400'; });
   }
 
   function ppLogout() {
@@ -3092,20 +3105,21 @@ ${(() => {
     let html = `
       <div class="bg-navy-800 border border-pastis-500 rounded-lg p-4">
         <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center gap-2">
-            <span class="text-pastis-500 text-lg">✏️</span>
-            <h3 class="font-oswald font-bold text-white uppercase tracking-wide text-sm">Mes pronos — ${esc(ppSession.joueur)}</h3>
+          <div class="flex items-center gap-2"><span class="text-pastis-500 text-lg">✏️</span>
+            <h3 class="font-oswald font-bold text-white uppercase tracking-wide text-sm">Mes pronos — ${esc(ppSession.joueur)}</h3></div>
+          <div class="flex items-center gap-3">
+            <button id="pp-logout" class="text-gray-400 hover:text-white text-xs underline">Déconnexion</button>
+            <button onclick="ppCollapse()" class="text-gray-500 hover:text-white text-xs">▲ Réduire</button>
           </div>
-          <button id="pp-logout" class="text-gray-400 hover:text-white text-xs underline">Déconnexion</button>
         </div>`;
 
-    ppPhasesOrder().forEach(ph => {
+    ppToursOrder().forEach(ph => {
       const verrou = lock[ph] === true;
       const matchs = (appData.calendrier || []).filter(r => (r[8] || '').trim() === ph);
       if (!matchs.length) return;
       html += `<div class="mb-4">
         <div class="flex items-center justify-between mb-2">
-          <h4 class="text-pastis-500 font-bold text-xs uppercase tracking-wider">${ph} ${verrou ? '<span class="text-gray-500 normal-case">🔒 commencée</span>' : ''}</h4>
+          <h4 class="text-pastis-500 font-bold text-xs uppercase tracking-wider">${ph} ${verrou ? '<span class="text-gray-500 normal-case">🔒 commencé</span>' : ''}</h4>
           ${verrou ? '' : `<span class="text-[10px] text-gray-400">Jokers : <span id="pp-jk-${cssId(ph)}">0</span>/${ppSession.jokersMax}</span>`}
         </div>
         <div class="space-y-1.5">`;
@@ -3154,7 +3168,7 @@ ${(() => {
     return n;
   }
   function ppUpdateJokerCounters() {
-    ppPhasesOrder().forEach(ph => {
+    ppToursOrder().forEach(ph => {
       const el = document.getElementById('pp-jk-' + cssId(ph));
       if (el) el.textContent = ppCountJokers(ph);
     });
@@ -3174,13 +3188,13 @@ ${(() => {
       if (a === '' && b === '') return;
       items.push({ idMatch: Number(inA.getAttribute('data-id')), pronoA: a, pronoB: b, joker: jk.textContent.trim() === '🌟' });
     });
-    if (!items.length) { ppSaveMsg('Rien à enregistrer (phases verrouillées ou cases vides).', 'text-yellow-400'); return; }
+    if (!items.length) { ppSaveMsg('Rien à enregistrer (tours verrouillés ou cases vides).', 'text-yellow-400'); return; }
     ppSaveMsg('Enregistrement...', 'text-gray-400');
     ppPost({ action: 'save', joueur: ppSession.joueur, mdp: ppSession.mdp, pronos: items }).then(d => {
       if (!d.ok) { ppSaveMsg('Erreur : ' + (d.error || 'inconnue'), 'text-red-400'); return; }
       let msg = `✅ ${d.misAJour} modifié(s), ${d.nouveaux} ajouté(s).`;
       if (d.jokersRefuses && d.jokersRefuses.length) msg += ` ${d.jokersRefuses.length} joker(s) refusé(s).`;
-      if (d.verrouilles && d.verrouilles.length) msg += ` ${d.verrouilles.length} ignoré(s) (phase commencée).`;
+      if (d.verrouilles && d.verrouilles.length) msg += ` ${d.verrouilles.length} ignoré(s) (tour commencé).`;
       ppSaveMsg(msg, 'text-green-400');
       ppPost({ action: 'login', joueur: ppSession.joueur, mdp: ppSession.mdp }).then(d2 => {
         if (d2.ok) { ppSession.pronos = d2.pronos; ppSession.phasesVerrouillees = d2.phasesVerrouillees; try { sessionStorage.setItem('ppSession', JSON.stringify(ppSession)); } catch (e) {} }
@@ -3188,14 +3202,25 @@ ${(() => {
     }).catch(() => ppSaveMsg('Erreur réseau.', 'text-red-400'));
   }
 
-  // Affichage auto, sans écraser une saisie en cours
+  // ---------- Contrôles d'ouverture/repli ----------
+  window.ppOpenMesPronos = function () {
+    ppCollapsed = false;
+    ppRenderMesPronos(true);
+    const m = ppMount(); if (!m) return;
+    m.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const card = m.firstElementChild;
+    if (card) { card.classList.add('ring-2', 'ring-pastis-500'); setTimeout(() => card.classList.remove('ring-2', 'ring-pastis-500'), 1600); }
+  };
+  window.ppCollapse = function () { ppCollapsed = true; ppRenderMesPronos(true); };
+
   window.ppRenderMesPronos = function (force) {
-    if (!ppMount()) return;
-    if (!force && ppSession && document.getElementById('pp-save')) return;
+    const m = ppMount(); if (!m) return;
+    if (!force && !ppCollapsed && ppSession && document.getElementById('pp-save')) return; // ne pas écraser une saisie
+    if (ppCollapsed) return ppRenderBar();
     if (ppSession) ppRenderGrid(); else ppRenderLogin();
   };
 
-  // Branchement automatique : on s'accroche à initApp (aucune autre modif à faire)
+  // Branchement auto
   if (typeof initApp === 'function') {
     const _initApp = initApp;
     initApp = function () { const r = _initApp.apply(this, arguments); try { window.ppRenderMesPronos(); } catch (e) {} return r; };
