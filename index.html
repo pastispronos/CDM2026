@@ -3008,16 +3008,17 @@ ${(() => {
    ============================================================ */
 (function () {
   const POST_URL = API_URL.split('?')[0];
-  let ppSession = null;
+let ppSession = null;
   let ppCollapsed = true;
-
+  let ppViewedJoueur = '';
+  
   try { const s = sessionStorage.getItem('ppSession'); if (s) ppSession = JSON.parse(s); } catch (e) {}
 
   const ppMount = () => document.getElementById('pp-mespronos-mount');
   const esc = s => (s || '').toString().replace(/"/g, '&quot;');
   const cssId = s => (s || '').toString().replace(/[^a-zA-Z0-9]/g, '_');
   const cleanName = t => (typeof getCleanName === 'function') ? getCleanName(t) : (t || '');
-  const ppCurrentJoueur = () => { const s = document.getElementById('select-joueur'); return s ? s.value : ''; };
+  const ppCurrentJoueur = () => { const s = document.getElementById('select-joueur'); return (s && s.value) || ppViewedJoueur || ''; };
   const ppMatchSession = () => { const c = ppCurrentJoueur(); return ppSession && c && ppSession.joueur.toUpperCase() === c.toUpperCase(); };
 
   function ppToursOrder() {
@@ -3238,9 +3239,16 @@ ${(() => {
     const _i = initApp;
     initApp = function () { const r = _i.apply(this, arguments); try { window.ppRenderMesPronos(); } catch (e) {} return r; };
   }
-  if (typeof renderJoueurProfile === 'function') {
+if (typeof renderJoueurProfile === 'function') {
     const _r = renderJoueurProfile;
-    renderJoueurProfile = function () { const r = _r.apply(this, arguments); try { window.ppRenderMesPronos(); } catch (e) {} return r; };
+    renderJoueurProfile = function (forcedJoueur) {
+      const r = _r.apply(this, arguments);
+      const s = document.getElementById('select-joueur');
+      const v = (s && s.value) || forcedJoueur || '';
+      if (v) ppViewedJoueur = v;          // mémorise le joueur affiché (résiste au reset du menu)
+      try { window.ppRenderMesPronos(); } catch (e) {}
+      return r;
+    };
   }
 })();
   </script>
