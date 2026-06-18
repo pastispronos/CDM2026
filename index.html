@@ -2216,7 +2216,27 @@ let ppLastTotal = null; // mémorise le total de la ligne précédente (ex-æquo
       sortedPlayers.forEach(r => { options += `<option value="${r[3]}">${r[3]}</option>`; });
       select.innerHTML = options;
     }
-
+// Rang numérique réel d'un joueur, déduit de sa position dans le classement
+// (le classement arrive déjà trié par Total décroissant). Gère les "-" ex-æquo.
+// Rang partagé : deux joueurs à égalité de Total ont le même rang (ex. 9 et 9),
+// puis le suivant saute (style classement sportif : 9, 9, 11...).
+// Le classement arrive déjà trié par Total décroissant.
+function getRangReel(joueur) {
+  if (!appData.classement) return '';
+  const norm = t => { const n = parseFloat((t || '').toString().replace(/\s/g, '').replace(',', '.')); return isNaN(n) ? null : n; };
+  let rang = 0;
+  let lastTotal = null;
+  for (let i = 0; i < appData.classement.length; i++) {
+    const r = appData.classement[i];
+    if (!r[3]) continue;
+    const tot = norm(r[25]);
+    // nouveau rang seulement si le total change (sinon on garde le rang précédent = ex-æquo)
+    if (tot === null || tot !== lastTotal) { rang = i + 1; lastTotal = tot; }
+    if (r[3] === joueur) return rang;
+  }
+  return '';
+}
+    
 function renderJoueurProfile(forcedJoueur = null) {
   const select = document.getElementById('select-joueur');
   if (forcedJoueur) select.value = forcedJoueur;
@@ -2266,7 +2286,7 @@ function renderJoueurProfile(forcedJoueur = null) {
   const evolJ1 = styleEvolText(evolJ1Raw);
   const evolJ2 = styleEvolText(evolJ2Raw);
 
-  const rang = cData[2], total = cData[25], bonsResultats = cData[33];
+const rang = getRangReel(joueur), total = cData[25], bonsResultats = cData[33];
   const favori = cData[36], statutFav = cData[37], ptsFav = cData[38];
   const finaliste = cData[40], statutFin = cData[41], ptsFin = cData[42];
 
@@ -2724,7 +2744,7 @@ function renderMatchPronos() {
       if (pronoA === "" || pronoB === "") return;
 
       const infoJoueur = appData.classement.find(c => c[3] === joueur);
-      const rangJoueur = infoJoueur ? infoJoueur[2] : '-';
+      const rangJoueur = getRangReel(joueur) || '-';
 
       let ptsBadge = "", btnInfo = "", pronoBloc = "", pTabHTML = "";
       let flagLeft = "", flagRight = "";
