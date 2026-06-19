@@ -1771,13 +1771,14 @@ const BRACKET_GRAPH = {
 };
 
 // --- Classement des groupes avec départage CDM 2026 (confrontation directe avant diff générale) ---
-function calculerClassementGroupes() {
+// --- Classement des groupes en OBJETS (avec stats + rang FIFA) ---
+function classementGroupesObjets() {
   const grpTeams = {}, fifaRank = {}, grpMatches = {};
   (appData.equipes || []).forEach(eq => {
     const nom = eq[0]; if (!nom) return;
-    const grp = (eq[10] || "").toString().trim();          // col K = Groupe
-    if (grp) { grpTeams[grp] = grpTeams[grp] || {}; grpTeams[grp][nom] = {nom, pts:0, gf:0, ga:0, gd:0, j:0}; }
-    const fr = parseInt(eq[6]); if (!isNaN(fr)) fifaRank[nom] = fr;   // col 7 = Classement FIFA
+    const fr = parseInt(eq[6]); if (!isNaN(fr)) fifaRank[nom] = fr;     // col 7 = Classement FIFA
+    const grp = (eq[10] || "").toString().trim();                      // col K = Groupe
+    if (grp) { grpTeams[grp] = grpTeams[grp] || {}; grpTeams[grp][nom] = {nom, pts:0, gf:0, ga:0, gd:0, j:0, fifa: fifaRank[nom] || 999}; }
   });
   (appData.calendrier || []).forEach(m => {
     if ((m[8] || "").toString().trim() !== "Poules") return;
@@ -1790,7 +1791,6 @@ function calculerClassementGroupes() {
     if (TA) { TA.j++; TA.gf+=na; TA.ga+=nb; TA.gd+=na-nb; TA.pts += na>nb?3:(na===nb?1:0); }
     if (TB) { TB.j++; TB.gf+=nb; TB.ga+=na; TB.gd+=nb-na; TB.pts += nb>na?3:(na===nb?1:0); }
   });
-
   const miniLigue = (cluster, matches) => {
     const noms = new Set(cluster.map(t => t.nom)), h = {};
     cluster.forEach(t => h[t.nom] = {pts:0, gd:0, gf:0});
@@ -1802,46 +1802,74 @@ function calculerClassementGroupes() {
     });
     return cluster.slice().sort((x,y) =>
       (h[y.nom].pts-h[x.nom].pts) || (h[y.nom].gd-h[x.nom].gd) || (h[y.nom].gf-h[x.nom].gf) ||
-      (y.gd-x.gd) || (y.gf-x.gf) ||
-      ((fifaRank[x.nom]||999)-(fifaRank[y.nom]||999)) || x.nom.localeCompare(y.nom));
+      (y.gd-x.gd) || (y.gf-x.gf) || ((x.fifa||999)-(y.fifa||999)) || x.nom.localeCompare(y.nom));
   };
-
   const res = {};
   Object.keys(grpTeams).forEach(grp => {
     let teams = Object.values(grpTeams[grp]).sort((x,y) => y.pts - x.pts);
     const matches = grpMatches[grp] || [], out = []; let i = 0;
-    while (i < teams.length) {                       // départage cluster par cluster
+    while (i < teams.length) {
       let j = i; while (j+1 < teams.length && teams[j+1].pts === teams[i].pts) j++;
       let cl = teams.slice(i, j+1);
       out.push(...(cl.length > 1 ? miniLigue(cl, matches) : cl)); i = j+1;
     }
-    res[grp] = out.map(t => t.nom);                  // [1er, 2e, 3e, 4e] en NOMS
+    res[grp] = out;
   });
   return res;
 }
 
-// --- Résolution du bracket : remplit les cases résolvables, laisse les 3e en attente ---
+// --- Version "noms seuls" (utilisée par renderPoules et le bracket) ---
+function calculerClassementGroupes() {
+  const o = classementGroupesObjets(), res = {};
+  Object.keys(o).forEach(g => res[g] = o[g].map(t => t.nom));
+  return res;
+}
+
+// --- Projection indicative des 8 meilleurs 3èmes -> slots (appariement valide, NON officiel) ---
+function projeterTroisiemes(objs) {
+  const SLOTS = {75:['A','B','C','D','F'],78:['C','D','F','G','H'],79:['C','E','F','H','I'],
+                 80:['E','H','I','J','K'],81:['A','E','H','I','J'],82:['B','E','F','I','J'],
+                 85:['E','F','G','I','J'],88:['D','E','I','J','L']};
+  const thirds = [];
+  Object.keys(objs).forEach(g => { const t = objs[g][2]; if (t) thirds.push({...t, grp:g}); });
+  thirds.sort((x,y) => (y.pts-x.pts) || (y.gd-x.gd) || (y.gf-x.gf) || ((x.fifa||999)-(y.fifa||999)) || x.nom.localeCompare(y.nom));
+  const top = thirds.slice(0, 8);
+  if (top.length < 8) return {};                       // pas encore 8 troisièmes -> pas de projection
+  const qual = top.map(t => t.grp), nameByGrp = {}; top.forEach(t => nameByGrp[t.grp] = t.nom);
+  const ids = Object.keys(SLOTS).map(Number);
+  const compat = {}; ids.forEach(s => compat[s] = SLOTS[s].filter(g => qual.includes(g)));
+  const order = ids.slice().sort((a,b) => compat[a].length - compat[b].length);  // slots les + contraints d'abord
+  const assign = {}, used = {};
+  const bt = i => {
+    if (i === order.length) return true;
+    for (const g of compat[order[i]]) { if (used[g]) continue; used[g]=true; assign[order[i]]=g; if (bt(i+1)) return true; used[g]=false; delete assign[order[i]]; }
+    return false;
+  };
+  if (!bt(0)) return {};
+  const out = {}; ids.forEach(s => { if (assign[s]) out[s] = nameByGrp[assign[s]]; });
+  return out;
+}
+
+// --- Résolution du bracket (le Sheet prime ; sinon rang / projection 3e / vainqueur) ---
 function resoudreBracket() {
-  const stand = calculerClassementGroupes(), cal = {}, noms = {}, issue = {};
+  const objs = classementGroupesObjets();
+  const stand = {}; Object.keys(objs).forEach(g => stand[g] = objs[g].map(t => t.nom));
+  const proj3e = projeterTroisiemes(objs);
+  const cal = {}, noms = {}, issue = {};
   (appData.calendrier || []).forEach(r => { const id = parseInt(String(r[0]).replace(/\D/g,'')); if (id) cal[id] = r; });
-
-  const estPlaceholder = v => {
-    v = (v || "").toString().trim();
-    return v === "" || /^[12][A-L]$/.test(v) || /^3[\/A-L]+$/i.test(v) || /vainqueur|perdant/i.test(v);
-  };
-  const resoudreSlot = s => {
-    if (!s) return null;
-    if (s.t === 'rank')  { const a = stand[s.g]; return (a && a[s.p-1]) ? a[s.p-1] : null; }
-    if (s.t === 'third') return null;                          // <-- saisie manuelle dans le Sheet
-    if (s.t === 'win')   return issue[s.m] ? issue[s.m].w : null;
-    if (s.t === 'lose')  return issue[s.m] ? issue[s.m].l : null;
-    return null;
-  };
-
+  const estPlaceholder = v => { v=(v||"").toString().trim(); return v===""||/^[12][A-L]$/.test(v)||/^3[\/A-L]+$/i.test(v)||/vainqueur|perdant/i.test(v); };
   Object.keys(BRACKET_GRAPH).map(Number).sort((a,b)=>a-b).forEach(id => {
     const g = BRACKET_GRAPH[id], row = cal[id];
-    const nomA = (row && !estPlaceholder(row[3])) ? row[3] : resoudreSlot(g.A);  // résultat réel prioritaire
-    const nomB = (row && !estPlaceholder(row[4])) ? row[4] : resoudreSlot(g.B);
+    const slot = s => {
+      if (!s) return null;
+      if (s.t === 'rank')  { const a = stand[s.g]; return (a && a[s.p-1]) ? a[s.p-1] : null; }
+      if (s.t === 'third') return proj3e[id] || null;         // projection indicative
+      if (s.t === 'win')   return issue[s.m] ? issue[s.m].w : null;
+      if (s.t === 'lose')  return issue[s.m] ? issue[s.m].l : null;
+      return null;
+    };
+    const nomA = (row && !estPlaceholder(row[3])) ? row[3] : slot(g.A);   // Sheet prioritaire
+    const nomB = (row && !estPlaceholder(row[4])) ? row[4] : slot(g.B);
     noms[id] = {A: nomA, B: nomB};
     if (row) {
       const sa = row[5], sb = row[6], tab = row[7];
@@ -1849,10 +1877,7 @@ function resoudreBracket() {
         const a = parseInt(sa), b = parseInt(sb); let w = null, l = null;
         if (a > b) { w = nomA; l = nomB; }
         else if (b > a) { w = nomB; l = nomA; }
-        else if (tab) {                              // égalité -> Vainqueur TAB
-          const aGagne = (tab === row[3]) || (nomA && getCleanName(tab) === getCleanName(nomA));
-          if (aGagne) { w = nomA; l = nomB; } else { w = nomB; l = nomA; }
-        }
+        else if (tab) { const aG = (tab === row[3]) || (nomA && getCleanName(tab) === getCleanName(nomA)); if (aG) { w = nomA; l = nomB; } else { w = nomB; l = nomA; } }
         issue[id] = {w, l};
       }
     }
@@ -1897,13 +1922,17 @@ function calendrierResolu() {
         }
       });
 
-      // 3. Trier chaque groupe et assigner les Rangs
+// 3. Trier chaque groupe selon le départage officiel CDM 2026 (confrontation directe d'abord)
+      const ordreOfficiel = calculerClassementGroupes();
       Object.keys(groups).forEach(gName => {
         let teams = Object.values(groups[gName]);
-        teams.sort((a, b) => (b.pts - a.pts) || (b.gd - a.gd) || (b.gf - a.gf) || a.name.localeCompare(b.name));
-        
+        const ordre = ordreOfficiel[gName] || [];
+        teams.sort((a, b) => {
+          let ia = ordre.indexOf(a.name); if (ia === -1) ia = 999;
+          let ib = ordre.indexOf(b.name); if (ib === -1) ib = 999;
+          return (ia - ib) || (b.pts - a.pts) || (b.gd - a.gd) || (b.gf - a.gf) || a.name.localeCompare(b.name);
+        });
         let isGroupFinished = teams.every(t => t.p === 3);
-
         teams.forEach((t, index) => {
           t.rank = index + 1;
           t.isGroupFinished = isGroupFinished;
