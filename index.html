@@ -1726,6 +1726,149 @@ let jokerHTML = "";
     </div>
   `;
 }
+    // ============================================================
+//  MOTEUR TABLEAU FINAL CDM26 — graphe officiel FIFA (clé = ID_Match de ta feuille 73→104)
+//  Vérifié contre le bracket officiel FIFA. NE PAS réordonner les ID.
+// ============================================================
+const BRACKET_GRAPH = {
+  // SEIZIÈMES : "rank" = {grp,pos} ; "third" = liste des groupes candidats
+  73:{A:{t:'rank',g:'A',p:2}, B:{t:'rank',g:'B',p:2}},
+  74:{A:{t:'rank',g:'C',p:1}, B:{t:'rank',g:'F',p:2}},
+  75:{A:{t:'rank',g:'E',p:1}, B:{t:'third',g:['A','B','C','D','F']}},
+  76:{A:{t:'rank',g:'F',p:1}, B:{t:'rank',g:'C',p:2}},
+  77:{A:{t:'rank',g:'E',p:2}, B:{t:'rank',g:'I',p:2}},
+  78:{A:{t:'rank',g:'I',p:1}, B:{t:'third',g:['C','D','F','G','H']}},
+  79:{A:{t:'rank',g:'A',p:1}, B:{t:'third',g:['C','E','F','H','I']}},
+  80:{A:{t:'rank',g:'L',p:1}, B:{t:'third',g:['E','H','I','J','K']}},
+  81:{A:{t:'rank',g:'G',p:1}, B:{t:'third',g:['A','E','H','I','J']}},
+  82:{A:{t:'rank',g:'D',p:1}, B:{t:'third',g:['B','E','F','I','J']}},
+  83:{A:{t:'rank',g:'H',p:1}, B:{t:'rank',g:'J',p:2}},
+  84:{A:{t:'rank',g:'K',p:2}, B:{t:'rank',g:'L',p:2}},
+  85:{A:{t:'rank',g:'B',p:1}, B:{t:'third',g:['E','F','G','I','J']}},
+  86:{A:{t:'rank',g:'D',p:2}, B:{t:'rank',g:'G',p:2}},
+  87:{A:{t:'rank',g:'J',p:1}, B:{t:'rank',g:'H',p:2}},
+  88:{A:{t:'rank',g:'K',p:1}, B:{t:'third',g:['D','E','I','J','L']}},
+  // HUITIÈMES : pairage CROISÉ officiel (corrige le bug du 1-2,3-4)
+  89:{A:{t:'win',m:75}, B:{t:'win',m:78}},
+  90:{A:{t:'win',m:73}, B:{t:'win',m:76}},
+  91:{A:{t:'win',m:74}, B:{t:'win',m:77}},
+  92:{A:{t:'win',m:79}, B:{t:'win',m:80}},
+  93:{A:{t:'win',m:84}, B:{t:'win',m:83}},
+  94:{A:{t:'win',m:82}, B:{t:'win',m:81}},
+  95:{A:{t:'win',m:87}, B:{t:'win',m:86}},
+  96:{A:{t:'win',m:85}, B:{t:'win',m:88}},
+  // QUARTS
+  97:{A:{t:'win',m:89}, B:{t:'win',m:90}},
+  98:{A:{t:'win',m:93}, B:{t:'win',m:94}},
+  99:{A:{t:'win',m:91}, B:{t:'win',m:92}},
+  100:{A:{t:'win',m:95}, B:{t:'win',m:96}},
+  // DEMIES
+  101:{A:{t:'win',m:97}, B:{t:'win',m:98}},
+  102:{A:{t:'win',m:99}, B:{t:'win',m:100}},
+  // PETITE FINALE / FINALE
+  103:{A:{t:'lose',m:101}, B:{t:'lose',m:102}},
+  104:{A:{t:'win',m:101},  B:{t:'win',m:102}},
+};
+
+// --- Classement des groupes avec départage CDM 2026 (confrontation directe avant diff générale) ---
+function calculerClassementGroupes() {
+  const grpTeams = {}, fifaRank = {}, grpMatches = {};
+  (appData.equipes || []).forEach(eq => {
+    const nom = eq[0]; if (!nom) return;
+    const grp = (eq[10] || "").toString().trim();          // col K = Groupe
+    if (grp) { grpTeams[grp] = grpTeams[grp] || {}; grpTeams[grp][nom] = {nom, pts:0, gf:0, ga:0, gd:0, j:0}; }
+    const fr = parseInt(eq[6]); if (!isNaN(fr)) fifaRank[nom] = fr;   // col 7 = Classement FIFA
+  });
+  (appData.calendrier || []).forEach(m => {
+    if ((m[8] || "").toString().trim() !== "Poules") return;
+    const a = m[3], b = m[4], sa = m[5], sb = m[6];
+    if (sa === "" || sb === "" || sa == null || sb == null) return;
+    const na = parseInt(sa), nb = parseInt(sb);
+    const grp = Object.keys(grpTeams).find(g => grpTeams[g][a]); if (!grp) return;
+    (grpMatches[grp] = grpMatches[grp] || []).push({a, b, sa:na, sb:nb});
+    const TA = grpTeams[grp][a], TB = grpTeams[grp][b];
+    if (TA) { TA.j++; TA.gf+=na; TA.ga+=nb; TA.gd+=na-nb; TA.pts += na>nb?3:(na===nb?1:0); }
+    if (TB) { TB.j++; TB.gf+=nb; TB.ga+=na; TB.gd+=nb-na; TB.pts += nb>na?3:(na===nb?1:0); }
+  });
+
+  const miniLigue = (cluster, matches) => {
+    const noms = new Set(cluster.map(t => t.nom)), h = {};
+    cluster.forEach(t => h[t.nom] = {pts:0, gd:0, gf:0});
+    matches.forEach(m => {
+      if (noms.has(m.a) && noms.has(m.b)) {
+        h[m.a].gf+=m.sa; h[m.a].gd+=m.sa-m.sb; h[m.b].gf+=m.sb; h[m.b].gd+=m.sb-m.sa;
+        h[m.a].pts += m.sa>m.sb?3:(m.sa===m.sb?1:0); h[m.b].pts += m.sb>m.sa?3:(m.sa===m.sb?1:0);
+      }
+    });
+    return cluster.slice().sort((x,y) =>
+      (h[y.nom].pts-h[x.nom].pts) || (h[y.nom].gd-h[x.nom].gd) || (h[y.nom].gf-h[x.nom].gf) ||
+      (y.gd-x.gd) || (y.gf-x.gf) ||
+      ((fifaRank[x.nom]||999)-(fifaRank[y.nom]||999)) || x.nom.localeCompare(y.nom));
+  };
+
+  const res = {};
+  Object.keys(grpTeams).forEach(grp => {
+    let teams = Object.values(grpTeams[grp]).sort((x,y) => y.pts - x.pts);
+    const matches = grpMatches[grp] || [], out = []; let i = 0;
+    while (i < teams.length) {                       // départage cluster par cluster
+      let j = i; while (j+1 < teams.length && teams[j+1].pts === teams[i].pts) j++;
+      let cl = teams.slice(i, j+1);
+      out.push(...(cl.length > 1 ? miniLigue(cl, matches) : cl)); i = j+1;
+    }
+    res[grp] = out.map(t => t.nom);                  // [1er, 2e, 3e, 4e] en NOMS
+  });
+  return res;
+}
+
+// --- Résolution du bracket : remplit les cases résolvables, laisse les 3e en attente ---
+function resoudreBracket() {
+  const stand = calculerClassementGroupes(), cal = {}, noms = {}, issue = {};
+  (appData.calendrier || []).forEach(r => { const id = parseInt(String(r[0]).replace(/\D/g,'')); if (id) cal[id] = r; });
+
+  const estPlaceholder = v => {
+    v = (v || "").toString().trim();
+    return v === "" || /^[12][A-L]$/.test(v) || /^3[\/A-L]+$/i.test(v) || /vainqueur|perdant/i.test(v);
+  };
+  const resoudreSlot = s => {
+    if (!s) return null;
+    if (s.t === 'rank')  { const a = stand[s.g]; return (a && a[s.p-1]) ? a[s.p-1] : null; }
+    if (s.t === 'third') return null;                          // <-- saisie manuelle dans le Sheet
+    if (s.t === 'win')   return issue[s.m] ? issue[s.m].w : null;
+    if (s.t === 'lose')  return issue[s.m] ? issue[s.m].l : null;
+    return null;
+  };
+
+  Object.keys(BRACKET_GRAPH).map(Number).sort((a,b)=>a-b).forEach(id => {
+    const g = BRACKET_GRAPH[id], row = cal[id];
+    const nomA = (row && !estPlaceholder(row[3])) ? row[3] : resoudreSlot(g.A);  // résultat réel prioritaire
+    const nomB = (row && !estPlaceholder(row[4])) ? row[4] : resoudreSlot(g.B);
+    noms[id] = {A: nomA, B: nomB};
+    if (row) {
+      const sa = row[5], sb = row[6], tab = row[7];
+      if (sa !== "" && sa != null && sb !== "" && sb != null) {
+        const a = parseInt(sa), b = parseInt(sb); let w = null, l = null;
+        if (a > b) { w = nomA; l = nomB; }
+        else if (b > a) { w = nomB; l = nomA; }
+        else if (tab) {                              // égalité -> Vainqueur TAB
+          const aGagne = (tab === row[3]) || (nomA && getCleanName(tab) === getCleanName(nomA));
+          if (aGagne) { w = nomA; l = nomB; } else { w = nomB; l = nomA; }
+        }
+        issue[id] = {w, l};
+      }
+    }
+  });
+  return noms;
+}
+
+// --- Copie du calendrier avec les cases du bracket déjà résolues (sans toucher appData) ---
+function calendrierResolu() {
+  const N = resoudreBracket();
+  return (appData.calendrier || []).map(row => {
+    const id = parseInt(String(row[0]).replace(/\D/g,''));
+    if (N[id]) { const c = row.slice(); if (N[id].A) c[3] = N[id].A; if (N[id].B) c[4] = N[id].B; return c; }
+    return row;
+  });
+}
     // --- MOTEUR DE GÉNÉRATION DES POULES ---
     function renderPoules() {
       let groups = {};
@@ -1872,7 +2015,7 @@ let jokerHTML = "";
       let matchCount = 0;
 
       // SÉPARATION DES PHASES (Y COMPRIS LA PETITE FINALE)
-      appData.calendrier.forEach(m => {
+      calendrierResolu().forEach(m => {
         let phase = (m[8] || "").toLowerCase().trim();
         if(!phase || phase === "poules" || phase === "") return;
 
