@@ -2067,21 +2067,16 @@ function garantiesTop2() {
       return html;
     }
 
-    // --- MOTEUR DE GÉNÉRATION TABLEAU FINAL (ARBRE ET LISTE MOBILE) ---
+// --- MOTEUR TABLEAU FINAL (onglets par tour, responsive, zéro scroll horizontal) ---
     function renderTableauFinal(logicalTodayStr) {
       let m16 = [], m8 = [], m4 = [], m2 = [], mF = [], m3rd = [];
       let matchCount = 0;
 
-      // SÉPARATION DES PHASES (Y COMPRIS LA PETITE FINALE)
       calendrierResolu().forEach(m => {
         let phase = (m[8] || "").toLowerCase().trim();
         if(!phase || phase === "poules" || phase === "") return;
-
-        // Cacher Vainqueur et Finaliste du bracket s'ils sont listés comme des phases
         if(phase.includes("vainqueur") || phase.includes("finaliste")) return;
-
         matchCount++;
-        
         if (phase.includes("16") || phase.includes("seizi")) m16.push(m);
         else if (phase.includes("8") || phase.includes("huiti")) m8.push(m);
         else if (phase.includes("1/4") || phase.includes("quart")) m4.push(m);
@@ -2092,82 +2087,85 @@ function garantiesTop2() {
 
       if(matchCount === 0) return `<p class="text-gray-500 text-center italic mt-10">Aucun match de phase finale défini pour l'instant.</p>`;
 
-      m16.sort((a,b) => parseInt(a[0].replace(/\D/g,'')) - parseInt(b[0].replace(/\D/g,'')));
-      m8.sort((a,b) => parseInt(a[0].replace(/\D/g,'')) - parseInt(b[0].replace(/\D/g,'')));
-      m4.sort((a,b) => parseInt(a[0].replace(/\D/g,'')) - parseInt(b[0].replace(/\D/g,'')));
-      m2.sort((a,b) => parseInt(a[0].replace(/\D/g,'')) - parseInt(b[0].replace(/\D/g,'')));
+      const byId = (a,b) => parseInt(String(a[0]).replace(/\D/g,'')) - parseInt(String(b[0]).replace(/\D/g,''));
+      [m16,m8,m4,m2,mF,m3rd].forEach(arr => arr.sort(byId));
 
-      let left16 = m16.slice(0, 8), right16 = m16.slice(8, 16);
-      let left8 = m8.slice(0, 4), right8 = m8.slice(4, 8);
-      let left4 = m4.slice(0, 2), right4 = m4.slice(2, 4);
-      let left2 = m2.slice(0, 1), right2 = m2.slice(1, 2);
+      const rounds = [
+        { key:'16', label:'Seizièmes', matches:m16, cols:'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' },
+        { key:'8',  label:'Huitièmes', matches:m8,  cols:'sm:grid-cols-2 lg:grid-cols-4' },
+        { key:'4',  label:'Quarts',    matches:m4,  cols:'sm:grid-cols-2 lg:grid-cols-4' },
+        { key:'2',  label:'Demies',    matches:m2,  cols:'sm:grid-cols-2' },
+        { key:'F',  label:'Finale',    matches:mF,  cols:'sm:grid-cols-1', isFinal:true },
+      ];
+      const avail = rounds.filter(r => r.matches.length || (r.isFinal && (mF.length || m3rd.length)));
 
-      const renderCol = (arr, side) => {
-        let h = '';
-        arr.forEach(match => { h += generateCompactBracketCard(match, side); });
-        return h;
-      };
+      // Onglet actif : on garde le choix de l'utilisateur s'il reste valable,
+      // sinon 1er tour ayant un match à jouer, sinon dernier tour disponible.
+      const estJoue = m => m[5] !== "" && m[5] != null;
+      let active = window.currentKoRound;
+      if (!avail.some(r => r.key === active)) {
+        active = (avail.find(r => r.matches.some(m => !estJoue(m))) || avail[avail.length-1] || {key:'16'}).key;
+      }
+      window.currentKoRound = active;
 
-      let winnerTextDesktop = "";
-      
-      // DÉTECTION DU VAINQUEUR DE LA FINALE
+      // Bandeau champion (si finale jouée)
+      let championHTML = "";
       if (mF.length > 0) {
-          let fin = mF[0];
-          let sA = fin[5], sB = fin[6], eqA = getCleanName(fin[3]), eqB = getCleanName(fin[4]), vTAB = fin[7];
-          if (sA !== "" && sB !== "") {
-              let winName = "";
-              if(parseInt(sA) > parseInt(sB)) winName = eqA;
-              else if(parseInt(sB) > parseInt(sA)) winName = eqB;
-              else winName = getCleanName(vTAB);
-              
-              if(winName) {
-                  winnerTextDesktop = `<div class="mt-4 md:mt-6 text-pastis-500 font-black uppercase text-lg md:text-2xl font-oswald animate-pulse text-center w-full leading-tight">🏆 VICTOIRE<br>${winName} 🏆</div>`;
-              }
-          }
+        const fin = mF[0], sA = fin[5], sB = fin[6];
+        if (sA !== "" && sB !== "") {
+          let win = "";
+          if (parseInt(sA) > parseInt(sB)) win = getCleanName(fin[3]);
+          else if (parseInt(sB) > parseInt(sA)) win = getCleanName(fin[4]);
+          else win = getCleanName(fin[7]);
+          if (win) championHTML = `<div class="mb-4 text-center bg-gradient-to-r from-pastis-500/20 via-pastis-500/10 to-pastis-500/20 border border-pastis-500/40 rounded-xl py-3"><div class="text-pastis-500 font-black uppercase font-oswald text-xl md:text-2xl tracking-wider flex items-center justify-center gap-2">🏆 ${win} 🏆</div><div class="text-[10px] text-gray-400 uppercase tracking-widest mt-0.5">Champion du monde</div></div>`;
+        }
       }
 
+      // Onglets
+      const tabsHTML = avail.map(r => {
+        const on = r.key === active;
+        const cls = on ? "bg-pastis-500 text-navy-900 shadow-md font-black"
+                       : "text-gray-400 hover:text-gray-200 hover:bg-navy-700/50";
+        return `<button data-ko-tab="${r.key}" onclick="switchKoRound('${r.key}')" class="flex-shrink-0 whitespace-nowrap px-3 md:px-4 py-2 text-xs md:text-sm font-bold uppercase tracking-wider rounded-lg transition-colors duration-200 ${cls}">${r.label}</button>`;
+      }).join('');
+
+      // Panneaux
+      const panelsHTML = avail.map(r => {
+        const hidden = r.key === active ? "" : "hidden";
+        let inner = "";
+        if (r.isFinal) {
+          const finCards = r.matches.map(m => generateCompactBracketCard(m, 'center')).join('');
+          const petiteHTML = m3rd.length
+            ? `<div class="mt-6 pt-4 border-t border-navy-700/50">
+                 <div class="text-gray-400 font-bold font-oswald text-xs uppercase tracking-widest text-center mb-3">Petite Finale</div>
+                 <div class="max-w-xs mx-auto">${m3rd.map(m => generateCompactBracketCard(m, 'center')).join('')}</div>
+               </div>`
+            : '';
+          inner = `${championHTML}
+            <div class="max-w-xs mx-auto transform scale-105">${finCards || '<p class="text-gray-500 text-center italic text-sm">Finale à venir.</p>'}</div>
+            ${petiteHTML}`;
+        } else {
+          inner = `<div class="grid grid-cols-1 ${r.cols} gap-3 md:gap-4">${r.matches.map(m => generateCompactBracketCard(m, 'left')).join('')}</div>`;
+        }
+        return `<div data-ko-panel="${r.key}" class="${hidden}">${inner}</div>`;
+      }).join('');
+
       return `
-        <div class="bg-navy-800 border border-navy-700 rounded-xl p-4 md:p-6 shadow-xl w-full overflow-x-scroll custom-scrollbar mt-4">
-          <div class="flex justify-between items-center min-w-[1200px] h-[900px] md:h-[1000px] pb-4">
-            
-            <div class="flex space-x-6 md:space-x-8 h-full">
-               <div class="bracket-col w-40 md:w-44">${renderCol(left16, 'left')}</div>
-               <div class="bracket-col w-40 md:w-44">${renderCol(left8, 'left')}</div>
-               <div class="bracket-col w-40 md:w-44">${renderCol(left4, 'left')}</div>
-               <div class="bracket-col w-40 md:w-44">${renderCol(left2, 'left')}</div>
-            </div>
-
-            <div class="flex flex-col justify-center items-center px-4 md:px-6 w-56 md:w-64 h-full border-x border-navy-700/50 bg-navy-900/30 rounded-3xl mx-6 relative">
-               
-               <div class="w-full flex flex-col items-center mb-12 md:mb-16 relative z-10">
-                 <span class="text-pastis-500 font-black font-oswald text-2xl md:text-3xl tracking-widest mb-4 shadow-sm flex flex-col items-center">
-                   <span>🏆</span> FINALE
-                 </span>
-                 <div class="w-full transform scale-110 shadow-[0_0_20px_rgba(247,195,37,0.3)] rounded-lg bg-navy-900">
-                   ${renderCol(mF, 'center')}
-                 </div>
-                 ${winnerTextDesktop}
-               </div>
-               
-               <div class="w-full flex flex-col items-center mt-8">
-                 <span class="text-gray-400 font-bold font-oswald text-xs md:text-sm tracking-widest mb-3 uppercase border-b border-navy-700 pb-1">Petite Finale</span>
-                 <div class="w-full shadow-lg rounded-lg border border-navy-700 bg-navy-800/90 transform scale-95">
-                   ${renderCol(m3rd, 'center')}
-                 </div>
-               </div>
-
-            </div>
-
-            <div class="flex space-x-6 md:space-x-8 h-full">
-               <div class="bracket-col w-40 md:w-44">${renderCol(right2, 'right')}</div>
-               <div class="bracket-col w-40 md:w-44">${renderCol(right4, 'right')}</div>
-               <div class="bracket-col w-40 md:w-44">${renderCol(right8, 'right')}</div>
-               <div class="bracket-col w-40 md:w-44">${renderCol(right16, 'right')}</div>
-            </div>
-
+        <div class="bg-navy-800 border border-navy-700 rounded-xl p-3 md:p-5 shadow-xl w-full mt-4">
+          <div class="flex gap-1 overflow-x-auto no-scrollbar bg-navy-900/60 rounded-xl p-1 border border-navy-700/50 mb-4">
+            ${tabsHTML}
           </div>
+          ${panelsHTML}
         </div>
       `;
+    }
+
+    function switchKoRound(key) {
+      window.currentKoRound = key;
+      const el = document.getElementById('cal-view-final');
+      if (el) { el.innerHTML = renderTableauFinal(getLogicalToday()); parseFlags(); }
+      const tab = document.querySelector(`[data-ko-tab="${key}"]`);
+      if (tab) tab.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
     }
 
 function generateCompactBracketCard(match, side) {
