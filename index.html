@@ -110,6 +110,20 @@
     }
   }
 }
+  /* ===== Bracket vertical par onglet ===== */
+.vb-wrap { display: flex; flex-direction: column; gap: 0; }
+.vb-pair { display: grid; grid-template-columns: 1fr 28px 1fr; align-items: center; margin-bottom: 18px; }
+.vb-pair > .vb-card-slot { display: flex; flex-direction: column; gap: 10px; }
+.vb-connect { position: relative; height: 100%; min-height: 60px; }
+.vb-connect::before { content:""; position:absolute; left:0; right:50%; top:25%; bottom:25%;
+  border:2px solid #314376; border-left:none; border-radius:0 6px 6px 0; }
+.vb-connect::after { content:""; position:absolute; left:50%; right:0; top:50%;
+  border-top:2px solid #314376; }
+.vb-next { display:flex; align-items:center; }
+@media (max-width: 640px) {
+  .vb-pair { grid-template-columns: 1fr 18px 1fr; }
+  .vb-connect { min-height: 50px; }
+}
 </style>
   </head>
 
@@ -2067,7 +2081,7 @@ function garantiesTop2() {
       return html;
     }
 
-// --- MOTEUR TABLEAU FINAL (onglets par tour, responsive, zéro scroll horizontal) ---
+// --- MOTEUR TABLEAU FINAL (onglets + mini-arbre vertical, sans scroll horizontal) ---
     function renderTableauFinal(logicalTodayStr) {
       let m16 = [], m8 = [], m4 = [], m2 = [], mF = [], m3rd = [];
       let matchCount = 0;
@@ -2090,76 +2104,84 @@ function garantiesTop2() {
       const byId = (a,b) => parseInt(String(a[0]).replace(/\D/g,'')) - parseInt(String(b[0]).replace(/\D/g,''));
       [m16,m8,m4,m2,mF,m3rd].forEach(arr => arr.sort(byId));
 
+      // Tours enchaînés : chaque onglet affiche le tour + le tour suivant relié
       const rounds = [
-        { key:'16', label:'Seizièmes', matches:m16, cols:'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' },
-        { key:'8',  label:'Huitièmes', matches:m8,  cols:'sm:grid-cols-2 lg:grid-cols-4' },
-        { key:'4',  label:'Quarts',    matches:m4,  cols:'sm:grid-cols-2 lg:grid-cols-4' },
-        { key:'2',  label:'Demies',    matches:m2,  cols:'sm:grid-cols-2' },
-        { key:'F',  label:'Finale',    matches:mF,  cols:'sm:grid-cols-1', isFinal:true },
+        { key:'16', label:'Seizièmes', from:m16, to:m8 },
+        { key:'8',  label:'Huitièmes', from:m8,  to:m4 },
+        { key:'4',  label:'Quarts',    from:m4,  to:m2 },
+        { key:'2',  label:'Demies',    from:m2,  to:mF },
+        { key:'F',  label:'Finale',    from:mF,  to:[], isFinal:true },
       ];
-      const avail = rounds.filter(r => r.matches.length || (r.isFinal && (mF.length || m3rd.length)));
+      const avail = rounds.filter(r => r.from.length || (r.isFinal && (mF.length || m3rd.length)));
 
-      // Onglet actif : on garde le choix de l'utilisateur s'il reste valable,
-      // sinon 1er tour ayant un match à jouer, sinon dernier tour disponible.
       const estJoue = m => m[5] !== "" && m[5] != null;
       let active = window.currentKoRound;
       if (!avail.some(r => r.key === active)) {
-        active = (avail.find(r => r.matches.some(m => !estJoue(m))) || avail[avail.length-1] || {key:'16'}).key;
+        active = (avail.find(r => r.from.some(m => !estJoue(m))) || avail[avail.length-1] || {key:'16'}).key;
       }
       window.currentKoRound = active;
 
-      // Bandeau champion (si finale jouée)
+      // Bandeau champion (finale jouée)
       let championHTML = "";
       if (mF.length > 0) {
         const fin = mF[0], sA = fin[5], sB = fin[6];
         if (sA !== "" && sB !== "") {
-          let win = "";
-          if (parseInt(sA) > parseInt(sB)) win = getCleanName(fin[3]);
-          else if (parseInt(sB) > parseInt(sA)) win = getCleanName(fin[4]);
-          else win = getCleanName(fin[7]);
-          if (win) championHTML = `<div class="mb-4 text-center bg-gradient-to-r from-pastis-500/20 via-pastis-500/10 to-pastis-500/20 border border-pastis-500/40 rounded-xl py-3"><div class="text-pastis-500 font-black uppercase font-oswald text-xl md:text-2xl tracking-wider flex items-center justify-center gap-2">🏆 ${win} 🏆</div><div class="text-[10px] text-gray-400 uppercase tracking-widest mt-0.5">Champion du monde</div></div>`;
+          let win = parseInt(sA) > parseInt(sB) ? getCleanName(fin[3]) : (parseInt(sB) > parseInt(sA) ? getCleanName(fin[4]) : getCleanName(fin[7]));
+          if (win) championHTML = `<div class="mb-4 text-center bg-gradient-to-r from-pastis-500/20 via-pastis-500/10 to-pastis-500/20 border border-pastis-500/40 rounded-xl py-3"><div class="text-pastis-500 font-black uppercase font-oswald text-xl md:text-2xl tracking-wider">🏆 ${win} 🏆</div><div class="text-[10px] text-gray-400 uppercase tracking-widest mt-0.5">Champion du monde</div></div>`;
         }
       }
 
-      // Onglets
       const tabsHTML = avail.map(r => {
         const on = r.key === active;
-        const cls = on ? "bg-pastis-500 text-navy-900 shadow-md font-black"
-                       : "text-gray-400 hover:text-gray-200 hover:bg-navy-700/50";
+        const cls = on ? "bg-pastis-500 text-navy-900 shadow-md font-black" : "text-gray-400 hover:text-gray-200 hover:bg-navy-700/50";
         return `<button data-ko-tab="${r.key}" onclick="switchKoRound('${r.key}')" class="flex-shrink-0 whitespace-nowrap px-3 md:px-4 py-2 text-xs md:text-sm font-bold uppercase tracking-wider rounded-lg transition-colors duration-200 ${cls}">${r.label}</button>`;
       }).join('');
 
-      // Panneaux
+      // Construit les paires "match du tour -> match suivant" reliées par un connecteur.
+      // 2 matchs d'un tour alimentent 1 match du tour suivant.
+      const buildPairs = (from, to) => {
+        let h = '';
+        for (let i = 0; i < from.length; i += 2) {
+          const a = from[i], b = from[i+1];
+          const idxNext = Math.floor(i/2);
+          const nextMatch = to[idxNext];
+          h += `
+            <div class="vb-pair">
+              <div class="vb-card-slot">
+                ${generateCompactBracketCard(a, 'left')}
+                ${b ? generateCompactBracketCard(b, 'left') : ''}
+              </div>
+              <div class="vb-connect"></div>
+              <div class="vb-next">
+                <div class="w-full">${nextMatch ? generateCompactBracketCard(nextMatch, 'right') : `<div class="border-2 border-dashed border-navy-700 rounded text-[10px] text-gray-600 text-center py-3 px-1">À venir</div>`}</div>
+              </div>
+            </div>`;
+        }
+        return h;
+      };
+
       const panelsHTML = avail.map(r => {
         const hidden = r.key === active ? "" : "hidden";
-        let inner = "";
+        let inner;
         if (r.isFinal) {
-          const finCards = r.matches.map(m => generateCompactBracketCard(m, 'center')).join('');
-          const petiteHTML = m3rd.length
-            ? `<div class="mt-6 pt-4 border-t border-navy-700/50">
-                 <div class="text-gray-400 font-bold font-oswald text-xs uppercase tracking-widest text-center mb-3">Petite Finale</div>
-                 <div class="max-w-xs mx-auto">${m3rd.map(m => generateCompactBracketCard(m, 'center')).join('')}</div>
-               </div>`
-            : '';
-          inner = `${championHTML}
-            <div class="max-w-xs mx-auto transform scale-105">${finCards || '<p class="text-gray-500 text-center italic text-sm">Finale à venir.</p>'}</div>
-            ${petiteHTML}`;
+          const finCards = mF.map(m => generateCompactBracketCard(m, 'center')).join('') || '<p class="text-gray-500 text-center italic text-sm">Finale à venir.</p>';
+          const petite = m3rd.length ? `<div class="mt-6 pt-4 border-t border-navy-700/50"><div class="text-gray-400 font-bold font-oswald text-xs uppercase tracking-widest text-center mb-3">Petite Finale</div><div class="max-w-xs mx-auto">${m3rd.map(m => generateCompactBracketCard(m, 'center')).join('')}</div></div>` : '';
+          inner = `${championHTML}<div class="max-w-xs mx-auto transform scale-105">${finCards}</div>${petite}`;
         } else {
-          inner = `<div class="grid grid-cols-1 ${r.cols} gap-3 md:gap-4">${r.matches.map(m => generateCompactBracketCard(m, 'left')).join('')}</div>`;
+          inner = `<div class="text-center text-[10px] text-gray-500 uppercase tracking-widest mb-3">${r.label} <span class="text-gray-600">→</span> ${avail.find(x=>x.from===r.to)?.label || 'Tour suivant'}</div>
+                   <div class="vb-wrap">${buildPairs(r.from, r.to)}</div>`;
         }
         return `<div data-ko-panel="${r.key}" class="${hidden}">${inner}</div>`;
       }).join('');
 
       return `
         <div class="bg-navy-800 border border-navy-700 rounded-xl p-3 md:p-5 shadow-xl w-full mt-4">
-          <div class="flex gap-1 overflow-x-auto no-scrollbar bg-navy-900/60 rounded-xl p-1 border border-navy-700/50 mb-4">
-            ${tabsHTML}
-          </div>
+          <div class="flex gap-1 overflow-x-auto no-scrollbar bg-navy-900/60 rounded-xl p-1 border border-navy-700/50 mb-4">${tabsHTML}</div>
           ${panelsHTML}
         </div>
       `;
     }
-
+    
     function switchKoRound(key) {
       window.currentKoRound = key;
       const el = document.getElementById('cal-view-final');
