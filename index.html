@@ -2028,11 +2028,12 @@ function garantiesTop2() {
             rankClass = "text-green-400 font-bold";
             if (estGaranti || t.isGroupFinished)
               statusBadge = `<span class="ml-2 text-[8px] md:text-[10px] bg-green-600 text-white px-1.5 py-0.5 rounded shadow-sm flex-shrink-0">Qualifié</span>`;
-          } else if (isBest3rd) {
+} else if (isBest3rd) {
             rowClass = "bg-pastis-500/10 border-l-4 border-pastis-500";
             rankClass = "text-pastis-500 font-bold";
             let lbl = t.isGroupFinished ? "Qualifié (3e)" : "Meilleur 3e";
-            statusBadge = `<span onclick="showTooltip(event, 'Fait partie des 8 meilleurs 3èmes ${t.isGroupFinished ? '' : '(projection à l\\'instant t)'}')" class="ml-2 text-[8px] md:text-[10px] bg-pastis-500 text-navy-900 px-1.5 py-0.5 rounded shadow-sm font-bold cursor-pointer flex-shrink-0">${lbl}</span>`;
+            let tip = t.isGroupFinished ? "Fait partie des 8 meilleurs 3èmes" : "Projection des 8 meilleurs 3èmes en direct";
+            statusBadge = `<span onclick="showTooltip(event, '${tip}')" class="ml-2 text-[8px] md:text-[10px] bg-pastis-500 text-navy-900 px-1.5 py-0.5 rounded shadow-sm font-bold cursor-pointer flex-shrink-0">${lbl}</span>`;
           } else if (t.isGroupFinished) {
             rowClass = "opacity-50 grayscale";
             statusBadge = `<span class="ml-2 text-[8px] md:text-[10px] bg-red-800 text-white px-1.5 py-0.5 rounded flex-shrink-0">Éliminé</span>`;
