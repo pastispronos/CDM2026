@@ -2964,13 +2964,14 @@ function renderMatchPronos() {
   if (matchFilter.tendance) pronosMatch = pronosMatch.filter(p => pronoTendance(p) === matchFilter.tendance);
   if (matchFilter.joker) pronosMatch = pronosMatch.filter(p => p[8] && String(p[8]).toLowerCase()==='oui');
 
-  // Tri : points décroissants, puis rang au classement
+// Tri : ordre du classement général (rang réel, gère les ex-æquo "-")
   pronosMatch.sort((a, b) => {
-    const ptsA = parseInt(a[9]) || 0, ptsB = parseInt(b[9]) || 0;
+    const rA = parseInt(getRangReel(a[0])) || 999;
+    const rB = parseInt(getRangReel(b[0])) || 999;
+    if (rA !== rB) return rA - rB;
+    const ptsA = parseInt(a[9]) || 0, ptsB = parseInt(b[9]) || 0;   // ex-æquo : le meilleur score du match d'abord
     if (ptsB !== ptsA) return ptsB - ptsA;
-    const infoA = appData.classement.find(c => c[3] === a[0]);
-    const infoB = appData.classement.find(c => c[3] === b[0]);
-    return (infoA ? parseInt(infoA[2]) : 999) - (infoB ? parseInt(infoB[2]) : 999);
+    return a[0].localeCompare(b[0]);
   });
 
   const pronoContainer = document.getElementById('pronostics-list');
