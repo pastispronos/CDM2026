@@ -381,6 +381,7 @@
     let playerChartInstance = null;
     let activeChartType = 'points'; 
     let selectedPlayersForChart = [];
+    let bracketProjIds = {};   // mémorise les slots "3e" remplis par projection (pour le badge ≈)
     let filterJoueurGroupe = 'all';
     const chartColors = ['#F7D11A', '#3b82f6', '#ef4444', '#10b981', '#8b5cf6', '#f97316', '#ec4899', '#06b6d4', '#84cc16', '#6366f1'];
     window.onload = function() { 
@@ -1852,6 +1853,7 @@ function projeterTroisiemes(objs) {
 
 // --- Résolution du bracket (le Sheet prime ; sinon rang / projection 3e / vainqueur) ---
 function resoudreBracket() {
+  bracketProjIds = {};
   const objs = classementGroupesObjets();
   const stand = {}; Object.keys(objs).forEach(g => stand[g] = objs[g].map(t => t.nom));
   const proj3e = projeterTroisiemes(objs);
@@ -1860,16 +1862,16 @@ function resoudreBracket() {
   const estPlaceholder = v => { v=(v||"").toString().trim(); return v===""||/^[12][A-L]$/.test(v)||/^3[\/A-L]+$/i.test(v)||/vainqueur|perdant/i.test(v); };
   Object.keys(BRACKET_GRAPH).map(Number).sort((a,b)=>a-b).forEach(id => {
     const g = BRACKET_GRAPH[id], row = cal[id];
-    const slot = s => {
+    const slot = (s, side) => {
       if (!s) return null;
       if (s.t === 'rank')  { const a = stand[s.g]; return (a && a[s.p-1]) ? a[s.p-1] : null; }
-      if (s.t === 'third') return proj3e[id] || null;         // projection indicative
+      if (s.t === 'third') { if (proj3e[id]) { bracketProjIds[id] = side; return proj3e[id]; } return null; }
       if (s.t === 'win')   return issue[s.m] ? issue[s.m].w : null;
       if (s.t === 'lose')  return issue[s.m] ? issue[s.m].l : null;
       return null;
     };
-    const nomA = (row && !estPlaceholder(row[3])) ? row[3] : slot(g.A);   // Sheet prioritaire
-    const nomB = (row && !estPlaceholder(row[4])) ? row[4] : slot(g.B);
+    const nomA = (row && !estPlaceholder(row[3])) ? row[3] : slot(g.A, 'A');   // Sheet prioritaire
+    const nomB = (row && !estPlaceholder(row[4])) ? row[4] : slot(g.B, 'B');
     noms[id] = {A: nomA, B: nomB};
     if (row) {
       const sa = row[5], sb = row[6], tab = row[7];
@@ -2141,12 +2143,12 @@ function calendrierResolu() {
       `;
     }
 
-    function generateCompactBracketCard(match, side) {
+function generateCompactBracketCard(match, side) {
       if(!match) return '';
       const idMatch = match[0], date = match[1], time = match[2];
       const eqA = match[3], eqB = match[4], scoreA = match[5], scoreB = match[6], vainqueurTAB = match[7];
       const isPlayed = (scoreA !== "" && scoreB !== "");
-      
+
       let winA = false, winB = false;
       if (isPlayed) {
         if(parseInt(scoreA) > parseInt(scoreB)) winA = true;
@@ -2157,7 +2159,24 @@ function calendrierResolu() {
 
       let flagA = getFlagOnly(eqA), flagB = getFlagOnly(eqB);
       let nameA = getCleanName(eqA), nameB = getCleanName(eqB);
-      if(nameA==='-') nameA = eqA; if(nameB==='-') nameB = eqB; 
+      if(nameA==='-') nameA = eqA; if(nameB==='-') nameB = eqB;
+
+      // --- Badges de provenance (seizièmes uniquement, masqués une fois le match joué) ---
+      const nid = parseInt(String(idMatch).replace(/\D/g,''));
+      const meta = (typeof BRACKET_GRAPH !== 'undefined') ? BRACKET_GRAPH[nid] : null;
+      const tagProv = (slot, proj) => {
+        if (!slot || isPlayed) return '';
+        if (slot.t === 'rank') {
+          const cls = slot.p === 1 ? 'bg-green-100 text-green-700' : 'bg-sky-100 text-sky-700';
+          return `<span class="ml-1 px-1 rounded text-[7px] md:text-[8px] font-bold ${cls} flex-shrink-0 not-italic">${slot.p}${slot.g}</span>`;
+        }
+        if (slot.t === 'third') {
+          return `<span class="ml-1 px-1 rounded text-[7px] md:text-[8px] font-black bg-pastis-500 text-navy-900 flex-shrink-0 not-italic">${proj ? '≈ ' : ''}3e</span>`;
+        }
+        return '';
+      };
+      const provA = meta ? tagProv(meta.A, false) : '';
+      const provB = meta ? tagProv(meta.B, !!(typeof bracketProjIds !== 'undefined' && bracketProjIds[nid] === 'B')) : '';
 
       let bgA = winA ? 'bg-pastis-500/10' : 'bg-white';
       let textA = winA ? 'text-navy-900' : (isPlayed ? 'text-gray-500' : 'text-gray-700');
@@ -2178,6 +2197,7 @@ function calendrierResolu() {
                 <div class="flex items-center space-x-1.5 overflow-hidden w-[80%]">
                   <span class="emoji-flag text-xs opacity-${isPlayed && !winA ? '50 grayscale' : '100'}">${flagA}</span>
                   <span class="truncate font-bold ${textA} uppercase tracking-wider">${nameA}</span>
+                  ${provA}
                 </div>
                 <span class="font-black ${ptsA} text-right bg-gray-100 px-1.5 rounded">${isPlayed ? scoreA : '-'}</span>
               </div>
@@ -2185,6 +2205,7 @@ function calendrierResolu() {
                 <div class="flex items-center space-x-1.5 overflow-hidden w-[80%]">
                   <span class="emoji-flag text-xs opacity-${isPlayed && !winB ? '50 grayscale' : '100'}">${flagB}</span>
                   <span class="truncate font-bold ${textB} uppercase tracking-wider">${nameB}</span>
+                  ${provB}
                 </div>
                 <span class="font-black ${ptsB} text-right bg-gray-100 px-1.5 rounded">${isPlayed ? scoreB : '-'}</span>
               </div>
