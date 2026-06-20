@@ -1951,46 +1951,90 @@ function garantiesTop2() {
   return res;
 }
 
-    // Renvoie, par groupe, un Set des équipes mathématiquement éliminées (ne peuvent plus finir top 3)
+// Renvoie, par groupe, un Set des équipes mathématiquement éliminées (ne peuvent plus finir top 3),
+// en appliquant le départage officiel CDM 2026 (confrontation directe d'abord).
 function eliminesGroupe() {
-  const objs = classementGroupesObjets();
-  const groupOf = {}, basePts = {}, teamsByGrp = {};
-  Object.keys(objs).forEach(g => {
-    teamsByGrp[g] = objs[g].map(t => t.nom);
-    objs[g].forEach(t => { groupOf[t.nom] = g; basePts[t.nom] = t.pts; });
+  const fifaRank = {}, teamsByGrp = {}, groupOf = {};
+  (appData.equipes || []).forEach(eq => {
+    const nom = eq[0]; if (!nom) return;
+    const fr = parseInt(eq[6]); if (!isNaN(fr)) fifaRank[nom] = fr;     // col 7 = Classement FIFA
+    const g = (eq[10] || "").toString().trim();                        // col K = Groupe
+    if (g) { (teamsByGrp[g] = teamsByGrp[g] || []).push(nom); groupOf[nom] = g; }
   });
-  const remByGrp = {};
+
+  // Matchs joués (avec score) et restants, par groupe
+  const playedByGrp = {}, remByGrp = {};
   (appData.calendrier || []).forEach(m => {
     if ((m[8] || "").toString().trim() !== "Poules") return;
-    const sa = m[5], sb = m[6];
-    if (!(sa === "" || sb === "" || sa == null || sb == null)) return;   // déjà joué -> ignore
     const a = m[3], b = m[4], g = groupOf[a];
     if (!g || groupOf[b] !== g) return;
-    (remByGrp[g] = remByGrp[g] || []).push([a, b]);
+    const sa = m[5], sb = m[6];
+    if (sa === "" || sb === "" || sa == null || sb == null) (remByGrp[g] = remByGrp[g] || []).push([a, b]);
+    else (playedByGrp[g] = playedByGrp[g] || []).push({a, b, sa: parseInt(sa), sb: parseInt(sb)});
   });
+
+  // Mini-championnat entre équipes à égalité (critères 1→3), puis diff/buts généraux, fair-play (≈ FIFA), FIFA
+  const miniL = (cluster, matches) => {
+    const noms = new Set(cluster.map(t => t.nom)), h = {};
+    cluster.forEach(t => h[t.nom] = {pts:0, gd:0, gf:0});
+    matches.forEach(m => {
+      if (noms.has(m.a) && noms.has(m.b)) {
+        h[m.a].gf+=m.sa; h[m.a].gd+=m.sa-m.sb; h[m.b].gf+=m.sb; h[m.b].gd+=m.sb-m.sa;
+        h[m.a].pts += m.sa>m.sb?3:(m.sa===m.sb?1:0); h[m.b].pts += m.sb>m.sa?3:(m.sa===m.sb?1:0);
+      }
+    });
+    return cluster.slice().sort((x,y) =>
+      (h[y.nom].pts-h[x.nom].pts) || (h[y.nom].gd-h[x.nom].gd) || (h[y.nom].gf-h[x.nom].gf) ||
+      (y.gd-x.gd) || (y.gf-x.gf) || ((x.fifa||999)-(y.fifa||999)) || x.nom.localeCompare(y.nom));
+  };
+  // Classement complet d'un groupe à partir de la liste de tous ses matchs
+  const classer = (names, matches) => {
+    const T = {};
+    names.forEach(n => T[n] = {nom:n, pts:0, gf:0, gd:0, fifa: fifaRank[n] || 999});
+    matches.forEach(m => {
+      const A = T[m.a], B = T[m.b]; if (!A || !B) return;
+      A.gf+=m.sa; A.gd+=m.sa-m.sb; B.gf+=m.sb; B.gd+=m.sb-m.sa;
+      A.pts += m.sa>m.sb?3:(m.sa===m.sb?1:0); B.pts += m.sb>m.sa?3:(m.sa===m.sb?1:0);
+    });
+    let teams = Object.values(T).sort((x,y)=> y.pts-x.pts);
+    const out = []; let i=0;
+    while (i<teams.length) {
+      let j=i; while (j+1<teams.length && teams[j+1].pts===teams[i].pts) j++;
+      let cl = teams.slice(i,j+1);
+      out.push(...(cl.length>1 ? miniL(cl, matches) : cl)); i=j+1;
+    }
+    return out.map(t=>t.nom);
+  };
+
   const res = {};
   Object.keys(teamsByGrp).forEach(g => {
-    const teams = teamsByGrp[g], rem = remByGrp[g] || [], elim = new Set(teams);
-    if (rem.length > 8) { res[g] = new Set(); return; }                  // garde-fou
+    const names = teamsByGrp[g], played = playedByGrp[g] || [], rem = remByGrp[g] || [];
+    const elim = new Set();
+    if (rem.length > 8) { res[g] = elim; return; }   // garde-fou (jamais atteint en pratique)
     const total = Math.pow(3, rem.length);
-    for (let mask = 0; mask < total; mask++) {
-      const pts = {}; teams.forEach(t => pts[t] = basePts[t]);
-      let x = mask;
-      for (let i = 0; i < rem.length; i++) {
-        const r = x % 3; x = Math.floor(x / 3); const [a, b] = rem[i];
-        if (r === 0) pts[a] += 3; else if (r === 1) pts[b] += 3; else { pts[a] += 1; pts[b] += 1; }
+
+    names.forEach(t => {
+      let peutTop3 = false;
+      // On cherche S'IL EXISTE un scénario où t finit top 3, en donnant à t le maximum de marge
+      for (let mask = 0; mask < total && !peutTop3; mask++) {
+        const sim = []; let x = mask;
+        for (let i = 0; i < rem.length; i++) {
+          const r = x % 3; x = Math.floor(x / 3); const [a, b] = rem[i];
+          const big = team => (team === t ? 20 : 1);   // t gagne large, les autres au minimum
+          if (r === 0) sim.push({a, b, sa: big(a), sb: 0});
+          else if (r === 1) sim.push({a, b, sa: 0, sb: big(b)});
+          else sim.push({a, b, sa: 0, sb: 0});
+        }
+        const ordre = classer(names, played.concat(sim));
+        if (ordre.slice(0, 3).includes(t)) peutTop3 = true;
       }
-      teams.forEach(t => {
-        if (!elim.has(t)) return;
-        let strictementAuDessus = 0;
-        teams.forEach(u => { if (u !== t && pts[u] > pts[t]) strictementAuDessus++; });
-        if (strictementAuDessus <= 2) elim.delete(t);   // peut encore viser le top 3 -> pas éliminé
-      });
-    }
+      if (!peutTop3) elim.add(t);
+    });
     res[g] = elim;
   });
   return res;
 }
+    
 // --- MOTEUR DE GÉNÉRATION DES POULES ---
     function renderPoules() {
       let groups = {};
