@@ -2792,26 +2792,26 @@ let jokersHTML = '';
           <span class="font-bold text-pastis-500 font-oswald text-lg md:text-xl leading-none mt-1 block">${ptsJourFormatted}</span>
         </div>
         <div class="bg-navy-900 p-2 rounded text-center border border-navy-700 flex flex-col justify-center items-center">
-          <span class="block text-xs md:text-sm text-gray-400 uppercase mb-1 text-center">Évol vs ${journeeJ1Label || "J-1"}</span>
-          ${evolJ1}
+          <span class="block text-xs md:text-sm text-gray-400 uppercase mb-1 text-center">Évolution vs ${journeeJ1Label || "J-1"}</span>
+          <span class="font-oswald text-lg md:text-xl leading-none mt-1 block">${evolJ1}</span>
         </div>
         <div class="bg-navy-900 p-2 rounded text-center border border-navy-700 flex flex-col justify-center items-center">
-          <span class="block text-xs md:text-sm text-gray-400 uppercase mb-1 text-center">Évol vs ${journeeJ2Label || "J-2"}</span>
-          ${evolJ2}
+          <span class="block text-xs md:text-sm text-gray-400 uppercase mb-1 text-center">Évolution vs ${journeeJ2Label || "J-2"}</span>
+          <span class="font-oswald text-lg md:text-xl leading-none mt-1 block">${evolJ2}</span>
         </div>
       </div>
 
       <div class="grid grid-cols-3 gap-2 mb-6">
         <div class="bg-navy-900 p-2 rounded text-center border border-navy-700 flex flex-col justify-center items-center">
-          <span class="block text-xs md:text-sm text-gray-400 uppercase">Meilleur</span>
+          <span class="block text-xs md:text-sm text-gray-400 uppercase">Meilleur Classement</span>
           <span class="font-bold text-green-400 font-oswald text-lg md:text-xl leading-none mt-1 block">${meilleurRang === "-" ? "-" : "#" + meilleurRang}</span>
         </div>
         <div class="bg-navy-900 p-2 rounded text-center border border-navy-700 flex flex-col justify-center items-center">
-          <span class="block text-xs md:text-sm text-gray-400 uppercase">Pire</span>
+          <span class="block text-xs md:text-sm text-gray-400 uppercase">Pire Classement</span>
           <span class="font-bold text-red-400 font-oswald text-lg md:text-xl leading-none mt-1 block">${pireRang === "-" ? "-" : "#" + pireRang}</span>
         </div>
         <div class="bg-navy-900 p-2 rounded text-center border border-navy-700 flex flex-col justify-center items-center">
-          <span class="block text-xs md:text-sm text-gray-400 uppercase">Moyenne</span>
+          <span class="block text-xs md:text-sm text-gray-400 uppercase">Classement Moyen</span>
           <span class="font-bold text-white font-oswald text-lg md:text-xl leading-none mt-1 block">${moyenRang === "-" ? "-" : "#" + moyenRang}</span>
         </div>
       </div>
