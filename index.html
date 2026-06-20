@@ -1221,20 +1221,24 @@ function retourAccueil() {
       return "text-green-500 font-bold";
     }
 
-    function getPointsBadge(points) {
-      if (points === "") return `<span class="px-1.5 py-0.5 md:px-2 md:py-1 rounded-md text-[10px] md:text-sm text-gray-400 bg-navy-700">-</span>`;
+function getPointsBadge(points) {
+      // Taille UNIFORME pour tous les badges — seule la couleur change selon le palier
+      const SIZE = "px-1.5 py-0.5 md:px-2 md:py-1 rounded-md text-xs md:text-sm font-bold inline-block whitespace-nowrap";
+
+      if (points === "") return `<span class="${SIZE} text-gray-400 bg-navy-700">-</span>`;
       let pNum = parseInt(points);
-      
-      if (pNum >= 50) return `<span class="px-2 py-1 md:px-3 md:py-1.5 rounded-lg text-navy-900 bg-pastis-500 font-oswald font-black text-sm md:text-xl shadow-[0_0_20px_rgba(247,195,37,0.8)] border border-pastis-600 transform md:scale-110 inline-block tracking-wide">${pNum} pts</span>`;
-      if (pNum >= 25) return `<span class="px-2 py-1 md:px-3 md:py-1.5 rounded-lg text-white bg-purple-600 font-oswald font-bold text-sm md:text-xl shadow-[0_0_15px_rgba(147,51,234,0.6)] border border-purple-400 transform md:scale-110 inline-block tracking-wide">${pNum} pts</span>`;
-      if (pNum >= 20) return `<span class="px-2 py-1 md:px-3 md:py-1 rounded-lg text-white bg-pink-600 font-oswald font-bold text-sm md:text-lg shadow-[0_0_10px_rgba(219,39,119,0.5)] tracking-wide">${pNum} pts</span>`;
-      if (pNum >= 14) return `<span class="px-2 py-1 md:px-3 md:py-1 rounded-lg text-white bg-red-600 font-oswald font-bold text-sm md:text-lg shadow-[0_0_10px_rgba(220,38,38,0.5)] tracking-wide">${pNum} pts</span>`;
-      if (pNum >= 10) return `<span class="px-1.5 py-0.5 md:px-3 md:py-1 rounded-md text-navy-900 bg-pastis-500 font-oswald font-bold text-xs md:text-base shadow-[0_0_8px_rgba(247,195,37,0.4)] tracking-wide">${pNum} pts</span>`;
-      if (pNum >= 5 && pNum <= 7) return `<span class="px-1.5 py-0.5 md:px-2 md:py-1 rounded-md text-white bg-green-600 font-bold text-xs md:text-sm shadow-[0_0_5px_rgba(22,163,74,0.3)]">${pNum} pts</span>`;
-      if (pNum === 1 || pNum === 2) return `<span class="px-1.5 py-0.5 md:px-2 md:py-1 rounded-md text-white bg-orange-500 font-bold text-xs md:text-sm shadow-[0_0_5px_rgba(249,115,22,0.3)]">${pNum} pts</span>`;
-      if (pNum === 0) return `<span class="px-1.5 py-0.5 md:px-2 md:py-1 rounded-md text-gray-400 bg-navy-700 font-medium text-[10px] md:text-sm">${pNum} pt</span>`;
-      
-      return `<span class="px-1.5 py-0.5 md:px-2 md:py-1 rounded-md text-[10px] md:text-sm text-gray-300 bg-navy-700">${pNum} pts</span>`;
+      if (isNaN(pNum)) return `<span class="${SIZE} text-gray-300 bg-navy-700">-</span>`;
+
+      if (pNum >= 50) return `<span class="${SIZE} text-navy-900 bg-pastis-500 shadow-[0_0_12px_rgba(247,195,37,0.7)] border border-pastis-600">${pNum} pts</span>`;
+      if (pNum >= 25) return `<span class="${SIZE} text-white bg-purple-600 shadow-[0_0_10px_rgba(147,51,234,0.5)] border border-purple-400">${pNum} pts</span>`;
+      if (pNum >= 20) return `<span class="${SIZE} text-white bg-pink-600 shadow-[0_0_8px_rgba(219,39,119,0.4)]">${pNum} pts</span>`;
+      if (pNum >= 14) return `<span class="${SIZE} text-white bg-red-600 shadow-[0_0_8px_rgba(220,38,38,0.4)]">${pNum} pts</span>`;
+      if (pNum >= 10) return `<span class="${SIZE} text-navy-900 bg-pastis-500 shadow-[0_0_6px_rgba(247,195,37,0.35)]">${pNum} pts</span>`;
+      if (pNum >= 5 && pNum <= 7) return `<span class="${SIZE} text-white bg-green-600 shadow-[0_0_5px_rgba(22,163,74,0.3)]">${pNum} pts</span>`;
+      if (pNum === 1 || pNum === 2) return `<span class="${SIZE} text-white bg-orange-500 shadow-[0_0_5px_rgba(249,115,22,0.3)]">${pNum} pts</span>`;
+      if (pNum === 0) return `<span class="px-1.5 py-0.5 md:px-2 md:py-1 rounded-md text-xs md:text-sm font-medium inline-block whitespace-nowrap text-gray-400 bg-navy-700">${pNum} pt</span>`;
+
+      return `<span class="${SIZE} text-gray-300 bg-navy-700">${pNum} pts</span>`;
     }
 
     function getPerformanceBadge(textPerf) {
@@ -2782,7 +2786,11 @@ let jokersHTML = '';
       ${phraseHTML}
       <p class="text-gray-400 font-medium text-sm mb-4">Classement actuel : <span class="text-white font-bold bg-navy-900 px-2 py-0.5 rounded shadow-inner">#${rang}</span></p>
 
-      <div class="grid grid-cols-3 gap-2 mb-6">
+<div class="grid grid-cols-3 gap-2 mb-2">
+        <div class="bg-navy-900 p-2 rounded text-center border border-navy-700 flex flex-col justify-center items-center">
+          <span class="block text-xs md:text-sm text-gray-400 uppercase">Pts ${journeeLabel !== "du Jour" ? journeeLabel : "du Jour"}</span>
+          <span class="font-bold text-pastis-500 font-oswald text-lg md:text-xl leading-none mt-1 block">${ptsJourFormatted}</span>
+        </div>
         <div class="bg-navy-900 p-2 rounded text-center border border-navy-700 flex flex-col justify-center items-center">
           <span class="block text-xs md:text-sm text-gray-400 uppercase mb-1 text-center">Évol vs ${journeeJ1Label || "J-1"}</span>
           ${evolJ1}
@@ -2790,6 +2798,21 @@ let jokersHTML = '';
         <div class="bg-navy-900 p-2 rounded text-center border border-navy-700 flex flex-col justify-center items-center">
           <span class="block text-xs md:text-sm text-gray-400 uppercase mb-1 text-center">Évol vs ${journeeJ2Label || "J-2"}</span>
           ${evolJ2}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2 mb-6">
+        <div class="bg-navy-900 p-2 rounded text-center border border-navy-700 flex flex-col justify-center items-center">
+          <span class="block text-xs md:text-sm text-gray-400 uppercase">Meilleur</span>
+          <span class="font-bold text-green-400 font-oswald text-lg md:text-xl leading-none mt-1 block">${meilleurRang === "-" ? "-" : "#" + meilleurRang}</span>
+        </div>
+        <div class="bg-navy-900 p-2 rounded text-center border border-navy-700 flex flex-col justify-center items-center">
+          <span class="block text-xs md:text-sm text-gray-400 uppercase">Pire</span>
+          <span class="font-bold text-red-400 font-oswald text-lg md:text-xl leading-none mt-1 block">${pireRang === "-" ? "-" : "#" + pireRang}</span>
+        </div>
+        <div class="bg-navy-900 p-2 rounded text-center border border-navy-700 flex flex-col justify-center items-center">
+          <span class="block text-xs md:text-sm text-gray-400 uppercase">Moyenne</span>
+          <span class="font-bold text-white font-oswald text-lg md:text-xl leading-none mt-1 block">${moyenRang === "-" ? "-" : "#" + moyenRang}</span>
         </div>
       </div>
 
