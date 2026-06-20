@@ -355,7 +355,8 @@
       </button>
       <button onclick="switchView('graph')" id="nav-graph" class="py-2 flex flex-col items-center justify-center text-gray-400 hover:text-white transition">
         <div class="text-xl md:text-2xl mb-0.5">📈</div>
-        <span class="text-[9px] md:text-sm font-semibold tracking-wide">Évol.</span>
+        <span class="text-[9px] md:text-sm font-semibold tracking-wide md:hidden">Évol.</span>
+        <span class="hidden md:inline text-[9px] md:text-sm font-semibold tracking-wide">Évolution</span>
       </button>
       <button onclick="switchView('duel')" id="nav-duel" class="py-2 flex flex-col items-center justify-center text-gray-400 hover:text-white transition">
         <div class="text-xl md:text-2xl mb-0.5">⚔️</div>
@@ -2618,6 +2619,15 @@ function renderJoueurProfile(forcedJoueur = null) {
   const ptsJourFormatted = formatPoints(ptsJour);
   const evolJ1 = styleEvolText(evolJ1Raw);
   const evolJ2 = styleEvolText(evolJ2Raw);
+  
+  // --- MEILLEUR / PIRE / MOYEN CLASSEMENT (depuis historyData) ---
+  let meilleurRang = "-", pireRang = "-", moyenRang = "-";
+  if (historyData[joueur] && Array.isArray(historyData[joueur].ranks) && historyData[joueur].ranks.length > 0) {
+    const ranks = historyData[joueur].ranks;
+    meilleurRang = Math.min(...ranks);
+    pireRang     = Math.max(...ranks);
+    moyenRang    = Math.round(ranks.reduce((a, b) => a + b, 0) / ranks.length);
+  }
 
 const rang = getRangReel(joueur), total = cData[25], bonsResultats = cData[33];
   const favori = cData[36], statutFav = cData[37], ptsFav = cData[38];
@@ -2773,10 +2783,6 @@ let jokersHTML = '';
       <p class="text-gray-400 font-medium text-sm mb-4">Classement actuel : <span class="text-white font-bold bg-navy-900 px-2 py-0.5 rounded shadow-inner">#${rang}</span></p>
 
       <div class="grid grid-cols-3 gap-2 mb-6">
-        <div class="bg-navy-900 p-2 rounded text-center border border-navy-700 flex flex-col justify-center items-center">
-          <span class="block text-xs md:text-sm text-gray-400 uppercase">Pts ${journeeLabel !== "du Jour" ? journeeLabel : "du Jour"}</span>
-          <span class="font-bold text-pastis-500 font-oswald text-lg md:text-xl leading-none mt-1 block">${ptsJourFormatted}</span>
-        </div>
         <div class="bg-navy-900 p-2 rounded text-center border border-navy-700 flex flex-col justify-center items-center">
           <span class="block text-xs md:text-sm text-gray-400 uppercase mb-1 text-center">Évol vs ${journeeJ1Label || "J-1"}</span>
           ${evolJ1}
