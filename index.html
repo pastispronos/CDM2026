@@ -1950,6 +1950,47 @@ function garantiesTop2() {
   });
   return res;
 }
+
+    // Renvoie, par groupe, un Set des équipes mathématiquement éliminées (ne peuvent plus finir top 3)
+function eliminesGroupe() {
+  const objs = classementGroupesObjets();
+  const groupOf = {}, basePts = {}, teamsByGrp = {};
+  Object.keys(objs).forEach(g => {
+    teamsByGrp[g] = objs[g].map(t => t.nom);
+    objs[g].forEach(t => { groupOf[t.nom] = g; basePts[t.nom] = t.pts; });
+  });
+  const remByGrp = {};
+  (appData.calendrier || []).forEach(m => {
+    if ((m[8] || "").toString().trim() !== "Poules") return;
+    const sa = m[5], sb = m[6];
+    if (!(sa === "" || sb === "" || sa == null || sb == null)) return;   // déjà joué -> ignore
+    const a = m[3], b = m[4], g = groupOf[a];
+    if (!g || groupOf[b] !== g) return;
+    (remByGrp[g] = remByGrp[g] || []).push([a, b]);
+  });
+  const res = {};
+  Object.keys(teamsByGrp).forEach(g => {
+    const teams = teamsByGrp[g], rem = remByGrp[g] || [], elim = new Set(teams);
+    if (rem.length > 8) { res[g] = new Set(); return; }                  // garde-fou
+    const total = Math.pow(3, rem.length);
+    for (let mask = 0; mask < total; mask++) {
+      const pts = {}; teams.forEach(t => pts[t] = basePts[t]);
+      let x = mask;
+      for (let i = 0; i < rem.length; i++) {
+        const r = x % 3; x = Math.floor(x / 3); const [a, b] = rem[i];
+        if (r === 0) pts[a] += 3; else if (r === 1) pts[b] += 3; else { pts[a] += 1; pts[b] += 1; }
+      }
+      teams.forEach(t => {
+        if (!elim.has(t)) return;
+        let strictementAuDessus = 0;
+        teams.forEach(u => { if (u !== t && pts[u] > pts[t]) strictementAuDessus++; });
+        if (strictementAuDessus <= 2) elim.delete(t);   // peut encore viser le top 3 -> pas éliminé
+      });
+    }
+    res[g] = elim;
+  });
+  return res;
+}
 // --- MOTEUR DE GÉNÉRATION DES POULES ---
     function renderPoules() {
       let groups = {};
@@ -1996,6 +2037,7 @@ function garantiesTop2() {
       thirdPlaces.sort((a,b) => (b.pts - a.pts) || (b.gd - a.gd) || (b.gf - a.gf));
       let best8ThirdsNames = thirdPlaces.slice(0, 8).map(t => t.name);
       const garanties = garantiesTop2();
+      const elimines = eliminesGroupe();
 
       // 5. Générer l'affichage HTML
       let html = '';
@@ -2030,19 +2072,23 @@ function garantiesTop2() {
                 </thead>
                 <tbody class="divide-y divide-navy-700">`;
 
-        teams.forEach((t, index) => {
+teams.forEach((t, index) => {
           let isTop2 = index < 2;
           let isBest3rd = (index === 2 && best8ThirdsNames.includes(t.name));
           let estGaranti = garanties[gName] && garanties[gName].has(t.name);
+          let estElimine = elimines[gName] && elimines[gName].has(t.name);
 
           let rowClass = ""; let rankClass = "text-gray-400"; let statusBadge = "";
 
-          if (isTop2) {
+          if (estElimine) {
+            rowClass = "opacity-50 grayscale";
+            statusBadge = `<span class="ml-2 text-[8px] md:text-[10px] bg-red-800 text-white px-1.5 py-0.5 rounded flex-shrink-0">Éliminé</span>`;
+          } else if (isTop2) {
             rowClass = "bg-green-900/20 border-l-4 border-green-500";
             rankClass = "text-green-400 font-bold";
             if (estGaranti || t.isGroupFinished)
               statusBadge = `<span class="ml-2 text-[8px] md:text-[10px] bg-green-600 text-white px-1.5 py-0.5 rounded shadow-sm flex-shrink-0">Qualifié</span>`;
-} else if (isBest3rd) {
+          } else if (isBest3rd) {
             rowClass = "bg-pastis-500/10 border-l-4 border-pastis-500";
             rankClass = "text-pastis-500 font-bold";
             let lbl = t.isGroupFinished ? "Qualifié (3e)" : "Meilleur 3e";
