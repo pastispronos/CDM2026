@@ -2076,7 +2076,10 @@ teams.forEach((t, index) => {
           let isTop2 = index < 2;
           let isBest3rd = (index === 2 && best8ThirdsNames.includes(t.name));
           let estGaranti = garanties[gName] && garanties[gName].has(t.name);
-          let estElimine = elimines[gName] && elimines[gName].has(t.name);
+          // 3e éliminé : poules finies + fait partie des 4 pires troisièmes (hors top 8)
+          let allGroupsFinished = allTeamsArray.every(x => x.isGroupFinished);
+          let isThirdElimine = (index === 2 && allGroupsFinished && !best8ThirdsNames.includes(t.name));
+          let estElimine = (elimines[gName] && elimines[gName].has(t.name)) || isThirdElimine;
 
           let rowClass = ""; let rankClass = "text-gray-400"; let statusBadge = "";
 
