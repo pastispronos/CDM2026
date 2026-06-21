@@ -2759,23 +2759,41 @@ const finContent = (!isTournamentStarted || estJoueurMasque(joueur))
     ptsParMatch[p[1]].push(v);
   });
 
+// Tendance (1/N/2) de chaque prono valide, par match (pour la rareté de la tendance)
+  const pronosTendanceParMatch = {};
+  appData.pronostics.forEach(p => {
+    if (p[5] === "" || p[6] === "" || p[5] == null || p[6] == null) return;
+    const a = parseInt(p[5]), b = parseInt(p[6]);
+    if (isNaN(a) || isNaN(b)) return;
+    const t = a > b ? '1' : (a < b ? '2' : 'N');
+    (pronosTendanceParMatch[p[1]] = pronosTendanceParMatch[p[1]] || []).push(t);
+  });
+
   appData.pronostics.forEach(p => {
     if (p[0] === joueur && p[5] !== "" && p[6] !== "") {
       const matchId = p[1], pts = parseInt(p[9]) || 0;
       const matchData = appData.calendrier.find(r => r[0] == matchId);
       if (!matchData || matchData[5] === "") return; // match non joué
 
-      // Position relative parmi tous les participants sur ce match (0 = pire, 1 = meilleur)
+      // Rareté des POINTS (proportion de joueurs battus, ex-æquo pour moitié) — identique à la vue Performance
       const pop = ptsParMatch[matchId] || [pts];
-      let moins = 0, egal = 0;
-      pop.forEach(v => { if (v < pts) moins++; else if (v === pts) egal++; });
-      const autres = pop.length - 1;
-      const pct = autres > 0 ? (moins + (egal - 1) * 0.5) / autres : 0.5;
+      const nbTotal = pop.length;
+      let nbPires = 0, nbEgaux = 0;
+      pop.forEach(v => { if (v < pts) nbPires++; else if (v === pts) nbEgaux++; });
+      const pctPoints = nbTotal > 0 ? (nbPires + (nbEgaux - 1) / 2) / nbTotal : 0;
+
+      // Rareté de la TENDANCE pronostiquée (1/N/2)
+      const maTend = pts >= 0 ? (parseInt(p[5]) > parseInt(p[6]) ? '1' : (parseInt(p[5]) < parseInt(p[6]) ? '2' : 'N')) : '?';
+      const tendances = (pronosTendanceParMatch[matchId] || []);
+      const nbMemeTend = tendances.filter(t => t === maTend).length;
+      const pctTendance = tendances.length > 0 ? 1 - (nbMemeTend / tendances.length) : 0;
+
+      // Score combiné identique à la vue Performance
+      const pct = (pctPoints * 0.5) + (pctTendance * 0.5);
 
       perfsJoueur.push({ matchId, match: matchData, prono: p, pts, pct });
     }
   });
-
   // Carte d'historique préfixée d'un numéro de classement (1, 2, 3)
   const rankedItemHTML = (rang, x) => {
     const card = generatePlayerHistoryItemHTML(x.match, x.prono).replace('relative mt-2 shadow-sm', 'relative shadow-sm');
