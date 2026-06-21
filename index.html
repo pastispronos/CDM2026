@@ -664,6 +664,8 @@ function initApp(data, isCached = false) {
       if (isInitialLoad && currentView === 'calendrier' && currentCalView === 'all') {
         setTimeout(() => { scrollToCalendarFocus(); }, isCached ? 50 : 120);
       }
+      if (!isCached) isInitialLoad = false; // après le 1er fetch réseau, plus d'auto-scroll
+    }
 
    // ==========================================
     // GÉNÉRATEUR RÈGLEMENT (Version Oswald Sans Alinéa)
@@ -1138,7 +1140,27 @@ function scrollToCalendarFocus() {
       }
     }
 
-
+let tooltipTimeout;
+    function showTooltip(event, message) {
+      if(event) event.stopPropagation(); 
+      const tooltip = document.getElementById('tooltip');
+      tooltip.innerText = message;
+      tooltip.classList.remove('opacity-0');
+      
+      if(event && event.target) {
+        const rect = event.target.getBoundingClientRect();
+        let leftPos = rect.left + (rect.width / 2);
+        if (leftPos < 110) leftPos = 110;
+        if (leftPos > window.innerWidth - 110) leftPos = window.innerWidth - 110;
+        tooltip.style.left = leftPos + 'px';
+        tooltip.style.top = (rect.top - 8) + 'px'; 
+      } else {
+        tooltip.style.left = '50%';
+        tooltip.style.top = '80%';
+      }
+      clearTimeout(tooltipTimeout);
+      tooltipTimeout = setTimeout(() => { tooltip.classList.add('opacity-0'); }, 3000);
+    }
     function formatPoints(pts) {
       let p = parseInt(pts);
       if(isNaN(p)) return '-';
