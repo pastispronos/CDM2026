@@ -3127,9 +3127,9 @@ function renderJoueurHistory() {
           const rang = i + 1;
           const medal = rang === 1 ? '🥇' : rang === 2 ? '🥈' : rang === 3 ? '🥉' : '';
           const card = generatePlayerHistoryItemHTML(x.match, x.prono).replace('relative mt-2 shadow-sm', 'relative shadow-sm');
-          listHTML += `
-            <div class="flex items-stretch gap-1.5 md:gap-2 mt-2">
-              <div class="flex-shrink-0 w-7 md:w-9 flex flex-col items-center justify-center bg-navy-900 rounded-lg border border-navy-700">
+listHTML += `
+            <div class="flex items-start gap-1.5 md:gap-2 mt-2">
+              <div class="flex-shrink-0 w-7 md:w-9 flex flex-col items-center justify-center bg-navy-900 rounded-lg border border-navy-700 self-stretch mt-6">
                 <span class="font-oswald font-black ${rang <= 3 ? 'text-pastis-500' : 'text-gray-400'} text-sm md:text-lg leading-none">${rang}</span>
                 ${medal ? `<span class="text-[10px] mt-0.5">${medal}</span>` : ''}
               </div>
