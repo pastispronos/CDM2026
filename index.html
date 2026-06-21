@@ -3123,20 +3123,20 @@ function renderPerformance() {
       if (perfs.length === 0) {
         listHTML = `<p class="text-center text-gray-500 italic mt-10">Aucune performance à afficher pour cette sélection.</p>`;
       } else {
-        perfs.forEach((x, i) => {
+perfs.forEach((x, i) => {
           const rang = i + 1;
           const medal = rang === 1 ? '🥇' : rang === 2 ? '🥈' : rang === 3 ? '🥉' : '';
           const card = generatePlayerHistoryItemHTML(x.match, x.prono).replace('relative mt-2 shadow-sm', 'relative shadow-sm');
+          const rangBadge = medal
+            ? `<span class="text-base leading-none">${medal}</span>`
+            : `<span class="font-oswald font-black text-gray-400 text-sm leading-none w-5 text-center">${rang}</span>`;
           listHTML += `
-            <div class="flex items-start gap-1.5 md:gap-2 mt-2">
-              <div class="flex-shrink-0 w-7 md:w-9 flex flex-col items-center justify-center bg-navy-900 rounded-lg border border-navy-700 self-stretch mt-6">
-                <span class="font-oswald font-black ${rang <= 3 ? 'text-pastis-500' : 'text-gray-400'} text-sm md:text-lg leading-none">${rang}</span>
-                ${medal ? `<span class="text-[10px] mt-0.5">${medal}</span>` : ''}
+            <div class="mt-3">
+              <div class="flex items-center gap-2 mb-1 ml-1">
+                ${rangBadge}
+                <span onclick="goToPlayerProfile('${escapeJS(x.joueur)}')" class="text-[11px] md:text-sm font-bold text-white hover:text-pastis-500 cursor-pointer inline-flex items-center gap-1">${x.joueur}${x.isJoker ? '<span class="text-pastis-500">🌟</span>' : ''}</span>
               </div>
-              <div class="flex-1 min-w-0">
-                <div onclick="goToPlayerProfile('${escapeJS(x.joueur)}')" class="text-[11px] md:text-sm font-bold text-white hover:text-pastis-500 cursor-pointer mb-0.5 ml-1 inline-flex items-center gap-1">${x.joueur}${x.isJoker ? '<span class="text-pastis-500">🌟</span>' : ''}</div>
-                ${card}
-              </div>
+              ${card}
             </div>`;
         });
       }
