@@ -3074,9 +3074,15 @@ function renderPerformance() {
         const estPoules = (phase === "poules");
         const isJoker = p[8] && String(p[8]).toLowerCase() === 'oui';
 
-// Performance lue depuis la feuille (col Rareté = index 15) : pts joueur / somme des pts du match
-        const pct = parseFloat((p[16] || "0").toString().replace(',', '.')) || 0;
-      // Filtres
+// Performance = percentile de rareté (ta formule Expert foot/Bien vu).
+        // Proportion de joueurs battus sur CE match, ex-æquo comptés pour moitié.
+        const pop = ptsParMatch[p[1]] || [pts];
+        const nbTotal = pop.length;
+        let nbPires = 0, nbEgaux = 0;
+        pop.forEach(v => { if (v < pts) nbPires++; else if (v === pts) nbEgaux++; });
+        nbEgaux = nbEgaux - 1;   // on s'exclut soi-même
+        const pct = nbTotal > 0 ? (nbPires + nbEgaux / 2) / nbTotal : 0;
+        // Filtres
       if (perfState.sub === 'poules')       perfs = perfs.filter(x => x.estPoules);
       else if (perfState.sub === 'finales') perfs = perfs.filter(x => !x.estPoules);
       if (perfState.joueur)                 perfs = perfs.filter(x => x.joueur === perfState.joueur);
