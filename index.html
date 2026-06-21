@@ -3057,12 +3057,15 @@ function renderJoueurHistory() {
 
 function renderPerformance() {
       // Points de TOUS les participants par match (pour la position relative / rareté)
-      const ptsParMatch = {};
+// Tendance (1/N/2) de chaque prono valide, par match
+      const pronosTendanceParMatch = {};
       appData.pronostics.forEach(p => {
-        const v = parseInt(p[9]); if (isNaN(v)) return;
-        (ptsParMatch[p[1]] = ptsParMatch[p[1]] || []).push(v);
+        if (p[5] === "" || p[6] === "" || p[5] == null || p[6] == null) return;
+        const a = parseInt(p[5]), b = parseInt(p[6]);
+        if (isNaN(a) || isNaN(b)) return;
+        const t = a > b ? '1' : (a < b ? '2' : 'N');
+        (pronosTendanceParMatch[p[1]] = pronosTendanceParMatch[p[1]] || []).push(t);
       });
-
       // Construction de toutes les performances (1 prono joué = 1 perf)
       let perfs = [];
       appData.pronostics.forEach(p => {
@@ -3073,6 +3076,7 @@ function renderPerformance() {
         const phase = (matchData[8] || "").toLowerCase().trim();
         const estPoules = (phase === "poules");
         const isJoker = p[8] && String(p[8]).toLowerCase() === 'oui';
+        perfs = perfs.filter(x => x.pts >= 5);   // seuil minimum pour figurer dans le top 100
 
         // Rareté des POINTS : proportion de joueurs battus sur ce match (ex-æquo pour moitié)
         const pop = ptsParMatch[p[1]] || [pts];
