@@ -3055,12 +3055,12 @@ function renderJoueurHistory() {
     function setPerfJoueur(v)   { perfState.joueur = v; renderPerformance(); }
     function setPerfJoker(v)    { perfState.joker = v; renderPerformance(); }
 
-    function renderPerformance() {
+function renderPerformance() {
       // Points de TOUS les participants par match (pour la position relative / rareté)
       const ptsParMatch = {};
       appData.pronostics.forEach(p => {
         const v = parseInt(p[9]); if (isNaN(v)) return;
-        perfs.sort((a, b) => (b.pct - a.pct) || (b.pts - a.pts));
+        (ptsParMatch[p[1]] = ptsParMatch[p[1]] || []).push(v);
       });
 
       // Construction de toutes les performances (1 prono joué = 1 perf)
@@ -3084,14 +3084,14 @@ function renderJoueurHistory() {
       });
 
       // Filtres
-      if (perfState.sub === 'poules')      perfs = perfs.filter(x => x.estPoules);
+      if (perfState.sub === 'poules')       perfs = perfs.filter(x => x.estPoules);
       else if (perfState.sub === 'finales') perfs = perfs.filter(x => !x.estPoules);
-      if (perfState.joueur)                perfs = perfs.filter(x => x.joueur === perfState.joueur);
-      if (perfState.joker === 'oui')       perfs = perfs.filter(x => x.isJoker);
-      else if (perfState.joker === 'non')  perfs = perfs.filter(x => !x.isJoker);
+      if (perfState.joueur)                 perfs = perfs.filter(x => x.joueur === perfState.joueur);
+      if (perfState.joker === 'oui')        perfs = perfs.filter(x => x.isJoker);
+      else if (perfState.joker === 'non')   perfs = perfs.filter(x => !x.isJoker);
 
-      // Tri : points marqués d'abord, puis rareté (calcul des meilleurs coups)
-      perfs.sort((a, b) => (b.pts - a.pts) || (b.pct - a.pct));
+      // Tri "meilleur coup" : rareté d'abord (position relative vs les autres), puis points marqués
+      perfs.sort((a, b) => (b.pct - a.pct) || (b.pts - a.pts));
       perfs = perfs.slice(0, 100);
 
       // --- Contrôles (sous-onglets + filtres) ---
@@ -3127,7 +3127,7 @@ function renderJoueurHistory() {
           const rang = i + 1;
           const medal = rang === 1 ? '🥇' : rang === 2 ? '🥈' : rang === 3 ? '🥉' : '';
           const card = generatePlayerHistoryItemHTML(x.match, x.prono).replace('relative mt-2 shadow-sm', 'relative shadow-sm');
-listHTML += `
+          listHTML += `
             <div class="flex items-start gap-1.5 md:gap-2 mt-2">
               <div class="flex-shrink-0 w-7 md:w-9 flex flex-col items-center justify-center bg-navy-900 rounded-lg border border-navy-700 self-stretch mt-6">
                 <span class="font-oswald font-black ${rang <= 3 ? 'text-pastis-500' : 'text-gray-400'} text-sm md:text-lg leading-none">${rang}</span>
