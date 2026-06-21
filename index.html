@@ -3026,13 +3026,15 @@ function renderJoueurHistory() {
       for(let i=0; i<phasesOrder.length; i++) {
         let p = phasesOrder[i];
         let hasUnplayed = appData.calendrier.some(m => m[8] && m[8].trim() === p && m[5] === "");
-        if(hasUnplayed) {
-          phaseEnCours = p;
-          break;
-        }
+        if(hasUnplayed) { phaseEnCours = p; break; }
       }
 
-      let pronosListHTML = '';
+      const todayStr = getLogicalToday();
+      const idxMap = {};
+      appData.calendrier.forEach((m, i) => { idxMap[m[0]] = i; });
+
+      // 1. Collecte des matchs correspondant aux filtres
+      let items = [];
       appData.calendrier.forEach(match => {
         let idMatch = match[0];
         let phaseMatch = match[8] ? match[8].trim() : "";
@@ -3056,9 +3058,22 @@ function renderJoueurHistory() {
           if (fTeam !== 'all' && eqA !== fTeam && eqB !== fTeam) return;
           if (fGroupe !== 'all' && groupeMatch !== fGroupe) return;
 
-          pronosListHTML += generatePlayerHistoryItemHTML(match, prono);
+          items.push({ match, prono });
         }
       });
+
+      // 2. Ordre : matchs du jour en haut, puis le reste inversé (plus récents d'abord)
+      items.sort((x, y) => {
+        const tx = (getLogicalDate(x.match[1], x.match[2]) === todayStr) ? 0 : 1;
+        const ty = (getLogicalDate(y.match[1], y.match[2]) === todayStr) ? 0 : 1;
+        if (tx !== ty) return tx - ty;
+        if (tx === 0) return idxMap[x.match[0]] - idxMap[y.match[0]];   // jour : ordre normal
+        return idxMap[y.match[0]] - idxMap[x.match[0]];                 // reste : ordre inversé
+      });
+
+      // 3. Rendu
+      let pronosListHTML = '';
+      items.forEach(it => { pronosListHTML += generatePlayerHistoryItemHTML(it.match, it.prono); });
 
       if(pronosListHTML === '') pronosListHTML = '<p class="text-sm text-gray-500 italic mt-4 text-center">Aucun résultat correspondant aux filtres.</p>';
       document.getElementById('joueur-history-list').innerHTML = pronosListHTML;
@@ -3117,7 +3132,6 @@ function renderPerformance() {
         const nbMemeTend = tendances.filter(t => t === maTend).length;
         const pctTendance = tendances.length > 0 ? 1 - (nbMemeTend / tendances.length) : 0;
 
-        // Score de rareté final : pronos rares ET payants
         const pct = (pctPoints * 0.5) + (pctTendance * 0.5);
 
         perfs.push({ joueur: p[0], match: matchData, prono: p, pts, pct, pctPoints, pctTendance, estPoules, isJoker });
@@ -3131,13 +3145,11 @@ function renderPerformance() {
       else if (perfState.joker === 'non')   perfs = perfs.filter(x => !x.isJoker);
 
       const isFlop = (perfState.mode === 'flop');
-
       if (isFlop) {
-        // Flop 100 : les pires d'abord (rareté la plus faible, puis le moins de points)
+        perfs = perfs.filter(x => x.pts < 5);                 // Flop : uniquement les pronos sous 5 pts
         perfs.sort((a, b) => (a.pct - b.pct) || (a.pts - b.pts));
       } else {
-        // Top 100 : seuil 5 pts mini, meilleures perfs d'abord (rareté la plus forte, puis points)
-        perfs = perfs.filter(x => x.pts >= 5);
+        perfs = perfs.filter(x => x.pts >= 5);                // Top : seuil 5 pts mini
         perfs.sort((a, b) => (b.pct - a.pct) || (b.pts - a.pts));
       }
       perfs = perfs.slice(0, 100);
@@ -3178,7 +3190,7 @@ function renderPerformance() {
         </div>
       `;
 
-      // --- Liste : rang + nom intégrés dans le bandeau (en-tête de la carte) ---
+      // --- Liste : rang + nom intégrés EN-TÊTE de la carte du match ---
       let listHTML = '';
       if (perfs.length === 0) {
         listHTML = `<p class="text-center text-gray-500 italic mt-10">Aucune performance à afficher pour cette sélection.</p>`;
@@ -3189,24 +3201,23 @@ function renderPerformance() {
           const rangBadge = medal
             ? `<span class="text-base leading-none flex-shrink-0">${medal}</span>`
             : `<span class="font-oswald font-black ${isFlop ? 'text-red-400' : 'text-gray-300'} text-sm leading-none w-5 text-center flex-shrink-0">${rang}</span>`;
+          const joker = x.isJoker ? '<span class="text-pastis-500">🌟</span>' : '';
+          const header = `<div class="flex items-center gap-2 mb-2 pb-1.5 border-b border-navy-700/50 w-full">${rangBadge}<span onclick="event.stopPropagation(); goToPlayerProfile('${escapeJS(x.joueur)}')" class="text-[11px] md:text-sm font-bold text-white hover:text-pastis-500 cursor-pointer inline-flex items-center gap-1 truncate">${x.joueur}${joker}</span></div>`;
 
-          // Carte sans bord/rounding/marge (le wrapper fournit le cadre) → le bandeau et la carte ne font qu'un bloc
+          // On convertit la carte en colonne : en-tête (rang+nom) au-dessus, puis la ligne du match
           const card = generatePlayerHistoryItemHTML(x.match, x.prono)
-            .replace('rounded-lg border border-navy-700 relative mt-2 shadow-sm', 'relative shadow-sm');
+            .replace(
+              '<div class="flex items-center justify-between bg-navy-800 p-2 md:p-3 rounded-lg border border-navy-700 relative mt-2 shadow-sm">',
+              `<div class="flex flex-col bg-navy-800 p-2 md:p-3 rounded-lg border border-navy-700 relative mt-3 shadow-sm">${header}<div class="flex items-center justify-between w-full">`
+            ) + '</div>';
 
-          listHTML += `
-            <div class="mt-3 rounded-lg overflow-hidden border border-navy-700 shadow-sm">
-              <div class="flex items-center gap-2 bg-navy-900 px-2.5 py-1.5 border-b border-navy-700">
-                ${rangBadge}
-                <span onclick="event.stopPropagation(); goToPlayerProfile('${escapeJS(x.joueur)}')" class="text-[11px] md:text-sm font-bold text-white hover:text-pastis-500 cursor-pointer inline-flex items-center gap-1 truncate">${x.joueur}${x.isJoker ? '<span class="text-pastis-500">🌟</span>' : ''}</span>
-              </div>
-              ${card}
-            </div>`;
+          listHTML += card;
         });
       }
       document.getElementById('performance-list').innerHTML = listHTML;
       parseFlags();
     }
+    
 // --- FILTRES DE LA VUE MATCH ---
 function pronoTendance(p) {
   const a = parseInt(p[5]), b = parseInt(p[6]);
