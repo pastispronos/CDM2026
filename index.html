@@ -3074,15 +3074,24 @@ function renderPerformance() {
         const estPoules = (phase === "poules");
         const isJoker = p[8] && String(p[8]).toLowerCase() === 'oui';
 
-        // Performance = percentile de rareté : proportion de joueurs battus sur CE match, ex-æquo pour moitié
+        // Rareté des POINTS : proportion de joueurs battus sur ce match (ex-æquo pour moitié)
         const pop = ptsParMatch[p[1]] || [pts];
         const nbTotal = pop.length;
         let nbPires = 0, nbEgaux = 0;
         pop.forEach(v => { if (v < pts) nbPires++; else if (v === pts) nbEgaux++; });
-        nbEgaux = nbEgaux - 1;   // on s'exclut soi-même
-        const pct = nbTotal > 0 ? (nbPires + nbEgaux / 2) / nbTotal : 0;
+        const pctPoints = nbTotal > 0 ? (nbPires + (nbEgaux - 1) / 2) / nbTotal : 0;
 
-        perfs.push({ joueur: p[0], match: matchData, prono: p, pts, pct, estPoules, isJoker });
+        // Rareté de la TENDANCE pronostiquée (1/N/2) : étais-tu seul à voir ce résultat ?
+        const tend = (a, b) => { a = parseInt(a); b = parseInt(b); if (isNaN(a) || isNaN(b)) return '?'; return a > b ? '1' : (a < b ? '2' : 'N'); };
+        const maTend = tend(p[5], p[6]);
+        const tendances = (pronosTendanceParMatch[p[1]] || []);
+        const nbMemeTend = tendances.filter(t => t === maTend).length;
+        const pctTendance = tendances.length > 0 ? 1 - (nbMemeTend / tendances.length) : 0; // 1 = tendance unique
+
+        // Score de rareté final : on récompense surtout les pronos rares ET payants
+        const pct = (pctPoints * 0.5) + (pctTendance * 0.5);
+
+        perfs.push({ joueur: p[0], match: matchData, prono: p, pts, pct, pctPoints, pctTendance, estPoules, isJoker });
       });
 
       // Filtres
