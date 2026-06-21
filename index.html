@@ -3060,7 +3060,7 @@ function renderJoueurHistory() {
       const ptsParMatch = {};
       appData.pronostics.forEach(p => {
         const v = parseInt(p[9]); if (isNaN(v)) return;
-        (ptsParMatch[p[1]] = ptsParMatch[p[1]] || []).push(v);
+        perfs.sort((a, b) => (b.pct - a.pct) || (b.pts - a.pts));
       });
 
       // Construction de toutes les performances (1 prono joué = 1 perf)
