@@ -3074,15 +3074,8 @@ function renderPerformance() {
         const estPoules = (phase === "poules");
         const isJoker = p[8] && String(p[8]).toLowerCase() === 'oui';
 
-        const pop = ptsParMatch[p[1]] || [pts];
-        let moins = 0, egal = 0;
-        pop.forEach(v => { if (v < pts) moins++; else if (v === pts) egal++; });
-        const autres = pop.length - 1;
-        const pct = autres > 0 ? (moins + (egal - 1) * 0.5) / autres : 0.5;
-
-        perfs.push({ joueur: p[0], match: matchData, prono: p, pts, pct, estPoules, isJoker });
-      });
-
+// Performance lue depuis la feuille (col Rareté = index 15) : pts joueur / somme des pts du match
+        const pct = parseFloat((p[16] || "0").toString().replace(',', '.')) || 0;
       // Filtres
       if (perfState.sub === 'poules')       perfs = perfs.filter(x => x.estPoules);
       else if (perfState.sub === 'finales') perfs = perfs.filter(x => !x.estPoules);
