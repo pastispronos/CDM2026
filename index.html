@@ -336,11 +336,16 @@
       <div id="reglement-content" class="bg-navy-900 p-2 rounded-xl relative">
         </div>
     </section>
-
+    
+  <section id="view-performance" class="hidden animate-fade-in">
+      <h2 class="text-xl font-oswald font-bold mb-4 text-white tracking-wide uppercase">🏅 Top 100 des Performances</h2>
+      <div id="performance-controls"></div>
+      <div id="performance-list" class="space-y-1"></div>
+    </section>
   </main>
 
 <nav class="w-full bg-navy-900/80 backdrop-blur-xl border-t border-navy-700/50 pb-[env(safe-area-inset-bottom,0.5rem)] pt-1 z-[100] flex-none shadow-[0_-10px_25px_rgba(0,0,0,0.5)]">
-    <div class="w-full max-w-7xl mx-auto grid grid-cols-6 gap-0">
+    <div class="w-full max-w-7xl mx-auto grid grid-cols-7 gap-0">
       <button onclick="retourAccueil()" id="nav-calendrier" class="py-2 flex flex-col items-center justify-center text-pastis-500 transition">
         <div class="text-xl md:text-2xl mb-0.5">📅</div>
         <span class="text-[9px] md:text-sm font-semibold tracking-wide">Matchs</span>
@@ -355,12 +360,15 @@
       </button>
       <button onclick="switchView('graph')" id="nav-graph" class="py-2 flex flex-col items-center justify-center text-gray-400 hover:text-white transition">
         <div class="text-xl md:text-2xl mb-0.5">📈</div>
-        <span class="text-[9px] md:text-sm font-semibold tracking-wide md:hidden">Évol.</span>
-        <span class="hidden md:inline text-[9px] md:text-sm font-semibold tracking-wide">Évolution</span>
+        <span class="text-[9px] md:text-sm font-semibold tracking-wide">Évol.</span>
       </button>
       <button onclick="switchView('duel')" id="nav-duel" class="py-2 flex flex-col items-center justify-center text-gray-400 hover:text-white transition">
         <div class="text-xl md:text-2xl mb-0.5">⚔️</div>
         <span class="text-[9px] md:text-sm font-semibold tracking-wide">Duel</span>
+      </button>
+      <button onclick="switchView('performance')" id="nav-performance" class="py-2 flex flex-col items-center justify-center text-gray-400 hover:text-white transition">
+        <div class="text-xl md:text-2xl mb-0.5">🏅</div>
+        <span class="text-[9px] md:text-sm font-semibold tracking-wide">Perf.</span>
       </button>
       <button onclick="switchView('reglement')" id="nav-reglement" class="py-2 flex flex-col items-center justify-center text-gray-400 hover:text-white transition">
         <div class="text-xl md:text-2xl mb-0.5">📝</div>
@@ -1433,8 +1441,8 @@ function switchCalView(view) {
   document.querySelector('.main-scroll').classList.remove('match-view');
 }
   currentView = viewName;
-  ['classement', 'joueurs', 'calendrier', 'match', 'graph', 'duel', 'reglement'].forEach(v => document.getElementById('view-' + v).classList.add('hidden'));
-  ['classement', 'joueurs', 'calendrier', 'graph', 'duel', 'reglement'].forEach(v => document.getElementById('nav-' + v).classList.remove('text-pastis-500'));
+  ['classement', 'joueurs', 'calendrier', 'match', 'graph', 'duel', 'performance', 'reglement'].forEach(v => document.getElementById('view-' + v).classList.add('hidden'));
+  ['classement', 'joueurs', 'calendrier', 'graph', 'duel', 'performance', 'reglement'].forEach(v => document.getElementById('nav-' + v).classList.remove('text-pastis-500'));
 
   if (viewName === 'calendrier') {
     switchCalView(currentCalView);
@@ -1444,6 +1452,7 @@ function switchCalView(view) {
   }
   
   if (viewName === 'duel' && document.getElementById('duel-p1').innerHTML === "") initDuelView();
+  if (viewName === 'performance') renderPerformance();
   if(viewName === 'match') {
     document.getElementById('view-match').classList.remove('hidden');
     document.getElementById('nav-calendrier').classList.add('text-pastis-500');
@@ -3035,6 +3044,103 @@ function renderJoueurHistory() {
 
       if(pronosListHTML === '') pronosListHTML = '<p class="text-sm text-gray-500 italic mt-4 text-center">Aucun résultat correspondant aux filtres.</p>';
       document.getElementById('joueur-history-list').innerHTML = pronosListHTML;
+      parseFlags();
+    }
+    // ==========================================
+    // VUE PERFORMANCES (Top 100)
+    // ==========================================
+    let perfState = { sub: 'total', joueur: '', joker: 'all' };
+
+    function switchPerfView(v) { perfState.sub = v; renderPerformance(); }
+    function setPerfJoueur(v)   { perfState.joueur = v; renderPerformance(); }
+    function setPerfJoker(v)    { perfState.joker = v; renderPerformance(); }
+
+    function renderPerformance() {
+      // Points de TOUS les participants par match (pour la position relative / rareté)
+      const ptsParMatch = {};
+      appData.pronostics.forEach(p => {
+        const v = parseInt(p[9]); if (isNaN(v)) return;
+        (ptsParMatch[p[1]] = ptsParMatch[p[1]] || []).push(v);
+      });
+
+      // Construction de toutes les performances (1 prono joué = 1 perf)
+      let perfs = [];
+      appData.pronostics.forEach(p => {
+        if (p[5] === "" || p[6] === "" || p[9] === "" || p[9] == null) return;
+        const matchData = appData.calendrier.find(r => r[0] == p[1]);
+        if (!matchData || matchData[5] === "") return;            // match non joué
+        const pts = parseInt(p[9]) || 0;
+        const phase = (matchData[8] || "").toLowerCase().trim();
+        const estPoules = (phase === "poules");
+        const isJoker = p[8] && String(p[8]).toLowerCase() === 'oui';
+
+        const pop = ptsParMatch[p[1]] || [pts];
+        let moins = 0, egal = 0;
+        pop.forEach(v => { if (v < pts) moins++; else if (v === pts) egal++; });
+        const autres = pop.length - 1;
+        const pct = autres > 0 ? (moins + (egal - 1) * 0.5) / autres : 0.5;
+
+        perfs.push({ joueur: p[0], match: matchData, prono: p, pts, pct, estPoules, isJoker });
+      });
+
+      // Filtres
+      if (perfState.sub === 'poules')      perfs = perfs.filter(x => x.estPoules);
+      else if (perfState.sub === 'finales') perfs = perfs.filter(x => !x.estPoules);
+      if (perfState.joueur)                perfs = perfs.filter(x => x.joueur === perfState.joueur);
+      if (perfState.joker === 'oui')       perfs = perfs.filter(x => x.isJoker);
+      else if (perfState.joker === 'non')  perfs = perfs.filter(x => !x.isJoker);
+
+      // Tri : points marqués d'abord, puis rareté (calcul des meilleurs coups)
+      perfs.sort((a, b) => (b.pts - a.pts) || (b.pct - a.pct));
+      perfs = perfs.slice(0, 100);
+
+      // --- Contrôles (sous-onglets + filtres) ---
+      const subTab = (key, label) => {
+        const on = perfState.sub === key;
+        const cls = on ? "bg-pastis-500 text-navy-900 shadow-md font-black" : "text-gray-400 hover:text-gray-200 hover:bg-navy-700/50";
+        return `<button onclick="switchPerfView('${key}')" class="flex-1 py-1.5 md:py-2 text-xs md:text-sm font-bold uppercase tracking-wider rounded-lg transition-colors duration-200 ${cls}">${label}</button>`;
+      };
+      let playerOptions = '<option value="">👤 Tous les joueurs</option>';
+      [...appData.classement].filter(r => r[3] && r[3] !== "").sort((a, b) => a[3].localeCompare(b[3]))
+        .forEach(r => { playerOptions += `<option value="${escapeJS(r[3])}" ${perfState.joueur === r[3] ? 'selected' : ''}>${r[3]}</option>`; });
+
+      document.getElementById('performance-controls').innerHTML = `
+        <div class="flex bg-navy-900/60 rounded-xl p-1 shadow-inner border border-navy-700/50 gap-1 mb-3">
+          ${subTab('poules', 'Poules')}${subTab('finales', 'Phases finales')}${subTab('total', 'Total')}
+        </div>
+        <div class="grid grid-cols-2 gap-2 mb-4 bg-navy-800 p-2 rounded-lg border border-navy-700 relative z-20">
+          <select onchange="setPerfJoueur(this.value)" class="bg-navy-900 border border-navy-700 text-gray-300 text-[10px] md:text-sm rounded p-2 focus:ring-pastis-500 font-semibold appearance-none">${playerOptions}</select>
+          <select onchange="setPerfJoker(this.value)" class="bg-navy-900 border border-navy-700 text-gray-300 text-[10px] md:text-sm rounded p-2 focus:ring-pastis-500 font-semibold appearance-none">
+            <option value="all" ${perfState.joker === 'all' ? 'selected' : ''}>Tous les pronos</option>
+            <option value="oui" ${perfState.joker === 'oui' ? 'selected' : ''}>🌟 Avec joker</option>
+            <option value="non" ${perfState.joker === 'non' ? 'selected' : ''}>Sans joker</option>
+          </select>
+        </div>
+      `;
+
+      // --- Liste ---
+      let listHTML = '';
+      if (perfs.length === 0) {
+        listHTML = `<p class="text-center text-gray-500 italic mt-10">Aucune performance à afficher pour cette sélection.</p>`;
+      } else {
+        perfs.forEach((x, i) => {
+          const rang = i + 1;
+          const medal = rang === 1 ? '🥇' : rang === 2 ? '🥈' : rang === 3 ? '🥉' : '';
+          const card = generatePlayerHistoryItemHTML(x.match, x.prono).replace('relative mt-2 shadow-sm', 'relative shadow-sm');
+          listHTML += `
+            <div class="flex items-stretch gap-1.5 md:gap-2 mt-2">
+              <div class="flex-shrink-0 w-7 md:w-9 flex flex-col items-center justify-center bg-navy-900 rounded-lg border border-navy-700">
+                <span class="font-oswald font-black ${rang <= 3 ? 'text-pastis-500' : 'text-gray-400'} text-sm md:text-lg leading-none">${rang}</span>
+                ${medal ? `<span class="text-[10px] mt-0.5">${medal}</span>` : ''}
+              </div>
+              <div class="flex-1 min-w-0">
+                <div onclick="goToPlayerProfile('${escapeJS(x.joueur)}')" class="text-[11px] md:text-sm font-bold text-white hover:text-pastis-500 cursor-pointer mb-0.5 ml-1 inline-flex items-center gap-1">${x.joueur}${x.isJoker ? '<span class="text-pastis-500">🌟</span>' : ''}</div>
+                ${card}
+              </div>
+            </div>`;
+        });
+      }
+      document.getElementById('performance-list').innerHTML = listHTML;
       parseFlags();
     }
 // --- FILTRES DE LA VUE MATCH ---
