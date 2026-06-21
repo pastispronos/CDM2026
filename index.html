@@ -3067,12 +3067,13 @@ function renderJoueurHistory() {
     // ==========================================
     // VUE PERFORMANCES (Top 100)
     // ==========================================
-    let perfState = { sub: 'total', joueur: '', joker: 'all' };
+let perfState = { sub: 'total', joueur: '', joker: 'all', mode: 'top' };
 
     function switchPerfView(v) { perfState.sub = v; renderPerformance(); }
     function setPerfJoueur(v)   { perfState.joueur = v; renderPerformance(); }
     function setPerfJoker(v)    { perfState.joker = v; renderPerformance(); }
-
+    function setPerfMode(m)     { perfState.mode = m; renderPerformance(); }
+    
 function renderPerformance() {
       // Points de TOUS les participants par match (pour la rareté des points)
       const ptsParMatch = {};
@@ -3109,32 +3110,48 @@ function renderPerformance() {
         pop.forEach(v => { if (v < pts) nbPires++; else if (v === pts) nbEgaux++; });
         const pctPoints = nbTotal > 0 ? (nbPires + (nbEgaux - 1) / 2) / nbTotal : 0;
 
-        // Rareté de la TENDANCE pronostiquée (1/N/2) : étais-tu seul à voir ce résultat ?
+        // Rareté de la TENDANCE pronostiquée (1/N/2)
         const tend = (a, b) => { a = parseInt(a); b = parseInt(b); if (isNaN(a) || isNaN(b)) return '?'; return a > b ? '1' : (a < b ? '2' : 'N'); };
         const maTend = tend(p[5], p[6]);
         const tendances = (pronosTendanceParMatch[p[1]] || []);
         const nbMemeTend = tendances.filter(t => t === maTend).length;
-        const pctTendance = tendances.length > 0 ? 1 - (nbMemeTend / tendances.length) : 0; // 1 = tendance unique
+        const pctTendance = tendances.length > 0 ? 1 - (nbMemeTend / tendances.length) : 0;
 
-        // Score de rareté final : on récompense surtout les pronos rares ET payants
+        // Score de rareté final : pronos rares ET payants
         const pct = (pctPoints * 0.5) + (pctTendance * 0.5);
 
         perfs.push({ joueur: p[0], match: matchData, prono: p, pts, pct, pctPoints, pctTendance, estPoules, isJoker });
       });
 
-      // Filtres
-      perfs = perfs.filter(x => x.pts >= 5);            // seuil minimum pour figurer dans le top 100
+      // Filtres communs
       if (perfState.sub === 'poules')       perfs = perfs.filter(x => x.estPoules);
       else if (perfState.sub === 'finales') perfs = perfs.filter(x => !x.estPoules);
       if (perfState.joueur)                 perfs = perfs.filter(x => x.joueur === perfState.joueur);
       if (perfState.joker === 'oui')        perfs = perfs.filter(x => x.isJoker);
       else if (perfState.joker === 'non')   perfs = perfs.filter(x => !x.isJoker);
 
-      // Tri "meilleur coup" : rareté d'abord (position relative vs les autres), puis points marqués
-      perfs.sort((a, b) => (b.pct - a.pct) || (b.pts - a.pts));
+      const isFlop = (perfState.mode === 'flop');
+
+      if (isFlop) {
+        // Flop 100 : les pires d'abord (rareté la plus faible, puis le moins de points)
+        perfs.sort((a, b) => (a.pct - b.pct) || (a.pts - b.pts));
+      } else {
+        // Top 100 : seuil 5 pts mini, meilleures perfs d'abord (rareté la plus forte, puis points)
+        perfs = perfs.filter(x => x.pts >= 5);
+        perfs.sort((a, b) => (b.pct - a.pct) || (b.pts - a.pts));
+      }
       perfs = perfs.slice(0, 100);
 
-      // --- Contrôles (sous-onglets + filtres) ---
+      // Titre dynamique
+      const titleEl = document.querySelector('#view-performance h2');
+      if (titleEl) titleEl.textContent = isFlop ? '💩 Flop 100 des Performances' : '🏅 Top 100 des Performances';
+
+      // --- Contrôles : bascule Top/Flop, sous-onglets, filtres ---
+      const modeBtn = (key, label) => {
+        const on = perfState.mode === key;
+        const cls = on ? "bg-pastis-500 text-navy-900 shadow-md font-black" : "text-gray-400 hover:text-gray-200 hover:bg-navy-700/50";
+        return `<button onclick="setPerfMode('${key}')" class="flex-1 py-1.5 md:py-2 text-xs md:text-sm font-bold uppercase tracking-wider rounded-lg transition-colors duration-200 ${cls}">${label}</button>`;
+      };
       const subTab = (key, label) => {
         const on = perfState.sub === key;
         const cls = on ? "bg-pastis-500 text-navy-900 shadow-md font-black" : "text-gray-400 hover:text-gray-200 hover:bg-navy-700/50";
@@ -3145,6 +3162,9 @@ function renderPerformance() {
         .forEach(r => { playerOptions += `<option value="${escapeJS(r[3])}" ${perfState.joueur === r[3] ? 'selected' : ''}>${r[3]}</option>`; });
 
       document.getElementById('performance-controls').innerHTML = `
+        <div class="flex bg-navy-900/60 rounded-xl p-1 shadow-inner border border-navy-700/50 gap-1 mb-3">
+          ${modeBtn('top', '🏅 Top 100')}${modeBtn('flop', '💩 Flop 100')}
+        </div>
         <div class="flex bg-navy-900/60 rounded-xl p-1 shadow-inner border border-navy-700/50 gap-1 mb-3">
           ${subTab('poules', 'Poules')}${subTab('finales', 'Phases finales')}${subTab('total', 'Total')}
         </div>
@@ -3158,23 +3178,27 @@ function renderPerformance() {
         </div>
       `;
 
-      // --- Liste ---
+      // --- Liste : rang + nom intégrés dans le bandeau (en-tête de la carte) ---
       let listHTML = '';
       if (perfs.length === 0) {
         listHTML = `<p class="text-center text-gray-500 italic mt-10">Aucune performance à afficher pour cette sélection.</p>`;
       } else {
         perfs.forEach((x, i) => {
           const rang = i + 1;
-          const medal = rang === 1 ? '🥇' : rang === 2 ? '🥈' : rang === 3 ? '🥉' : '';
-          const card = generatePlayerHistoryItemHTML(x.match, x.prono).replace('relative mt-2 shadow-sm', 'relative shadow-sm');
+          const medal = !isFlop ? (rang === 1 ? '🥇' : rang === 2 ? '🥈' : rang === 3 ? '🥉' : '') : '';
           const rangBadge = medal
-            ? `<span class="text-base leading-none">${medal}</span>`
-            : `<span class="font-oswald font-black text-gray-400 text-sm leading-none w-5 text-center">${rang}</span>`;
+            ? `<span class="text-base leading-none flex-shrink-0">${medal}</span>`
+            : `<span class="font-oswald font-black ${isFlop ? 'text-red-400' : 'text-gray-300'} text-sm leading-none w-5 text-center flex-shrink-0">${rang}</span>`;
+
+          // Carte sans bord/rounding/marge (le wrapper fournit le cadre) → le bandeau et la carte ne font qu'un bloc
+          const card = generatePlayerHistoryItemHTML(x.match, x.prono)
+            .replace('rounded-lg border border-navy-700 relative mt-2 shadow-sm', 'relative shadow-sm');
+
           listHTML += `
-            <div class="mt-3">
-              <div class="flex items-center gap-2 mb-1 ml-1">
+            <div class="mt-3 rounded-lg overflow-hidden border border-navy-700 shadow-sm">
+              <div class="flex items-center gap-2 bg-navy-900 px-2.5 py-1.5 border-b border-navy-700">
                 ${rangBadge}
-                <span onclick="goToPlayerProfile('${escapeJS(x.joueur)}')" class="text-[11px] md:text-sm font-bold text-white hover:text-pastis-500 cursor-pointer inline-flex items-center gap-1">${x.joueur}${x.isJoker ? '<span class="text-pastis-500">🌟</span>' : ''}</span>
+                <span onclick="event.stopPropagation(); goToPlayerProfile('${escapeJS(x.joueur)}')" class="text-[11px] md:text-sm font-bold text-white hover:text-pastis-500 cursor-pointer inline-flex items-center gap-1 truncate">${x.joueur}${x.isJoker ? '<span class="text-pastis-500">🌟</span>' : ''}</span>
               </div>
               ${card}
             </div>`;
