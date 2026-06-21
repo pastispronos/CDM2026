@@ -3073,8 +3073,14 @@ function renderJoueurHistory() {
 
       // 3. Rendu
       let pronosListHTML = '';
-      items.forEach(it => { pronosListHTML += generatePlayerHistoryItemHTML(it.match, it.prono); });
-
+      items.forEach(it => {
+        let card = generatePlayerHistoryItemHTML(it.match, it.prono);
+        const estDuJour = (getLogicalDate(it.match[1], it.match[2]) === todayStr);
+        if (estDuJour) {
+          card = `<div class="rounded-lg ring-2 ring-pastis-500 shadow-[0_0_12px_rgba(247,195,37,0.35)] mt-2">${card.replace('mt-2 shadow-sm', 'mt-0 shadow-sm')}</div>`;
+        }
+        pronosListHTML += card;
+      });
       if(pronosListHTML === '') pronosListHTML = '<p class="text-sm text-gray-500 italic mt-4 text-center">Aucun résultat correspondant aux filtres.</p>';
       document.getElementById('joueur-history-list').innerHTML = pronosListHTML;
       parseFlags();
@@ -3144,10 +3150,12 @@ function renderPerformance() {
       if (perfState.joker === 'oui')        perfs = perfs.filter(x => x.isJoker);
       else if (perfState.joker === 'non')   perfs = perfs.filter(x => !x.isJoker);
 
-      const isFlop = (perfState.mode === 'flop');
+const isFlop = (perfState.mode === 'flop');
       if (isFlop) {
         perfs = perfs.filter(x => x.pts < 5);                 // Flop : uniquement les pronos sous 5 pts
-        perfs.sort((a, b) => (a.pct - b.pct) || (a.pts - b.pts));
+        // Pire d'abord : le plus mauvais classement RELATIF en points (avoir raté quand les autres ont réussi),
+        // puis le moins de points, puis la tendance la plus banale.
+        perfs.sort((a, b) => (a.pctPoints - b.pctPoints) || (a.pts - b.pts) || (a.pctTendance - b.pctTendance));
       } else {
         perfs = perfs.filter(x => x.pts >= 5);                // Top : seuil 5 pts mini
         perfs.sort((a, b) => (b.pct - a.pct) || (b.pts - a.pts));
@@ -3190,28 +3198,69 @@ function renderPerformance() {
         </div>
       `;
 
-      // --- Liste : rang + nom intégrés EN-TÊTE de la carte du match ---
+// --- Liste : une seule ligne par perf (Rang | Joueur | Réel | Prono | Points/Perf) ---
       let listHTML = '';
       if (perfs.length === 0) {
         listHTML = `<p class="text-center text-gray-500 italic mt-10">Aucune performance à afficher pour cette sélection.</p>`;
       } else {
         perfs.forEach((x, i) => {
           const rang = i + 1;
+          const m = x.match, p = x.prono;
+          const eqA = m[3], eqB = m[4], scoreA = m[5], scoreB = m[6], vTABreel = m[7];
+          const styles = getTeamDisplayStyles(eqA, eqB, scoreA, scoreB, vTABreel);
           const medal = !isFlop ? (rang === 1 ? '🥇' : rang === 2 ? '🥈' : rang === 3 ? '🥉' : '') : '';
-          const rangBadge = medal
-            ? `<span class="text-base leading-none flex-shrink-0">${medal}</span>`
-            : `<span class="font-oswald font-black ${isFlop ? 'text-red-400' : 'text-gray-300'} text-sm leading-none w-5 text-center flex-shrink-0">${rang}</span>`;
-          const joker = x.isJoker ? '<span class="text-pastis-500">🌟</span>' : '';
-          const header = `<div class="flex items-center gap-2 mb-2 pb-1.5 border-b border-navy-700/50 w-full">${rangBadge}<span onclick="event.stopPropagation(); goToPlayerProfile('${escapeJS(x.joueur)}')" class="text-[11px] md:text-sm font-bold text-white hover:text-pastis-500 cursor-pointer inline-flex items-center gap-1 truncate">${x.joueur}${joker}</span></div>`;
+          const rangHTML = medal
+            ? `<span class="text-base leading-none">${medal}</span>`
+            : `<span class="font-oswald font-black ${isFlop ? 'text-red-400' : 'text-gray-300'} text-sm md:text-base leading-none">${rang}</span>`;
 
-          // On convertit la carte en colonne : en-tête (rang+nom) au-dessus, puis la ligne du match
-          const card = generatePlayerHistoryItemHTML(x.match, x.prono)
-            .replace(
-              '<div class="flex items-center justify-between bg-navy-800 p-2 md:p-3 rounded-lg border border-navy-700 relative mt-2 shadow-sm">',
-              `<div class="flex flex-col bg-navy-800 p-2 md:p-3 rounded-lg border border-navy-700 relative mt-3 shadow-sm">${header}<div class="flex items-center justify-between w-full">`
-            ) + '</div>';
+          const jkrBadge = (p[8] && String(p[8]).toLowerCase() === 'oui')
+            ? `<span class="joker-pulse bg-pastis-500 text-navy-900 text-[7px] md:text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm flex items-center justify-center -mt-2 mb-1 w-fit mx-auto">🌟 JOKER</span>` : '';
+          const dispA = p[5] !== "" ? p[5] : "-", dispB = p[6] !== "" ? p[6] : "-";
+          const colorProno = (p[8] && String(p[8]).toLowerCase() === 'oui') ? 'text-pastis-500' : 'text-white';
+          const pTabHTML = (p[7] && p[7].trim() !== "") ? `<div class="text-[8px] md:text-[9px] text-pastis-500 font-bold uppercase mt-0.5">TAB: ${p[7]}</div>` : '';
+          const rTabHTML = (vTABreel && vTABreel.trim() !== "") ? `<div class="text-[9px] text-gray-500 font-bold uppercase mt-0.5">TAB: ${vTABreel}</div>` : '';
 
-          listHTML += card;
+          listHTML += `
+            <div onclick="openMatchDetails('${m[0]}')" class="flex items-center justify-between bg-navy-800 p-2 md:p-3 rounded-lg border border-navy-700 relative mt-2 shadow-sm cursor-pointer hover:bg-navy-700 transition">
+
+              <div class="w-[9%] flex flex-col items-center justify-center flex-shrink-0">${rangHTML}</div>
+
+              <div onclick="event.stopPropagation(); goToPlayerProfile('${escapeJS(x.joueur)}')" class="w-[20%] min-w-0 px-1 cursor-pointer">
+                <span class="block truncate text-[11px] md:text-sm font-bold text-white hover:text-pastis-500">${x.joueur}</span>
+                <div class="text-[8px] md:text-[10px] text-gray-500 leading-tight">${shortDate(m[1])}</div>
+              </div>
+
+              <div class="w-[22%] flex flex-col justify-center min-w-0 font-oswald">
+                <div class="flex items-center space-x-1 min-w-0">
+                  <span class="${styles.flagOpacityA} emoji-flag text-xs">${getFlagOnly(eqA)}</span>
+                  <span class="truncate text-[10px] md:text-sm ${styles.clsEqA}">${getCleanName(eqA)}</span>
+                </div>
+                <div class="flex items-center space-x-1 min-w-0 mt-0.5">
+                  <span class="${styles.flagOpacityB} emoji-flag text-xs">${getFlagOnly(eqB)}</span>
+                  <span class="truncate text-[10px] md:text-sm ${styles.clsEqB}">${getCleanName(eqB)}</span>
+                </div>
+              </div>
+
+              <div class="w-[24%] flex items-center justify-center">
+                <div class="text-center w-1/2">
+                  <div class="text-[8px] md:text-[10px] text-gray-500 uppercase">Réel</div>
+                  <div class="font-bold text-gray-400 font-oswald text-sm md:text-xl leading-none">${scoreA}-${scoreB}</div>
+                  ${rTabHTML}
+                </div>
+                <div class="text-center w-1/2 border-l border-navy-700 pl-1 flex flex-col items-center justify-center">
+                  ${jkrBadge}
+                  <div class="text-[8px] md:text-[10px] text-blue-400 uppercase">Prono</div>
+                  <div class="font-black ${colorProno} font-oswald text-sm md:text-xl leading-none">${dispA}-${dispB}</div>
+                  ${pTabHTML}
+                </div>
+              </div>
+
+              <div class="w-[25%] flex flex-col items-end justify-center space-y-1 pl-1">
+                ${getPerformanceBadge(p[11] || "")}
+                ${getPointsBadge(p[9])}
+              </div>
+
+            </div>`;
         });
       }
       document.getElementById('performance-list').innerHTML = listHTML;
