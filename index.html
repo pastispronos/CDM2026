@@ -3030,11 +3030,9 @@ function renderJoueurHistory() {
       }
 
       const todayStr = getLogicalToday();
-      const idxMap = {};
-      appData.calendrier.forEach((m, i) => { idxMap[m[0]] = i; });
+      let pronosListHTML = '';
 
-      // 1. Collecte des matchs correspondant aux filtres
-      let items = [];
+      // Ordre chronologique (= ordre du calendrier)
       appData.calendrier.forEach(match => {
         let idMatch = match[0];
         let phaseMatch = match[8] ? match[8].trim() : "";
@@ -3058,29 +3056,18 @@ function renderJoueurHistory() {
           if (fTeam !== 'all' && eqA !== fTeam && eqB !== fTeam) return;
           if (fGroupe !== 'all' && groupeMatch !== fGroupe) return;
 
-          items.push({ match, prono });
+          let card = generatePlayerHistoryItemHTML(match, prono);
+          const estDuJour = (getLogicalDate(match[1], match[2]) === todayStr);
+          if (estDuJour) {
+            card = `<div class="rounded-lg ring-2 ring-pastis-500 shadow-[0_0_12px_rgba(247,195,37,0.35)] mt-2 overflow-hidden">
+                      <div class="bg-pastis-500 text-navy-900 text-[9px] md:text-[11px] font-black uppercase tracking-wider px-2 py-0.5 text-center">🎯 Match du jour</div>
+                      ${card.replace('mt-2 shadow-sm', 'mt-0 shadow-sm')}
+                    </div>`;
+          }
+          pronosListHTML += card;
         }
       });
 
-      // 2. Ordre : matchs du jour en haut, puis le reste inversé (plus récents d'abord)
-      items.sort((x, y) => {
-        const tx = (getLogicalDate(x.match[1], x.match[2]) === todayStr) ? 0 : 1;
-        const ty = (getLogicalDate(y.match[1], y.match[2]) === todayStr) ? 0 : 1;
-        if (tx !== ty) return tx - ty;
-        if (tx === 0) return idxMap[x.match[0]] - idxMap[y.match[0]];   // jour : ordre normal
-        return idxMap[y.match[0]] - idxMap[x.match[0]];                 // reste : ordre inversé
-      });
-
-      // 3. Rendu
-      let pronosListHTML = '';
-      items.forEach(it => {
-        let card = generatePlayerHistoryItemHTML(it.match, it.prono);
-        const estDuJour = (getLogicalDate(it.match[1], it.match[2]) === todayStr);
-        if (estDuJour) {
-          card = `<div class="rounded-lg ring-2 ring-pastis-500 shadow-[0_0_12px_rgba(247,195,37,0.35)] mt-2">${card.replace('mt-2 shadow-sm', 'mt-0 shadow-sm')}</div>`;
-        }
-        pronosListHTML += card;
-      });
       if(pronosListHTML === '') pronosListHTML = '<p class="text-sm text-gray-500 italic mt-4 text-center">Aucun résultat correspondant aux filtres.</p>';
       document.getElementById('joueur-history-list').innerHTML = pronosListHTML;
       parseFlags();
@@ -3131,7 +3118,7 @@ function renderPerformance() {
         pop.forEach(v => { if (v < pts) nbPires++; else if (v === pts) nbEgaux++; });
         const pctPoints = nbTotal > 0 ? (nbPires + (nbEgaux - 1) / 2) / nbTotal : 0;
 
-        // Rareté de la TENDANCE pronostiquée (1/N/2)
+        // Rareté de la TENDANCE pronostiquée (1/N/2) : 1 = tu étais seul à voir ce résultat
         const tend = (a, b) => { a = parseInt(a); b = parseInt(b); if (isNaN(a) || isNaN(b)) return '?'; return a > b ? '1' : (a < b ? '2' : 'N'); };
         const maTend = tend(p[5], p[6]);
         const tendances = (pronosTendanceParMatch[p[1]] || []);
@@ -3150,12 +3137,13 @@ function renderPerformance() {
       if (perfState.joker === 'oui')        perfs = perfs.filter(x => x.isJoker);
       else if (perfState.joker === 'non')   perfs = perfs.filter(x => !x.isJoker);
 
-const isFlop = (perfState.mode === 'flop');
+      const isFlop = (perfState.mode === 'flop');
       if (isFlop) {
         perfs = perfs.filter(x => x.pts < 5);                 // Flop : uniquement les pronos sous 5 pts
-        // Pire d'abord : le plus mauvais classement RELATIF en points (avoir raté quand les autres ont réussi),
-        // puis le moins de points, puis la tendance la plus banale.
-        perfs.sort((a, b) => (a.pctPoints - b.pctPoints) || (a.pts - b.pts) || (a.pctTendance - b.pctTendance));
+        // Flop = score d'horreur : avoir raté (peu de points vs les autres) ET avoir tenté un prono rare/audacieux.
+        // (1 - pctPoints) : tu as fait pire que les autres. pctTendance : tu étais seul à y croire.
+        perfs.forEach(x => { x.flop = 0.5 * (1 - x.pctPoints) + 0.5 * x.pctTendance; });
+        perfs.sort((a, b) => (b.flop - a.flop) || (a.pts - b.pts));
       } else {
         perfs = perfs.filter(x => x.pts >= 5);                // Top : seuil 5 pts mini
         perfs.sort((a, b) => (b.pct - a.pct) || (b.pts - a.pts));
@@ -3198,7 +3186,7 @@ const isFlop = (perfState.mode === 'flop');
         </div>
       `;
 
-// --- Liste : une seule ligne par perf (Rang | Joueur | Réel | Prono | Points/Perf) ---
+      // --- Liste : une seule ligne par perf (Rang | Joueur | Réel | Prono | Points/Perf), polices agrandies ---
       let listHTML = '';
       if (perfs.length === 0) {
         listHTML = `<p class="text-center text-gray-500 italic mt-10">Aucune performance à afficher pour cette sélection.</p>`;
@@ -3210,15 +3198,15 @@ const isFlop = (perfState.mode === 'flop');
           const styles = getTeamDisplayStyles(eqA, eqB, scoreA, scoreB, vTABreel);
           const medal = !isFlop ? (rang === 1 ? '🥇' : rang === 2 ? '🥈' : rang === 3 ? '🥉' : '') : '';
           const rangHTML = medal
-            ? `<span class="text-base leading-none">${medal}</span>`
-            : `<span class="font-oswald font-black ${isFlop ? 'text-red-400' : 'text-gray-300'} text-sm md:text-base leading-none">${rang}</span>`;
+            ? `<span class="text-xl md:text-2xl leading-none">${medal}</span>`
+            : `<span class="font-oswald font-black ${isFlop ? 'text-red-400' : 'text-gray-300'} text-base md:text-2xl leading-none">${rang}</span>`;
 
           const jkrBadge = (p[8] && String(p[8]).toLowerCase() === 'oui')
             ? `<span class="joker-pulse bg-pastis-500 text-navy-900 text-[7px] md:text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm flex items-center justify-center -mt-2 mb-1 w-fit mx-auto">🌟 JOKER</span>` : '';
           const dispA = p[5] !== "" ? p[5] : "-", dispB = p[6] !== "" ? p[6] : "-";
           const colorProno = (p[8] && String(p[8]).toLowerCase() === 'oui') ? 'text-pastis-500' : 'text-white';
-          const pTabHTML = (p[7] && p[7].trim() !== "") ? `<div class="text-[8px] md:text-[9px] text-pastis-500 font-bold uppercase mt-0.5">TAB: ${p[7]}</div>` : '';
-          const rTabHTML = (vTABreel && vTABreel.trim() !== "") ? `<div class="text-[9px] text-gray-500 font-bold uppercase mt-0.5">TAB: ${vTABreel}</div>` : '';
+          const pTabHTML = (p[7] && p[7].trim() !== "") ? `<div class="text-[8px] md:text-[10px] text-pastis-500 font-bold uppercase mt-0.5">TAB: ${p[7]}</div>` : '';
+          const rTabHTML = (vTABreel && vTABreel.trim() !== "") ? `<div class="text-[9px] md:text-[10px] text-gray-500 font-bold uppercase mt-0.5">TAB: ${vTABreel}</div>` : '';
 
           listHTML += `
             <div onclick="openMatchDetails('${m[0]}')" class="flex items-center justify-between bg-navy-800 p-2 md:p-3 rounded-lg border border-navy-700 relative mt-2 shadow-sm cursor-pointer hover:bg-navy-700 transition">
@@ -3226,31 +3214,31 @@ const isFlop = (perfState.mode === 'flop');
               <div class="w-[9%] flex flex-col items-center justify-center flex-shrink-0">${rangHTML}</div>
 
               <div onclick="event.stopPropagation(); goToPlayerProfile('${escapeJS(x.joueur)}')" class="w-[20%] min-w-0 px-1 cursor-pointer">
-                <span class="block truncate text-[11px] md:text-sm font-bold text-white hover:text-pastis-500">${x.joueur}</span>
-                <div class="text-[8px] md:text-[10px] text-gray-500 leading-tight">${shortDate(m[1])}</div>
+                <span class="block truncate text-sm md:text-xl font-bold text-white hover:text-pastis-500 font-oswald tracking-wide">${x.joueur}</span>
+                <div class="text-[10px] md:text-sm text-gray-500 leading-tight">${shortDate(m[1])}</div>
               </div>
 
               <div class="w-[22%] flex flex-col justify-center min-w-0 font-oswald">
-                <div class="flex items-center space-x-1 min-w-0">
-                  <span class="${styles.flagOpacityA} emoji-flag text-xs">${getFlagOnly(eqA)}</span>
-                  <span class="truncate text-[10px] md:text-sm ${styles.clsEqA}">${getCleanName(eqA)}</span>
+                <div class="flex items-center space-x-1.5 min-w-0">
+                  <span class="${styles.flagOpacityA} emoji-flag text-sm md:text-lg">${getFlagOnly(eqA)}</span>
+                  <span class="truncate text-sm md:text-xl ${styles.clsEqA}">${getCleanName(eqA)}</span>
                 </div>
-                <div class="flex items-center space-x-1 min-w-0 mt-0.5">
-                  <span class="${styles.flagOpacityB} emoji-flag text-xs">${getFlagOnly(eqB)}</span>
-                  <span class="truncate text-[10px] md:text-sm ${styles.clsEqB}">${getCleanName(eqB)}</span>
+                <div class="flex items-center space-x-1.5 min-w-0 mt-0.5">
+                  <span class="${styles.flagOpacityB} emoji-flag text-sm md:text-lg">${getFlagOnly(eqB)}</span>
+                  <span class="truncate text-sm md:text-xl ${styles.clsEqB}">${getCleanName(eqB)}</span>
                 </div>
               </div>
 
               <div class="w-[24%] flex items-center justify-center">
                 <div class="text-center w-1/2">
-                  <div class="text-[8px] md:text-[10px] text-gray-500 uppercase">Réel</div>
-                  <div class="font-bold text-gray-400 font-oswald text-sm md:text-xl leading-none">${scoreA}-${scoreB}</div>
+                  <div class="text-[10px] md:text-sm text-gray-500 uppercase">Réel</div>
+                  <div class="font-bold text-gray-400 font-oswald text-lg md:text-2xl leading-none">${scoreA}-${scoreB}</div>
                   ${rTabHTML}
                 </div>
                 <div class="text-center w-1/2 border-l border-navy-700 pl-1 flex flex-col items-center justify-center">
                   ${jkrBadge}
-                  <div class="text-[8px] md:text-[10px] text-blue-400 uppercase">Prono</div>
-                  <div class="font-black ${colorProno} font-oswald text-sm md:text-xl leading-none">${dispA}-${dispB}</div>
+                  <div class="text-[10px] md:text-sm text-blue-400 uppercase">Prono</div>
+                  <div class="font-black ${colorProno} font-oswald text-lg md:text-2xl leading-none">${dispA}-${dispB}</div>
                   ${pTabHTML}
                 </div>
               </div>
