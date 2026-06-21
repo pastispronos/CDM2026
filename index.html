@@ -3056,8 +3056,14 @@ function renderJoueurHistory() {
     function setPerfJoker(v)    { perfState.joker = v; renderPerformance(); }
 
 function renderPerformance() {
-      // Points de TOUS les participants par match (pour la position relative / rareté)
-// Tendance (1/N/2) de chaque prono valide, par match
+      // Points de TOUS les participants par match (pour la rareté des points)
+      const ptsParMatch = {};
+      appData.pronostics.forEach(p => {
+        const v = parseInt(p[9]); if (isNaN(v)) return;
+        (ptsParMatch[p[1]] = ptsParMatch[p[1]] || []).push(v);
+      });
+
+      // Tendance (1/N/2) de chaque prono valide, par match (pour la rareté de la tendance)
       const pronosTendanceParMatch = {};
       appData.pronostics.forEach(p => {
         if (p[5] === "" || p[6] === "" || p[5] == null || p[6] == null) return;
@@ -3066,6 +3072,7 @@ function renderPerformance() {
         const t = a > b ? '1' : (a < b ? '2' : 'N');
         (pronosTendanceParMatch[p[1]] = pronosTendanceParMatch[p[1]] || []).push(t);
       });
+
       // Construction de toutes les performances (1 prono joué = 1 perf)
       let perfs = [];
       appData.pronostics.forEach(p => {
@@ -3076,7 +3083,6 @@ function renderPerformance() {
         const phase = (matchData[8] || "").toLowerCase().trim();
         const estPoules = (phase === "poules");
         const isJoker = p[8] && String(p[8]).toLowerCase() === 'oui';
-        perfs = perfs.filter(x => x.pts >= 5);   // seuil minimum pour figurer dans le top 100
 
         // Rareté des POINTS : proportion de joueurs battus sur ce match (ex-æquo pour moitié)
         const pop = ptsParMatch[p[1]] || [pts];
@@ -3099,6 +3105,7 @@ function renderPerformance() {
       });
 
       // Filtres
+      perfs = perfs.filter(x => x.pts >= 5);            // seuil minimum pour figurer dans le top 100
       if (perfState.sub === 'poules')       perfs = perfs.filter(x => x.estPoules);
       else if (perfState.sub === 'finales') perfs = perfs.filter(x => !x.estPoules);
       if (perfState.joueur)                 perfs = perfs.filter(x => x.joueur === perfState.joueur);
@@ -3138,7 +3145,7 @@ function renderPerformance() {
       if (perfs.length === 0) {
         listHTML = `<p class="text-center text-gray-500 italic mt-10">Aucune performance à afficher pour cette sélection.</p>`;
       } else {
-perfs.forEach((x, i) => {
+        perfs.forEach((x, i) => {
           const rang = i + 1;
           const medal = rang === 1 ? '🥇' : rang === 2 ? '🥈' : rang === 3 ? '🥉' : '';
           const card = generatePlayerHistoryItemHTML(x.match, x.prono).replace('relative mt-2 shadow-sm', 'relative shadow-sm');
