@@ -378,7 +378,7 @@
 </nav>
 
   <script>
-    const API_URL = 'https://script.google.com/macros/s/AKfycbzNltLkIZCEzp3l-l7PFtzc74lIg59fNSzu6sQ1KjRfusuhbR_wf23VmQRmqwSE4e3P/exec?api=1';
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxEscJpePgDIJhowVIecClDvuY7bonpJxytHGziEpN3OD-Rb05Z44c-L9y-8wbgo1Gi/exec?api=1';
     let appData = { classement: [], calendrier: [], pronostics: [], equipes: [], chaines: [], reglement: [], joueursMasques: [] };
     let matchFilter = { idMatch: null, tendance: null, joueur: '', joker: false };
 
@@ -662,14 +662,9 @@ function initApp(data, isCached = false) {
       // --- Atterrissage direct sur les matchs du jour (uniquement au tout premier chargement) ---
       // On ne le fait PAS lors des rafraîchissements live (silentRefresh) pour ne pas voler le scroll de l'utilisateur.
       if (isInitialLoad && currentView === 'calendrier' && currentCalView === 'all') {
-        setTimeout(() => {
-          const todayCard = document.querySelector('[data-today="1"]');
-          if (todayCard) todayCard.scrollIntoView({ behavior: 'auto', block: 'center' });
-        }, isCached ? 50 : 120);
+        setTimeout(() => { scrollToCalendarFocus(); }, isCached ? 50 : 120);
       }
-      if (!isCached) isInitialLoad = false; // après le 1er fetch réseau, plus d'auto-scroll
-    }
-    
+
    // ==========================================
     // GÉNÉRATEUR RÈGLEMENT (Version Oswald Sans Alinéa)
     // ==========================================
@@ -1111,52 +1106,38 @@ statsContainer.innerHTML = `
     // UTILITAIRES & DESIGNS (Logos TV, Badges...)
     // ==========================================
 function retourAccueil() {
-  switchView('calendrier');
-  switchCalView('all'); // on force la sous-vue "Tous" = page d'accueil
-  setTimeout(() => {
-    const todayCard = document.querySelector('[data-today="1"]');
-    if (todayCard) todayCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, 120);
+  currentCalView = 'all';
+  switchView('calendrier'); // switchView gère l'atterrissage (live > jour > prochain match)
+}
+    
+    // Remonte le vrai conteneur de scroll (.main-scroll) tout en haut
+function scrollMainTop(smooth = false) {
+  const c = document.querySelector('.main-scroll');
+  if (c) c.scrollTo({ top: 0, behavior: smooth ? 'smooth' : 'auto' });
+}
+
+// Calendrier : priorité au match LIVE, puis aux matchs du jour, puis au prochain match à venir
+function scrollToCalendarFocus() {
+  const container = document.getElementById('cal-view-all');
+  if (!container) return false;
+  const cible = container.querySelector('[data-live="1"]')
+             || container.querySelector('[data-today="1"]')
+             || container.querySelector('[data-future="1"]');
+  if (cible) { cible.scrollIntoView({ behavior: 'smooth', block: 'center' }); return true; }
+  return false;
 }
     function scrollToToday() {
-      // Si on n'est pas sur la bonne vue, on switch de force
       if (currentView !== 'calendrier' || currentCalView !== 'all') {
         switchView('calendrier');
         switchCalView('all');
-        // Un délai millimétré pour laisser le DOM afficher les éléments
         setTimeout(() => {
-          const todayCard = document.querySelector('[data-today="1"]');
-          if (todayCard) todayCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          else showTooltip(null, "Aucun match prévu aujourd'hui !");
+          if (!scrollToCalendarFocus()) showTooltip(null, "Aucun match prévu aujourd'hui !");
         }, 300);
       } else {
-        const todayCard = document.querySelector('[data-today="1"]');
-        if (todayCard) todayCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        else showTooltip(null, "Aucun match prévu aujourd'hui !");
+        if (!scrollToCalendarFocus()) showTooltip(null, "Aucun match prévu aujourd'hui !");
       }
     }
-    
-    let tooltipTimeout;
-    function showTooltip(event, message) {
-      if(event) event.stopPropagation(); 
-      const tooltip = document.getElementById('tooltip');
-      tooltip.innerText = message;
-      tooltip.classList.remove('opacity-0');
-      
-      if(event && event.target) {
-        const rect = event.target.getBoundingClientRect();
-        let leftPos = rect.left + (rect.width / 2);
-        if (leftPos < 110) leftPos = 110;
-        if (leftPos > window.innerWidth - 110) leftPos = window.innerWidth - 110;
-        tooltip.style.left = leftPos + 'px';
-        tooltip.style.top = (rect.top - 8) + 'px'; 
-      } else {
-        tooltip.style.left = '50%';
-        tooltip.style.top = '80%';
-      }
-      clearTimeout(tooltipTimeout);
-      tooltipTimeout = setTimeout(() => { tooltip.classList.add('opacity-0'); }, 3000);
-    }
+
 
     function formatPoints(pts) {
       let p = parseInt(pts);
@@ -1436,7 +1417,7 @@ function switchCalView(view) {
   }
 }
 
-    function switchView(viewName) {
+function switchView(viewName) {
         if (viewName !== 'match') {
   document.querySelector('.main-scroll').classList.remove('match-view');
 }
@@ -1459,14 +1440,23 @@ function switchCalView(view) {
   } else {
     document.getElementById('view-' + viewName).classList.remove('hidden');
     document.getElementById('nav-' + viewName).classList.add('text-pastis-500');
-    window.scrollTo(0,0);
+
+    // Scroll à l'entrée d'une vue :
+    // - Calendrier (sous-vue "Tous") : LIVE > matchs du jour > prochain match à venir
+    // - Toutes les autres vues : on remonte tout en haut
+    if (viewName === 'calendrier') {
+      if (currentCalView === 'all') setTimeout(scrollToCalendarFocus, 80);
+      else scrollMainTop();
+    } else {
+      scrollMainTop();
+    }
   }
   
   if(viewName === 'classement') {
     setTimeout(syncScrollbarWidth, 100);
   }
 }
-
+  
     function goToPlayerProfile(joueur) {
       const select = document.getElementById('select-joueur');
       select.value = joueur; 
@@ -1582,12 +1572,15 @@ function generateMatchCardHTML(row, logicalTodayStr) {
   const jokerCount = row[17] || "";
 
   const isPlayed = (scoreA !== "" && scoreB !== "");
-  // --- NOUVEAU : détection LIVE (colonne AV = index 47, minute AW = index 48) ---
+  // --- détection LIVE (colonne AV = index 47, minute AW = index 48) ---
   const statut = (row[47] || "").toString().toUpperCase();
   const minute = (row[48] || "").toString();
   const isLive = (statut === "LIVE");
 
   const matchLogicalDate = getLogicalDate(date, time);
+  // Comparateur de dates logiques "jj/mm/aaaa" → aaaammjj (pour repérer le prochain match à venir)
+  const cmpDate = s => { const p = (s || "").split('/'); return p.length === 3 ? Number(p[2] + p[1].padStart(2, '0') + p[0].padStart(2, '0')) : 0; };
+  const isFuture = !isPlayed && cmpDate(matchLogicalDate) >= cmpDate(logicalTodayStr);
 
   // --- Bloc score (VS / live / terminé) ---
   let scoreBlock = `<div class="bg-navy-700 px-2 md:px-4 py-1 rounded text-xl font-oswald text-gray-400 font-bold shadow-inner border border-navy-700">VS</div>`;
@@ -1702,7 +1695,7 @@ let jokerHTML = "";
   let bonusBadgeHTML = isbonus ? `<div class="absolute -top-3 left-4 md:left-6 bg-orange-600 text-white text-[8px] md:text-[10px] font-black px-2 py-0.5 rounded-full shadow-md z-10 uppercase tracking-wider border border-orange-400 flex items-center gap-1"><span>🔥</span> Match Bonus</div>` : "";
 
   return `
-<div onclick="openMatchDetails('${idMatch}')" ${matchLogicalDate === logicalTodayStr ? 'data-today="1"' : ''} class="rounded-xl p-2 md:pt-3 md:px-3 md:pb-3 relative cursor-pointer mb-3 md:mb-4 ${cardHighlightClass}">
+<div onclick="openMatchDetails('${idMatch}')" ${isLive ? 'data-live="1"' : ''} ${matchLogicalDate === logicalTodayStr ? 'data-today="1"' : ''} ${isFuture ? 'data-future="1"' : ''} class="rounded-xl p-2 md:pt-3 md:px-3 md:pb-3 relative cursor-pointer mb-3 md:mb-4 ${cardHighlightClass}">
       ${bonusBadgeHTML}
       ${badgeHighlightHTML}
 
@@ -2747,54 +2740,13 @@ const finContent = (!isTournamentStarted || estJoueurMasque(joueur))
     `;
 
 // --- Top 3 meilleurs coups & 3 pires inspirations ---
+  // Méthode STRICTEMENT identique à la vue "Perf" (Top 100 / Flop 100) via le référentiel commun.
   let bestMatchHTML = '';
-  const perfsJoueur = [];
+  const perfsJoueur = computePerfs(joueur);
+  const top3   = trierTopPerfs(perfsJoueur).slice(0, 3);
+  const worst3 = trierFlopPerfs(perfsJoueur).slice(0, 3);
 
-  // Points de TOUS les participants par match (pour situer le joueur sur chaque match)
-  const ptsParMatch = {};
-  appData.pronostics.forEach(p => {
-    const v = parseInt(p[9]);
-    if (isNaN(v)) return;
-    if (!ptsParMatch[p[1]]) ptsParMatch[p[1]] = [];
-    ptsParMatch[p[1]].push(v);
-  });
-
-// Tendance (1/N/2) de chaque prono valide, par match (pour la rareté de la tendance)
-  const pronosTendanceParMatch = {};
-  appData.pronostics.forEach(p => {
-    if (p[5] === "" || p[6] === "" || p[5] == null || p[6] == null) return;
-    const a = parseInt(p[5]), b = parseInt(p[6]);
-    if (isNaN(a) || isNaN(b)) return;
-    const t = a > b ? '1' : (a < b ? '2' : 'N');
-    (pronosTendanceParMatch[p[1]] = pronosTendanceParMatch[p[1]] || []).push(t);
-  });
-
-  appData.pronostics.forEach(p => {
-    if (p[0] === joueur && p[5] !== "" && p[6] !== "") {
-      const matchId = p[1], pts = parseInt(p[9]) || 0;
-      const matchData = appData.calendrier.find(r => r[0] == matchId);
-      if (!matchData || matchData[5] === "") return; // match non joué
-
-      // Rareté des POINTS (proportion de joueurs battus, ex-æquo pour moitié) — identique à la vue Performance
-      const pop = ptsParMatch[matchId] || [pts];
-      const nbTotal = pop.length;
-      let nbPires = 0, nbEgaux = 0;
-      pop.forEach(v => { if (v < pts) nbPires++; else if (v === pts) nbEgaux++; });
-      const pctPoints = nbTotal > 0 ? (nbPires + (nbEgaux - 1) / 2) / nbTotal : 0;
-
-      // Rareté de la TENDANCE pronostiquée (1/N/2)
-      const maTend = pts >= 0 ? (parseInt(p[5]) > parseInt(p[6]) ? '1' : (parseInt(p[5]) < parseInt(p[6]) ? '2' : 'N')) : '?';
-      const tendances = (pronosTendanceParMatch[matchId] || []);
-      const nbMemeTend = tendances.filter(t => t === maTend).length;
-      const pctTendance = tendances.length > 0 ? 1 - (nbMemeTend / tendances.length) : 0;
-
-      // Score combiné identique à la vue Performance
-      const pct = (pctPoints * 0.5) + (pctTendance * 0.5);
-
-      perfsJoueur.push({ matchId, match: matchData, prono: p, pts, pct });
-    }
-  });
-  // Carte d'historique préfixée d'un numéro de classement (1, 2, 3)
+  // Carte d'historique préfixée d'un numéro de classement (1, 2, 3) — réutilisée par les Jokers
   const rankedItemHTML = (rang, x) => {
     const card = generatePlayerHistoryItemHTML(x.match, x.prono).replace('relative mt-2 shadow-sm', 'relative shadow-sm');
     return `
@@ -2804,18 +2756,6 @@ const finContent = (!isTournamentStarted || estJoueurMasque(joueur))
       </div>
     `;
   };
-
-// Meilleurs : au moins 5 pts — meilleure position relative d'abord (à égalité, le plus de points)
-  const top3 = [...perfsJoueur]
-    .filter(x => x.pts >= 5)
-    .sort((a, b) => (b.pct - a.pct) || (b.pts - a.pts))
-    .slice(0, 3);
-
-  // Pires : moins de 5 pts — pire position relative d'abord (à égalité, le moins de points)
-  const worst3 = [...perfsJoueur]
-    .filter(x => x.pts < 5)
-    .sort((a, b) => (a.pct - b.pct) || (a.pts - b.pts))
-    .slice(0, 3);
 
   if (top3.length > 0) {
     let itemsTop = '';
@@ -3030,9 +2970,27 @@ function renderJoueurHistory() {
       }
 
       const todayStr = getLogicalToday();
-      let pronosListHTML = '';
 
-      // Ordre chronologique (= ordre du calendrier)
+      // Bandeau identique à la vue calendrier : liseré + petit badge flottant discret
+      // (rouge "Live" / jaune "Match(s) du jour"), au lieu de l'ancien gros bandeau plein.
+      const decorerCarte = (card, isLive, estDuJour) => {
+        if (!isLive && !estDuJour) return card;
+        const borderCls = isLive
+          ? 'border-2 border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.18)]'
+          : 'border-2 border-pastis-500 shadow-[0_0_10px_rgba(247,195,37,0.22)]';
+        const badge = isLive
+          ? `<div class="absolute -top-2 -right-2 h-[16px] px-2.5 rounded-full shadow-sm z-10 text-[9px] font-black uppercase tracking-wider leading-none flex items-center justify-center gap-1.5 bg-red-500 text-white border border-red-400/60"><span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>Live</div>`
+          : `<div class="absolute -top-2 -right-2 h-[16px] px-2.5 rounded-full shadow-sm z-10 text-[9px] font-black uppercase tracking-wider leading-none flex items-center justify-center bg-pastis-500 text-navy-900 border border-pastis-600/60">Match(s) du jour</div>`;
+        const openOld = '<div class="flex items-center justify-between bg-navy-800 p-2 md:p-3 rounded-lg border border-navy-700 relative mt-2 shadow-sm">';
+        const openNew = `<div class="flex items-center justify-between bg-navy-800 p-2 md:p-3 rounded-lg ${borderCls} relative mt-2 shadow-sm">${badge}`;
+        return card.replace(openOld, openNew);
+      };
+
+      // 3 paniers : on remonte LIVE puis matchs du jour tout en haut, le reste en ordre chronologique.
+      let liveHTML = '';
+      let dujourHTML = '';
+      let restHTML = '';
+
       appData.calendrier.forEach(match => {
         let idMatch = match[0];
         let phaseMatch = match[8] ? match[8].trim() : "";
@@ -3056,18 +3014,18 @@ function renderJoueurHistory() {
           if (fTeam !== 'all' && eqA !== fTeam && eqB !== fTeam) return;
           if (fGroupe !== 'all' && groupeMatch !== fGroupe) return;
 
-          let card = generatePlayerHistoryItemHTML(match, prono);
+          const isLive = (match[47] || "").toString().toUpperCase() === "LIVE";
           const estDuJour = (getLogicalDate(match[1], match[2]) === todayStr);
-          if (estDuJour) {
-            card = `<div class="rounded-lg ring-2 ring-pastis-500 shadow-[0_0_12px_rgba(247,195,37,0.35)] mt-2 overflow-hidden">
-                      <div class="bg-pastis-500 text-navy-900 text-[9px] md:text-[11px] font-black uppercase tracking-wider px-2 py-0.5 text-center">🎯 Match du jour</div>
-                      ${card.replace('mt-2 shadow-sm', 'mt-0 shadow-sm')}
-                    </div>`;
-          }
-          pronosListHTML += card;
+
+          let card = decorerCarte(generatePlayerHistoryItemHTML(match, prono), isLive, estDuJour);
+
+          if (isLive) liveHTML += card;
+          else if (estDuJour) dujourHTML += card;
+          else restHTML += card;
         }
       });
 
+      let pronosListHTML = liveHTML + dujourHTML + restHTML;
       if(pronosListHTML === '') pronosListHTML = '<p class="text-sm text-gray-500 italic mt-4 text-center">Aucun résultat correspondant aux filtres.</p>';
       document.getElementById('joueur-history-list').innerHTML = pronosListHTML;
       parseFlags();
@@ -3081,54 +3039,78 @@ let perfState = { sub: 'total', joueur: '', joker: 'all', mode: 'top' };
     function setPerfJoueur(v)   { perfState.joueur = v; renderPerformance(); }
     function setPerfJoker(v)    { perfState.joker = v; renderPerformance(); }
     function setPerfMode(m)     { perfState.mode = m; renderPerformance(); }
-    
+
+    // ==========================================
+// RÉFÉRENTIEL UNIQUE DE CALCUL DES PERFORMANCES
+// Utilisé par la vue "Perf" (Top 100 / Flop 100) ET par la fiche joueur
+// (meilleurs coups / pires inspirations) → méthode 100% identique, garantie.
+// ==========================================
+function computePerfs(filterJoueur = null) {
+  // Points de TOUS les participants par match (rareté des points)
+  const ptsParMatch = {};
+  appData.pronostics.forEach(p => {
+    const v = parseInt(p[9]); if (isNaN(v)) return;
+    (ptsParMatch[p[1]] = ptsParMatch[p[1]] || []).push(v);
+  });
+
+  // Tendance (1/N/2) de chaque prono valide, par match (rareté de la tendance)
+  const pronosTendanceParMatch = {};
+  appData.pronostics.forEach(p => {
+    if (p[5] === "" || p[6] === "" || p[5] == null || p[6] == null) return;
+    const a = parseInt(p[5]), b = parseInt(p[6]);
+    if (isNaN(a) || isNaN(b)) return;
+    const t = a > b ? '1' : (a < b ? '2' : 'N');
+    (pronosTendanceParMatch[p[1]] = pronosTendanceParMatch[p[1]] || []).push(t);
+  });
+
+  const tend = (a, b) => { a = parseInt(a); b = parseInt(b); if (isNaN(a) || isNaN(b)) return '?'; return a > b ? '1' : (a < b ? '2' : 'N'); };
+
+  const perfs = [];
+  appData.pronostics.forEach(p => {
+    if (filterJoueur && p[0] !== filterJoueur) return;
+    if (p[5] === "" || p[6] === "" || p[9] === "" || p[9] == null) return;
+    const matchData = appData.calendrier.find(r => r[0] == p[1]);
+    if (!matchData || matchData[5] === "") return;          // match non joué
+    const pts = parseInt(p[9]) || 0;
+    const phase = (matchData[8] || "").toLowerCase().trim();
+    const estPoules = (phase === "poules");
+    const isJoker = p[8] && String(p[8]).toLowerCase() === 'oui';
+
+    // Rareté des POINTS : proportion de joueurs battus (ex-æquo comptés pour moitié)
+    const pop = ptsParMatch[p[1]] || [pts];
+    const nbTotal = pop.length;
+    let nbPires = 0, nbEgaux = 0;
+    pop.forEach(v => { if (v < pts) nbPires++; else if (v === pts) nbEgaux++; });
+    const pctPoints = nbTotal > 0 ? (nbPires + (nbEgaux - 1) / 2) / nbTotal : 0;
+
+    // Rareté de la TENDANCE pronostiquée (1/N/2)
+    const maTend = tend(p[5], p[6]);
+    const tendances = (pronosTendanceParMatch[p[1]] || []);
+    const nbMemeTend = tendances.filter(t => t === maTend).length;
+    const pctTendance = tendances.length > 0 ? 1 - (nbMemeTend / tendances.length) : 0;
+
+    const pct = (pctPoints * 0.5) + (pctTendance * 0.5);
+    perfs.push({ joueur: p[0], matchId: p[1], match: matchData, prono: p, pts, pct, pctPoints, pctTendance, estPoules, isJoker });
+  });
+  return perfs;
+}
+
+// TOP : seuil 5 pts mini ; meilleure position relative d'abord (départage : + de points)
+function trierTopPerfs(perfs) {
+  return [...perfs]
+    .filter(x => x.pts >= 5)
+    .sort((a, b) => (b.pct - a.pct) || (b.pts - a.pts));
+}
+
+// FLOP : sous 5 pts ; score d'horreur = avoir fait pire que les autres ET tenté un prono rare
+function trierFlopPerfs(perfs) {
+  const arr = [...perfs].filter(x => x.pts < 5);
+  arr.forEach(x => { x.flop = 0.5 * (1 - x.pctPoints) + 0.5 * x.pctTendance; });
+  return arr.sort((a, b) => (b.flop - a.flop) || (a.pts - b.pts));
+}
 function renderPerformance() {
-      // Points de TOUS les participants par match (pour la rareté des points)
-      const ptsParMatch = {};
-      appData.pronostics.forEach(p => {
-        const v = parseInt(p[9]); if (isNaN(v)) return;
-        (ptsParMatch[p[1]] = ptsParMatch[p[1]] || []).push(v);
-      });
-
-      // Tendance (1/N/2) de chaque prono valide, par match (pour la rareté de la tendance)
-      const pronosTendanceParMatch = {};
-      appData.pronostics.forEach(p => {
-        if (p[5] === "" || p[6] === "" || p[5] == null || p[6] == null) return;
-        const a = parseInt(p[5]), b = parseInt(p[6]);
-        if (isNaN(a) || isNaN(b)) return;
-        const t = a > b ? '1' : (a < b ? '2' : 'N');
-        (pronosTendanceParMatch[p[1]] = pronosTendanceParMatch[p[1]] || []).push(t);
-      });
-
-      // Construction de toutes les performances (1 prono joué = 1 perf)
-      let perfs = [];
-      appData.pronostics.forEach(p => {
-        if (p[5] === "" || p[6] === "" || p[9] === "" || p[9] == null) return;
-        const matchData = appData.calendrier.find(r => r[0] == p[1]);
-        if (!matchData || matchData[5] === "") return;            // match non joué
-        const pts = parseInt(p[9]) || 0;
-        const phase = (matchData[8] || "").toLowerCase().trim();
-        const estPoules = (phase === "poules");
-        const isJoker = p[8] && String(p[8]).toLowerCase() === 'oui';
-
-        // Rareté des POINTS : proportion de joueurs battus sur ce match (ex-æquo pour moitié)
-        const pop = ptsParMatch[p[1]] || [pts];
-        const nbTotal = pop.length;
-        let nbPires = 0, nbEgaux = 0;
-        pop.forEach(v => { if (v < pts) nbPires++; else if (v === pts) nbEgaux++; });
-        const pctPoints = nbTotal > 0 ? (nbPires + (nbEgaux - 1) / 2) / nbTotal : 0;
-
-        // Rareté de la TENDANCE pronostiquée (1/N/2) : 1 = tu étais seul à voir ce résultat
-        const tend = (a, b) => { a = parseInt(a); b = parseInt(b); if (isNaN(a) || isNaN(b)) return '?'; return a > b ? '1' : (a < b ? '2' : 'N'); };
-        const maTend = tend(p[5], p[6]);
-        const tendances = (pronosTendanceParMatch[p[1]] || []);
-        const nbMemeTend = tendances.filter(t => t === maTend).length;
-        const pctTendance = tendances.length > 0 ? 1 - (nbMemeTend / tendances.length) : 0;
-
-        const pct = (pctPoints * 0.5) + (pctTendance * 0.5);
-
-        perfs.push({ joueur: p[0], match: matchData, prono: p, pts, pct, pctPoints, pctTendance, estPoules, isJoker });
-      });
+      // Référentiel unique de calcul (identique à la fiche joueur)
+      let perfs = computePerfs();
 
       // Filtres communs
       if (perfState.sub === 'poules')       perfs = perfs.filter(x => x.estPoules);
@@ -3138,17 +3120,7 @@ function renderPerformance() {
       else if (perfState.joker === 'non')   perfs = perfs.filter(x => !x.isJoker);
 
       const isFlop = (perfState.mode === 'flop');
-      if (isFlop) {
-        perfs = perfs.filter(x => x.pts < 5);                 // Flop : uniquement les pronos sous 5 pts
-        // Flop = score d'horreur : avoir raté (peu de points vs les autres) ET avoir tenté un prono rare/audacieux.
-        // (1 - pctPoints) : tu as fait pire que les autres. pctTendance : tu étais seul à y croire.
-        perfs.forEach(x => { x.flop = 0.5 * (1 - x.pctPoints) + 0.5 * x.pctTendance; });
-        perfs.sort((a, b) => (b.flop - a.flop) || (a.pts - b.pts));
-      } else {
-        perfs = perfs.filter(x => x.pts >= 5);                // Top : seuil 5 pts mini
-        perfs.sort((a, b) => (b.pct - a.pct) || (b.pts - a.pts));
-      }
-      perfs = perfs.slice(0, 100);
+      perfs = (isFlop ? trierFlopPerfs(perfs) : trierTopPerfs(perfs)).slice(0, 100);
 
       // Titre dynamique
       const titleEl = document.querySelector('#view-performance h2');
@@ -3186,7 +3158,7 @@ function renderPerformance() {
         </div>
       `;
 
-      // --- Liste : une seule ligne par perf (Rang | Joueur | Réel | Prono | Points/Perf), polices agrandies ---
+      // --- Liste : une seule ligne par perf (Rang | Joueur | Réel | Prono | Points/Perf) ---
       let listHTML = '';
       if (perfs.length === 0) {
         listHTML = `<p class="text-center text-gray-500 italic mt-10">Aucune performance à afficher pour cette sélection.</p>`;
@@ -3220,12 +3192,12 @@ function renderPerformance() {
 
               <div class="w-[22%] flex flex-col justify-center min-w-0 font-oswald">
                 <div class="flex items-center space-x-1.5 min-w-0">
-                  <span class="${styles.flagOpacityA} emoji-flag text-sm md:text-lg">${getFlagOnly(eqA)}</span>
-                  <span class="truncate text-sm md:text-xl ${styles.clsEqA}">${getCleanName(eqA)}</span>
+                  <span class="${styles.flagOpacityA} emoji-flag">${getFlagOnly(eqA)}</span>
+                  <span class="truncate text-xs md:text-lg ${styles.clsEqA}">${getCleanName(eqA)}</span>
                 </div>
                 <div class="flex items-center space-x-1.5 min-w-0 mt-0.5">
-                  <span class="${styles.flagOpacityB} emoji-flag text-sm md:text-lg">${getFlagOnly(eqB)}</span>
-                  <span class="truncate text-sm md:text-xl ${styles.clsEqB}">${getCleanName(eqB)}</span>
+                  <span class="${styles.flagOpacityB} emoji-flag">${getFlagOnly(eqB)}</span>
+                  <span class="truncate text-xs md:text-lg ${styles.clsEqB}">${getCleanName(eqB)}</span>
                 </div>
               </div>
 
