@@ -2330,25 +2330,50 @@ teams.forEach((t, index) => {
       }).join('');
 
       // Construit les paires "match du tour -> match suivant" reliées par un connecteur.
-      // 2 matchs d'un tour alimentent 1 match du tour suivant.
+      // ⚠️ On NE PAIRE PLUS par adjacence (77+78...) : c'est ce qui sortait des affiches
+      // impossibles (ex. 1I × 2I en huitième). On lit les 2 VRAIES sources de chaque match
+      // suivant dans BRACKET_GRAPH (slots {t:'win'/'lose', m:…}). Robuste à tout réordonnancement.
       const buildPairs = (from, to) => {
+        // Index des matchs du tour courant par ID numérique
+        const fromById = {};
+        (from || []).forEach(m => { const id = parseInt(String(m[0]).replace(/\D/g,'')); if (id) fromById[id] = m; });
+
+        // Repli : tour suivant inconnu -> ancien rendu "À venir"
+        if (!to || to.length === 0) {
+          let h = '';
+          (from || []).forEach(a => {
+            h += `
+              <div class="vb-pair">
+                <div class="vb-card-slot">${generateCompactBracketCard(a, 'left')}</div>
+                <div class="vb-connect"></div>
+                <div class="vb-next">
+                  <div class="w-full"><div class="border-2 border-dashed border-navy-700 rounded text-[10px] text-gray-600 text-center py-3 px-1">À venir</div></div>
+                </div>
+              </div>`;
+          });
+          return h;
+        }
+
         let h = '';
-        for (let i = 0; i < from.length; i += 2) {
-          const a = from[i], b = from[i+1];
-          const idxNext = Math.floor(i/2);
-          const nextMatch = to[idxNext];
+        // On parcourt les matchs du tour SUIVANT et on remonte leurs 2 sources réelles
+        to.forEach(nextMatch => {
+          const nid = parseInt(String(nextMatch[0]).replace(/\D/g,''));
+          const g = (typeof BRACKET_GRAPH !== 'undefined') ? BRACKET_GRAPH[nid] : null;
+          const srcId = s => (s && (s.t === 'win' || s.t === 'lose')) ? s.m : null;
+          const a = g ? fromById[srcId(g.A)] : null;
+          const b = g ? fromById[srcId(g.B)] : null;
           h += `
             <div class="vb-pair">
               <div class="vb-card-slot">
-                ${generateCompactBracketCard(a, 'left')}
+                ${a ? generateCompactBracketCard(a, 'left') : ''}
                 ${b ? generateCompactBracketCard(b, 'left') : ''}
               </div>
               <div class="vb-connect"></div>
               <div class="vb-next">
-                <div class="w-full">${nextMatch ? generateCompactBracketCard(nextMatch, 'right') : `<div class="border-2 border-dashed border-navy-700 rounded text-[10px] text-gray-600 text-center py-3 px-1">À venir</div>`}</div>
+                <div class="w-full">${generateCompactBracketCard(nextMatch, 'right')}</div>
               </div>
             </div>`;
-        }
+        });
         return h;
       };
 
