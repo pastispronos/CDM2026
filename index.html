@@ -125,11 +125,12 @@
   .vb-connect { min-height: 50px; }
 }
   /* ===== Grille saisie pronos éliminatoires : colonne TAB toujours réservée (pas de décalage) ===== */
+/* ===== Grille saisie pronos éliminatoires : colonne TAB toujours réservée (pas de décalage) ===== */
 .pp-knock-grid {
   display: grid;
-  grid-template-columns: minmax(0,1fr) 38px 10px 38px minmax(0,1fr) 104px;
+  grid-template-columns: minmax(0,1fr) 36px 8px 36px minmax(0,1fr) 92px;
   align-items: center;
-  column-gap: 6px;
+  column-gap: 5px;
 }
 @media (min-width: 768px) {
   .pp-knock-grid {
@@ -137,6 +138,8 @@
     column-gap: 10px;
   }
 }
+/* Noms d'équipes : jamais coupés, retour à la ligne autorisé */
+.pp-team-name { line-height: 1.15; word-break: break-word; overflow-wrap: anywhere; }
 </style>
   </head>
 
@@ -3809,23 +3812,23 @@ let ppSession = null;
         // POULES : layout simple + joker (aucun TAB)
         html += `<div class="pp-match-row bg-navy-900/70 border border-navy-700/50 rounded-lg px-2 py-2" data-id="${id}">
           <div class="flex items-center gap-1.5">
-            <span class="flex-1 min-w-0 truncate text-right text-xs text-white">${cleanName(r[3])}</span>
+            <span class="pp-team-name flex-1 min-w-0 text-right text-[11px] md:text-xs text-white">${cleanName(r[3])}</span>
             <input type="number" inputmode="numeric" min="0" max="99" value="${pr.a === '' ? '' : pr.a}" data-side="a" class="pp-score w-9 text-center bg-navy-800 border border-navy-700 rounded text-white text-sm py-1 focus:border-pastis-500 focus:outline-none"/>
             <span class="text-gray-500 text-xs">-</span>
             <input type="number" inputmode="numeric" min="0" max="99" value="${pr.b === '' ? '' : pr.b}" data-side="b" class="pp-score w-9 text-center bg-navy-800 border border-navy-700 rounded text-white text-sm py-1 focus:border-pastis-500 focus:outline-none"/>
-            <span class="flex-1 min-w-0 truncate text-left text-xs text-white">${cleanName(r[4])}</span>
+            <span class="pp-team-name flex-1 min-w-0 text-left text-[11px] md:text-xs text-white">${cleanName(r[4])}</span>
             <button class="pp-joker text-base flex-none" data-phase="${esc(ph)}" title="Joker (x2)">${pr.joker ? '🌟' : '☆'}</button>
           </div>
         </div>`;
       } else {
-        // ÉLIMINATOIRES : grille à colonnes fixes → la colonne TAB est TOUJOURS réservée (alignement stable)
+        // ÉLIMINATOIRES : grille à colonnes fixes → colonne TAB toujours réservée + noms jamais coupés
         html += `<div class="pp-match-row bg-navy-900/70 border border-navy-700/50 rounded-lg px-2 py-2" data-id="${id}">
           <div class="pp-knock-grid">
-            <span class="min-w-0 truncate text-right text-xs text-white">${cleanName(r[3])}</span>
+            <span class="pp-team-name min-w-0 text-right text-[11px] md:text-xs text-white">${cleanName(r[3])}</span>
             <input type="number" inputmode="numeric" min="0" max="99" value="${pr.a === '' ? '' : pr.a}" data-side="a" class="pp-score w-full min-w-0 text-center bg-navy-800 border border-navy-700 rounded text-white text-sm py-1 focus:border-pastis-500 focus:outline-none"/>
             <span class="text-gray-500 text-xs text-center">-</span>
             <input type="number" inputmode="numeric" min="0" max="99" value="${pr.b === '' ? '' : pr.b}" data-side="b" class="pp-score w-full min-w-0 text-center bg-navy-800 border border-navy-700 rounded text-white text-sm py-1 focus:border-pastis-500 focus:outline-none"/>
-            <span class="min-w-0 truncate text-left text-xs text-white">${cleanName(r[4])}</span>
+            <span class="pp-team-name min-w-0 text-left text-[11px] md:text-xs text-white">${cleanName(r[4])}</span>
             <div class="pp-tab-cell">
               <div class="pp-tab-wrap flex flex-col gap-0.5 ${drawShown ? '' : 'hidden'}">
                 <span class="font-black uppercase tracking-wider text-pastis-500 leading-tight text-[8px] md:text-[9px]">
