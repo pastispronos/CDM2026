@@ -124,6 +124,19 @@
   .vb-pair { grid-template-columns: 1fr 18px 1fr; }
   .vb-connect { min-height: 50px; }
 }
+  /* ===== Grille saisie pronos éliminatoires : colonne TAB toujours réservée (pas de décalage) ===== */
+.pp-knock-grid {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 38px 10px 38px minmax(0,1fr) 104px;
+  align-items: center;
+  column-gap: 6px;
+}
+@media (min-width: 768px) {
+  .pp-knock-grid {
+    grid-template-columns: minmax(0,1fr) 44px 14px 44px minmax(0,1fr) 220px;
+    column-gap: 10px;
+  }
+}
 </style>
   </head>
 
@@ -3792,30 +3805,43 @@ let ppSession = null;
       const pr = pronos[id] || { a: '', b: '', joker: false, tab: '' };
       const drawShown = (!isPoules && pr.a !== '' && pr.a === pr.b);
 
-      // Pastille drapeau "qui passe aux TAB" — à DROITE de l'équipe 2
-      const tabOpt = (team, sel) => `
-        <button type="button" class="pp-tab-opt flex items-center justify-center w-7 h-7 rounded-md border transition ${sel ? 'bg-pastis-500 border-pastis-500' : 'bg-navy-800 border-navy-700 hover:border-pastis-500'}" data-team="${esc(team)}" aria-pressed="${sel ? 'true' : 'false'}" title="${esc(cleanName(team))} se qualifie aux tirs au but">
-          <span class="text-sm leading-none">${ppFlag(team)}</span>
-        </button>`;
-
-      const tabWrap = !isPoules ? `
-        <div class="pp-tab-wrap flex-none flex items-center gap-1 pl-1.5 ml-1 border-l border-navy-700 ${drawShown ? '' : 'hidden'}">
-          <span class="text-[8px] font-black uppercase tracking-wider text-pastis-500 leading-none">TAB</span>
-          ${tabOpt(r[3], pr.tab === r[3])}
-          ${tabOpt(r[4], pr.tab === r[4])}
-        </div>` : '';
-
-      html += `<div class="pp-match-row bg-navy-900/70 border border-navy-700/50 rounded-lg px-2 py-2" data-id="${id}">
-        <div class="flex items-center gap-1.5">
-          <span class="flex-1 min-w-0 truncate text-right text-xs text-white">${cleanName(r[3])}</span>
-          <input type="number" inputmode="numeric" min="0" max="99" value="${pr.a === '' ? '' : pr.a}" data-side="a" class="pp-score w-9 text-center bg-navy-800 border border-navy-700 rounded text-white text-sm py-1 focus:border-pastis-500 focus:outline-none"/>
-          <span class="text-gray-500 text-xs">-</span>
-          <input type="number" inputmode="numeric" min="0" max="99" value="${pr.b === '' ? '' : pr.b}" data-side="b" class="pp-score w-9 text-center bg-navy-800 border border-navy-700 rounded text-white text-sm py-1 focus:border-pastis-500 focus:outline-none"/>
-          <span class="flex-1 min-w-0 truncate text-left text-xs text-white">${cleanName(r[4])}</span>
-          ${isPoules ? `<button class="pp-joker text-base flex-none" data-phase="${esc(ph)}" title="Joker (x2)">${pr.joker ? '🌟' : '☆'}</button>` : ''}
-          ${tabWrap}
-        </div>
-      </div>`;
+      if (isPoules) {
+        // POULES : layout simple + joker (aucun TAB)
+        html += `<div class="pp-match-row bg-navy-900/70 border border-navy-700/50 rounded-lg px-2 py-2" data-id="${id}">
+          <div class="flex items-center gap-1.5">
+            <span class="flex-1 min-w-0 truncate text-right text-xs text-white">${cleanName(r[3])}</span>
+            <input type="number" inputmode="numeric" min="0" max="99" value="${pr.a === '' ? '' : pr.a}" data-side="a" class="pp-score w-9 text-center bg-navy-800 border border-navy-700 rounded text-white text-sm py-1 focus:border-pastis-500 focus:outline-none"/>
+            <span class="text-gray-500 text-xs">-</span>
+            <input type="number" inputmode="numeric" min="0" max="99" value="${pr.b === '' ? '' : pr.b}" data-side="b" class="pp-score w-9 text-center bg-navy-800 border border-navy-700 rounded text-white text-sm py-1 focus:border-pastis-500 focus:outline-none"/>
+            <span class="flex-1 min-w-0 truncate text-left text-xs text-white">${cleanName(r[4])}</span>
+            <button class="pp-joker text-base flex-none" data-phase="${esc(ph)}" title="Joker (x2)">${pr.joker ? '🌟' : '☆'}</button>
+          </div>
+        </div>`;
+      } else {
+        // ÉLIMINATOIRES : grille à colonnes fixes → la colonne TAB est TOUJOURS réservée (alignement stable)
+        html += `<div class="pp-match-row bg-navy-900/70 border border-navy-700/50 rounded-lg px-2 py-2" data-id="${id}">
+          <div class="pp-knock-grid">
+            <span class="min-w-0 truncate text-right text-xs text-white">${cleanName(r[3])}</span>
+            <input type="number" inputmode="numeric" min="0" max="99" value="${pr.a === '' ? '' : pr.a}" data-side="a" class="pp-score w-full min-w-0 text-center bg-navy-800 border border-navy-700 rounded text-white text-sm py-1 focus:border-pastis-500 focus:outline-none"/>
+            <span class="text-gray-500 text-xs text-center">-</span>
+            <input type="number" inputmode="numeric" min="0" max="99" value="${pr.b === '' ? '' : pr.b}" data-side="b" class="pp-score w-full min-w-0 text-center bg-navy-800 border border-navy-700 rounded text-white text-sm py-1 focus:border-pastis-500 focus:outline-none"/>
+            <span class="min-w-0 truncate text-left text-xs text-white">${cleanName(r[4])}</span>
+            <div class="pp-tab-cell">
+              <div class="pp-tab-wrap flex flex-col gap-0.5 ${drawShown ? '' : 'hidden'}">
+                <span class="font-black uppercase tracking-wider text-pastis-500 leading-tight text-[8px] md:text-[9px]">
+                  <span class="hidden md:inline">Vainqueur tirs au buts</span>
+                  <span class="md:hidden">Vainqueur TAB</span>
+                </span>
+                <select class="pp-tab w-full bg-navy-800 border border-navy-700 rounded text-white text-[11px] py-1 px-1.5 focus:border-pastis-500 focus:outline-none">
+                  <option value="">— Choisir —</option>
+                  <option value="${esc(r[3])}" ${pr.tab === r[3] ? 'selected' : ''}>${cleanName(r[3])}</option>
+                  <option value="${esc(r[4])}" ${pr.tab === r[4] ? 'selected' : ''}>${cleanName(r[4])}</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      }
     });
 
     html += `</div>
@@ -3823,7 +3849,6 @@ let ppSession = null;
         <p id="pp-save-msg" class="text-xs mt-2 text-center"></p>
       </div>`;
     m.innerHTML = html;
-    if (window.twemoji) { try { twemoji.parse(m); } catch (e) {} }
 
     document.getElementById('pp-logout').onclick = ppLogout;
     document.getElementById('pp-save').onclick = ppSave;
@@ -3840,18 +3865,8 @@ let ppSession = null;
           wrap.classList.remove('hidden');
         } else {
           wrap.classList.add('hidden');
-          wrap.querySelectorAll('.pp-tab-opt').forEach(ppTabOff);
+          const s = wrap.querySelector('.pp-tab'); if (s) s.value = '';
         }
-      };
-    });
-
-    // Sélection du vainqueur aux TAB (clic = toggle, re-clic = désélection)
-    m.querySelectorAll('.pp-tab-opt').forEach(btn => {
-      btn.onclick = () => {
-        const wrap = btn.closest('.pp-tab-wrap');
-        const wasOn = btn.getAttribute('aria-pressed') === 'true';
-        wrap.querySelectorAll('.pp-tab-opt').forEach(ppTabOff);
-        if (!wasOn) ppTabOn(btn);
       };
     });
 
@@ -3898,12 +3913,12 @@ function ppSave() {
       const a = inA.value.trim(), b = inB.value.trim();
       if (a === '' && b === '') return;
       const jk = row.querySelector('.pp-joker');
-      const tabBtn = row.querySelector('.pp-tab-opt[aria-pressed="true"]');
+      const tabSel = row.querySelector('.pp-tab');
       items.push({
         idMatch: Number(row.getAttribute('data-id')),
         pronoA: a, pronoB: b,
         joker: jk ? jk.textContent.trim() === '🌟' : false,
-        tab: tabBtn ? (tabBtn.getAttribute('data-team') || '') : ''
+        tab: tabSel ? tabSel.value : ''
       });
     });
     if (!items.length) { ppSaveMsg('Rien à enregistrer (cases vides).', 'text-yellow-400'); return; }
