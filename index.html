@@ -3825,13 +3825,28 @@ function ppRenderLogin() {
     try { sessionStorage.removeItem('ppSession'); } catch (e) {}
     ppRenderLogin();
   }
-
-// ---------- Grille : uniquement le prochain tour ----------
-  function ppRenderGrid() {
+// 🆕 Match de finale "commencé" (donc figé) : score saisi OU Statut = LIVE.
+  // Même signal que la révélation des pronos → visible et figé au même instant.
+  function ppMatchCommence(r) {
+    const scoreA = (r[5] || '').toString().trim();
+    if (scoreA !== '') return true;
+    const statut = (r[47] || '').toString().toUpperCase();
+    return statut === 'LIVE';
+  }
+function ppRenderGrid() {
     const m = ppMount(); if (!m || !ppSession) return;
     const lock = ppSession.phasesVerrouillees || {};
     const pronos = ppSession.pronos || {};
-    const nextTour = ppToursOrder().find(ph => lock[ph] !== true);
+
+    // 🆕 Choix du prochain tour.
+    // Poules  : ouvert tant que la phase n'est pas verrouillée (historique).
+    // Finales : ouvert tant qu'AU MOINS UN match du tour n'a pas commencé.
+    const ppPhaseOuverte = (ph) => {
+      if ((ph || '').toLowerCase() === 'poules') return lock[ph] !== true;
+      const ms = (appData.calendrier || []).filter(r => (r[8] || '').trim() === ph);
+      return ms.some(r => !ppMatchCommence(r));
+    };
+    const nextTour = ppToursOrder().find(ph => ppPhaseOuverte(ph));
 
     let html = `
       <div class="bg-navy-800 border border-pastis-500 rounded-lg p-4">
@@ -3877,8 +3892,26 @@ function ppRenderLogin() {
             <button class="pp-joker text-base flex-none" data-phase="${esc(ph)}" title="Joker (x2)">${pr.joker ? '🌟' : '☆'}</button>
           </div>
         </div>`;
+      } else if (ppMatchCommence(r)) {
+        // 🆕 ÉLIMINATOIRES — match commencé : FIGÉ (lecture seule)
+        const dispA = pr.a === '' ? '–' : pr.a;
+        const dispB = pr.b === '' ? '–' : pr.b;
+        const tabTxt = (pr.tab && pr.tab !== '') ? `TAB : ${cleanName(pr.tab)}` : '';
+        html += `<div class="pp-match-row bg-navy-900/40 border border-navy-700/40 rounded-lg px-2 py-2 opacity-60" data-id="${id}" data-locked="1" title="Coup d'envoi donné — prono figé">
+          <div class="pp-knock-grid">
+            <span class="pp-team-name min-w-0 text-right text-[10px] md:text-xs text-gray-300">${cleanName(r[3])}</span>
+            <span class="text-center text-white text-sm font-oswald">${dispA}</span>
+            <span class="text-gray-500 text-xs text-center">-</span>
+            <span class="text-center text-white text-sm font-oswald">${dispB}</span>
+            <span class="pp-team-name min-w-0 text-left text-[10px] md:text-xs text-gray-300">${cleanName(r[4])}</span>
+            <div class="pp-tab-cell flex items-center justify-center gap-1">
+              <span class="text-pastis-500 text-xs">🔒</span>
+              ${tabTxt ? `<span class="text-[8px] md:text-[9px] text-pastis-500 font-bold uppercase truncate">${tabTxt}</span>` : ''}
+            </div>
+          </div>
+        </div>`;
       } else {
-        // ÉLIMINATOIRES : grille à colonnes fixes → colonne TAB toujours réservée, noms sur 1 ligne
+        // ÉLIMINATOIRES — match à venir : éditable (grille à colonnes fixes, TAB réservé)
         html += `<div class="pp-match-row bg-navy-900/70 border border-navy-700/50 rounded-lg px-2 py-2" data-id="${id}">
           <div class="pp-knock-grid">
             <span class="pp-team-name min-w-0 text-right text-[10px] md:text-xs text-white">${cleanName(r[3])}</span>
