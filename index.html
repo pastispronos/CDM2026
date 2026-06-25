@@ -609,17 +609,28 @@ function populateFilters() {
   }
 }
 
-// 🆕 Révélation des pronos & tendances d'un match.
-// Poules  : déverrouillage GLOBAL de la phase (1er match commencé).
-// Finales : match PAR match, dès le coup d'envoi (Score A saisi OU Statut LIVE).
-function matchPronosReveles(phase, scoreA, statut) {
-  phase = (phase || "").toString().trim();
+// 🆕 Révélation des pronos & tendances (affichage public).
+// Poules  : déverrouillage GLOBAL de la phase (1er match commencé) — inchangé.
+// Finales : par match, dès l'heure de coup d'envoi (SEULE variable).
+function matchPronosReveles(r) {
+  const phase = (r[8] || "").toString().trim();
   if (phase === "Poules" || phase === "") {
     return phasesStarted[phase] || false;
   }
-  const aScore = (scoreA !== "" && scoreA !== null && scoreA !== undefined);
-  const live   = (statut || "").toString().toUpperCase() === "LIVE";
-  return aScore || live;
+  const ko = koMatchMs(r[1], r[2]);   // r[1]=Date, r[2]=Heure
+  return ko !== null && Date.now() >= ko;
+}
+    // 🆕 Heure de coup d'envoi → instant en ms (heure française, CEST UTC+2 l'été → CDM
+//    juin/juillet). null si date invalide. Alignée sur heureMatch() côté serveur.
+function koMatchMs(dateStr, heureStr) {
+  if (!dateStr) return null;
+  const d = String(dateStr).split('/');            // "JJ/MM/AAAA"
+  if (d.length !== 3) return null;
+  const t = String(heureStr || '').replace('h', ':').split(':'); // "HH:MM" / "HHhMM"
+  const h  = parseInt(t[0], 10) || 0;
+  const mi = parseInt(t[1], 10) || 0;
+  const ms = Date.UTC(parseInt(d[2], 10), parseInt(d[1], 10) - 1, parseInt(d[0], 10), h - 2, mi);
+  return isNaN(ms) ? null : ms;
 }
     
 function initApp(data, isCached = false) {
@@ -1010,7 +1021,7 @@ statsContainer.innerHTML = `
         let idMatch = match[0], date = match[1], eqA = match[3], eqB = match[4], phase = match[8];
         let scoreA = match[5], scoreB = match[6];
         const isPlayed = (scoreA !== "" && scoreB !== "");
-const isPhaseStarted = matchPronosReveles(phase, scoreA, match[47]);        
+const isPhaseStarted = matchPronosReveles(match);        
         let p1 = appData.pronostics.find(p => p[0] === j1 && p[1] === idMatch);
         let p2 = appData.pronostics.find(p => p[0] === j2 && p[1] === idMatch);
 
@@ -1362,7 +1373,7 @@ function getPointsBadge(points) {
       let points = prono[9], textInfo = prono[10], textPerf = prono[11];
       
       let isPlayed = (scoreA !== "" && scoreB !== "");
-      let isPhaseStarted = matchPronosReveles(phase, scoreA, match[47]);
+      let isPhaseStarted = matchPronosReveles(match);
       
       let ptsBadge = "", btnInfo = "", pronoBloc = "", pTabHTML = "";
       const styles = getTeamDisplayStyles(eqA, eqB, scoreA, scoreB, vainqueurTABReel);
@@ -1658,7 +1669,7 @@ if (isLive) {
 
   let statsHTML = '';
 
-  if (stat1 && stat1 !== "" && matchPronosReveles(phase, scoreA, row[47])) {
+  if (stat1 && stat1 !== "" && matchPronosReveles(row)) {
     let bg1 = styles.real1N2 === "1" ? "bg-pastis-500 text-navy-900 border-pastis-500 shadow-[0_0_10px_rgba(247,195,37,0.4)]" : "bg-navy-800 text-white border-navy-700 shadow-sm";
     let lbl1 = styles.real1N2 === "1" ? "text-navy-900 opacity-70" : "text-gray-400";
     let bgN = styles.real1N2 === "N" ? "bg-pastis-500 text-navy-900 border-pastis-500 shadow-[0_0_10px_rgba(247,195,37,0.4)]" : "bg-navy-800 text-white border-navy-700 shadow-sm";
@@ -3400,7 +3411,7 @@ function renderMatchPronos() {
   const scoreA = match[5], scoreB = match[6];
   const phase = match[8];
   const isPlayed = (scoreA !== "" && scoreB !== "");
-  const isPhaseStarted = matchPronosReveles(phase, scoreA, match[47]);
+  const isPhaseStarted = matchPronosReveles(match);
 
   // Pronos valides du match + application des filtres
   let pronosMatch = appData.pronostics.filter(r => r[1] == idMatch && r[5] !== "" && r[6] !== "");
@@ -3536,7 +3547,7 @@ function openMatchDetails(idMatch) {
   const jokerCount = match[17] || "";
   
   const isPlayed = (scoreA !== "" && scoreB !== "");
-  const isPhaseStarted = matchPronosReveles(phase, scoreA, match[47]);
+  const isPhaseStarted = matchPronosReveles(match);
 
   const backBtn = document.querySelector('#view-match > button');
   if (backBtn) {
@@ -3825,28 +3836,12 @@ function ppRenderLogin() {
     try { sessionStorage.removeItem('ppSession'); } catch (e) {}
     ppRenderLogin();
   }
-  
-// 🆕 Heure de coup d'envoi (heure française, CEST UTC+2 l'été → CDM juin/juillet)
-  // → instant en ms, ou null si date invalide. Aligné sur heureMatch() côté serveur.
-  function ppKickoffMs(dateStr, heureStr) {
-    if (!dateStr) return null;
-    const d = String(dateStr).split('/');            // "JJ/MM/AAAA"
-    if (d.length !== 3) return null;
-    const t = String(heureStr || '').replace('h', ':').split(':'); // "HH:MM" ou "HHhMM"
-    const h  = parseInt(t[0], 10) || 0;
-    const mi = parseInt(t[1], 10) || 0;
-    const ms = Date.UTC(parseInt(d[2], 10), parseInt(d[1], 10) - 1, parseInt(d[0], 10), h - 2, mi);
-    return isNaN(ms) ? null : ms;
-  }
 
-  // 🆕 Match de finale figé dès que son coup d'envoi (heure française) est atteint.
-  // Filets de sécurité : score déjà saisi OU Statut = LIVE.
+// 🆕 Match de finale figé dès que son coup d'envoi (heure française) est atteint.
+  //    L'heure est la SEULE variable (plus de score / LIVE).
   function ppMatchCommence(r) {
-    const ko = ppKickoffMs(r[1], r[2]);              // r[1]=Date, r[2]=Heure
-    if (ko !== null && Date.now() >= ko) return true;
-    const scoreA = (r[5] || '').toString().trim();
-    if (scoreA !== '') return true;
-    return (r[47] || '').toString().toUpperCase() === 'LIVE';
+    const ko = koMatchMs(r[1], r[2]);   // r[1]=Date, r[2]=Heure
+    return ko !== null && Date.now() >= ko;
   }
   
 function ppRenderGrid() {
