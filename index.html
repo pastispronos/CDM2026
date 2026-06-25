@@ -609,6 +609,19 @@ function populateFilters() {
   }
 }
 
+// 🆕 Révélation des pronos & tendances d'un match.
+// Poules  : déverrouillage GLOBAL de la phase (1er match commencé).
+// Finales : match PAR match, dès le coup d'envoi (Score A saisi OU Statut LIVE).
+function matchPronosReveles(phase, scoreA, statut) {
+  phase = (phase || "").toString().trim();
+  if (phase === "Poules" || phase === "") {
+    return phasesStarted[phase] || false;
+  }
+  const aScore = (scoreA !== "" && scoreA !== null && scoreA !== undefined);
+  const live   = (statut || "").toString().toUpperCase() === "LIVE";
+  return aScore || live;
+}
+    
 function initApp(data, isCached = false) {
       appData = data;
 
@@ -997,8 +1010,7 @@ statsContainer.innerHTML = `
         let idMatch = match[0], date = match[1], eqA = match[3], eqB = match[4], phase = match[8];
         let scoreA = match[5], scoreB = match[6];
         const isPlayed = (scoreA !== "" && scoreB !== "");
-        const isPhaseStarted = phasesStarted[phase] || false;
-        
+const isPhaseStarted = matchPronosReveles(phase, scoreA, match[47]);        
         let p1 = appData.pronostics.find(p => p[0] === j1 && p[1] === idMatch);
         let p2 = appData.pronostics.find(p => p[0] === j2 && p[1] === idMatch);
 
@@ -1350,7 +1362,7 @@ function getPointsBadge(points) {
       let points = prono[9], textInfo = prono[10], textPerf = prono[11];
       
       let isPlayed = (scoreA !== "" && scoreB !== "");
-      let isPhaseStarted = phasesStarted[phase] || false;
+      let isPhaseStarted = matchPronosReveles(phase, scoreA, match[47]);
       
       let ptsBadge = "", btnInfo = "", pronoBloc = "", pTabHTML = "";
       const styles = getTeamDisplayStyles(eqA, eqB, scoreA, scoreB, vainqueurTABReel);
@@ -1646,7 +1658,7 @@ if (isLive) {
 
   let statsHTML = '';
 
-  if (stat1 && stat1 !== "" && phasesStarted[phase]) {
+  if (stat1 && stat1 !== "" && matchPronosReveles(phase, scoreA, row[47])) {
     let bg1 = styles.real1N2 === "1" ? "bg-pastis-500 text-navy-900 border-pastis-500 shadow-[0_0_10px_rgba(247,195,37,0.4)]" : "bg-navy-800 text-white border-navy-700 shadow-sm";
     let lbl1 = styles.real1N2 === "1" ? "text-navy-900 opacity-70" : "text-gray-400";
     let bgN = styles.real1N2 === "N" ? "bg-pastis-500 text-navy-900 border-pastis-500 shadow-[0_0_10px_rgba(247,195,37,0.4)]" : "bg-navy-800 text-white border-navy-700 shadow-sm";
@@ -3388,7 +3400,7 @@ function renderMatchPronos() {
   const scoreA = match[5], scoreB = match[6];
   const phase = match[8];
   const isPlayed = (scoreA !== "" && scoreB !== "");
-  const isPhaseStarted = phasesStarted[phase] || false;
+  const isPhaseStarted = matchPronosReveles(phase, scoreA, match[47]);
 
   // Pronos valides du match + application des filtres
   let pronosMatch = appData.pronostics.filter(r => r[1] == idMatch && r[5] !== "" && r[6] !== "");
@@ -3409,8 +3421,16 @@ function renderMatchPronos() {
   const pronoContainer = document.getElementById('pronostics-list');
   let pronoHTML = '';
 
-  if (pronosMatch.length === 0) {
-    pronoHTML = `<li class="p-4 text-center text-gray-500 italic">${(matchFilter.tendance || matchFilter.joueur || matchFilter.joker) ? 'Aucun prono ne correspond à ce filtre.' : 'Aucun pronostic enregistré.'}</li>`;
+if (pronosMatch.length === 0) {
+    let msgVide;
+    if (matchFilter.tendance || matchFilter.joueur || matchFilter.joker) {
+      msgVide = 'Aucun prono ne correspond à ce filtre.';
+    } else if (!isPhaseStarted && !isPlayed) {
+      msgVide = '🔒 Pronostics masqués jusqu’au coup d’envoi du match.';
+    } else {
+      msgVide = 'Aucun pronostic enregistré.';
+    }
+    pronoHTML = `<li class="p-4 text-center text-gray-500 italic">${msgVide}</li>`;
   } else {
     pronosMatch.forEach(p => {
       const joueur = p[0], pronoA = p[5], pronoB = p[6], pTAB = p[7], isJoker = p[8] && String(p[8]).toLowerCase() === 'oui', points = p[9], textInfo = p[10], textPerf = p[11];
@@ -3516,7 +3536,7 @@ function openMatchDetails(idMatch) {
   const jokerCount = match[17] || "";
   
   const isPlayed = (scoreA !== "" && scoreB !== "");
-  const isPhaseStarted = phasesStarted[phase] || false;
+  const isPhaseStarted = matchPronosReveles(phase, scoreA, match[47]);
 
   const backBtn = document.querySelector('#view-match > button');
   if (backBtn) {
