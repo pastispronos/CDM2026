@@ -609,15 +609,16 @@ function populateFilters() {
   }
 }
 
-// 🆕 Révélation des pronos & tendances (affichage public).
-// Poules  : déverrouillage GLOBAL de la phase (1er match commencé) — inchangé.
-// Finales : par match, dès l'heure de coup d'envoi (SEULE variable).
 function matchPronosReveles(r) {
-  const phase = (r[8] || "").toString().trim();
-  if (phase === "Poules" || phase === "") {
-    return phasesStarted[phase] || false;
+  const id = (r[0] || "").toString().trim();
+  // Source de vérité : carte serveur (tour entièrement saisi OU coup d'envoi passé).
+  if (appData.pronosReveles && Object.prototype.hasOwnProperty.call(appData.pronosReveles, id)) {
+    return appData.pronosReveles[id] === true;
   }
-  const ko = koMatchMs(r[1], r[2]);   // r[1]=Date, r[2]=Heure
+  // Repli (cache ancien sans la carte)
+  const phase = (r[8] || "").toString().trim();
+  if (phase === "Poules" || phase === "") return phasesStarted[phase] || false;
+  const ko = koMatchMs(r[1], r[2]);
   return ko !== null && Date.now() >= ko;
 }
     // 🆕 Heure de coup d'envoi → instant en ms (heure française, CEST UTC+2 l'été → CDM
@@ -3837,10 +3838,12 @@ function ppRenderLogin() {
     ppRenderLogin();
   }
 
-// 🆕 Match de finale figé dès que son coup d'envoi (heure française) est atteint.
-  //    L'heure est la SEULE variable (plus de score / LIVE).
+// 🆕 Match de finale figé si : coup d'envoi (heure française) atteint
+  //    OU tour entièrement saisi par tous (carte serveur pronosReveles).
   function ppMatchCommence(r) {
-    const ko = koMatchMs(r[1], r[2]);   // r[1]=Date, r[2]=Heure
+    const id = (r[0] || '').toString().trim();
+    if (appData.pronosReveles && appData.pronosReveles[id] === true) return true;
+    const ko = koMatchMs(r[1], r[2]);   // repli : heure de coup d'envoi
     return ko !== null && Date.now() >= ko;
   }
   
