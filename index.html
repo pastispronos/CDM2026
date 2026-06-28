@@ -3555,8 +3555,21 @@ function openMatchDetails(idMatch) {
     backBtn.className = "flex items-center justify-center text-pastis-500 hover:text-pastis-600 mb-8 font-medium bg-navy-800/80 backdrop-blur px-6 py-2 rounded-full w-fit mx-auto transition border border-navy-700 shadow-lg relative z-20";
   }
 
-  let tabDetailHTML = vainqueurTAB !== "" ? `<p class="text-gray-400 font-bold text-sm mt-3 uppercase tracking-widest drop-shadow-md">Victoire ${vainqueurTAB} (TAB)</p>` : '';
   const styles = getTeamDisplayStyles(eqA, eqB, scoreA, scoreB, vainqueurTAB);
+
+  // 🏴 Vainqueur aux T.A.B. : affiché du côté de l'équipe gagnante (seizièmes →),
+  //    plus aucune mention centrée sous le score.
+  let tabDetailHTML = ''; // (volontairement vide : on n'affiche plus rien au centre)
+  let tabWinA = '', tabWinB = '';
+  if (vainqueurTAB !== "" && (styles.winA || styles.winB)) {
+    const tabLineCls = "flex items-center text-[9px] md:text-[12px] text-gray-300 font-bold uppercase tracking-widest mt-1 drop-shadow-md";
+    const tabContent = (flag, name) => `<span class="emoji-flag text-sm md:text-base mr-1.5">${flag}</span><span>${name} <span class="text-gray-500">(TAB)</span></span>`;
+    if (styles.winA) {
+      tabWinA = `<div class="${tabLineCls} justify-end mr-12 md:mr-[85px]">${tabContent(getFlagOnly(eqA), getCleanName(eqA))}</div>`;
+    } else {
+      tabWinB = `<div class="${tabLineCls} justify-start ml-12 md:ml-[85px]">${tabContent(getFlagOnly(eqB), getCleanName(eqB))}</div>`;
+    }
+  }
   
   let tvHTML = tvChannel !== "" ? getTvLogoHTML(tvChannel) : '';
 
@@ -3669,6 +3682,7 @@ let statsDetailHTML = '';
             ${logoHtmlA}
           </div>
           ${fifaA !== "" ? `<span class="text-[9px] md:text-[12px] text-pastis-500 opacity-90 font-oswald tracking-widest uppercase mt-2 mr-12 md:mr-[85px]">FIFA #${fifaA}</span>` : ""}
+          ${tabWinA}
         </div>
         
         <div class="flex flex-col items-center justify-center min-w-[80px] md:min-w-[120px] flex-shrink-0 z-10 px-2 drop-shadow-2xl">
@@ -3697,6 +3711,7 @@ ${(() => {
             ${styles.iconB}
           </div>
           ${fifaB !== "" ? `<span class="text-[9px] md:text-[12px] text-pastis-500 opacity-90 font-oswald tracking-widest uppercase mt-2 ml-12 md:ml-[85px]">FIFA #${fifaB}</span>` : ''}
+          ${tabWinB}
         </div>
         
       </div>
