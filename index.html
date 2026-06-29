@@ -1370,10 +1370,10 @@ function getPointsBadge(points) {
 function buildTabChip(tabTeam, eqA, eqB, variant, size) {
   if (!tabTeam || String(tabTeam).trim() === "") return "";
   const nameTab = getCleanName(tabTeam);
-  const isB  = (nameTab === getCleanName(eqB)); // équipe B => drapeau à droite
-  const flag = <span class="emoji-flag text-[1.25em] leading-none">${getFlagOnly(tabTeam)}</span>;
-  const name = <span class="truncate">${nameTab}</span>;
-  const tab  = <span class="opacity-60">(TAB)</span>;
+  const isB  = (nameTab === getCleanName(eqB));
+  const flag = `<span class="emoji-flag text-[1.25em] leading-none">${getFlagOnly(tabTeam)}</span>`;
+  const name = `<span class="truncate">${nameTab}</span>`;
+  const tab  = `<span class="opacity-60">(TAB)</span>`;
 
   let cls;
   if (variant === 'reel')     cls = 'bg-pastis-500/15 text-pastis-400 border-pastis-500/40';
@@ -1384,8 +1384,8 @@ function buildTabChip(tabTeam, eqA, eqB, variant, size) {
     ? 'text-[10px] md:text-xs gap-1.5 px-2.5 py-1'
     : 'text-[8px] md:text-[10px] gap-1 px-1.5 py-0.5';
 
-  const inner = isB ? ${tab}${name}${flag} : ${flag}${name}${tab};
-  return <div class="inline-flex items-center ${sz} ${cls} border font-bold uppercase rounded-full mt-1 max-w-full leading-none tracking-wide">${inner}</div>;
+  const inner = isB ? `${tab}${name}${flag}` : `${flag}${name}${tab}`;
+  return `<div class="inline-flex items-center ${sz} ${cls} border font-bold uppercase rounded-full mt-1 max-w-full leading-none tracking-wide">${inner}</div>`;
 }
     
     function generatePlayerHistoryItemHTML(match, prono) {
@@ -1684,7 +1684,8 @@ if (isLive) {
     scoreBlock = `<div class="bg-pastis-500 px-2 md:px-4 py-1 rounded text-xl font-oswald text-navy-900 font-bold shadow-inner">${scoreA} - ${scoreB}</div>`;
   }
 
-  let tabHTML = (vainqueurTAB && vainqueurTAB !== "") ? <div class="flex justify-center">${buildTabChip(vainqueurTAB, eqA, eqB, 'reel')}</div>
+  let tabHTML = (vainqueurTAB && vainqueurTAB !== "")
+    ? `<div class="flex justify-center">${buildTabChip(vainqueurTAB, eqA, eqB, 'reel')}</div>`
     : '';
 
   const styles = getTeamDisplayStyles(eqA, eqB, scoreA, scoreB, vainqueurTAB);
