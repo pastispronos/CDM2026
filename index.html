@@ -1397,17 +1397,8 @@ function getPointsBadge(points) {
         let dispA = pA !== "" ? pA : "-";
         let dispB = pB !== "" ? pB : "-";
         pronoBloc = `<span class="font-black ${colorProno} font-oswald text-base md:text-2xl leading-none">${dispA}-${dispB}</span>`;
-        if (pTAB && pTAB.trim() !== "") {
-  const tabIsA  = (pTAB === eqA) || (getCleanName(pTAB) === getCleanName(eqA));
-  const tabTeam = tabIsA ? eqA : eqB;
-  const tabFlag = `<span class="emoji-flag text-sm md:text-base">${getFlagOnly(tabTeam)}</span>`;
-  const tabTxt  = `<span>${getCleanName(tabTeam)} <span class="opacity-60">(TAB)</span></span>`;
-  pTabHTML = tabIsA
-    ? `<div class="flex items-center justify-start gap-1 mt-1 w-full text-pastis-500 text-[8px] md:text-[10px] font-bold uppercase tracking-wide leading-tight">${tabFlag}${tabTxt}</div>`
-    : `<div class="flex items-center justify-end gap-1 mt-1 w-full text-pastis-500 text-[8px] md:text-[10px] font-bold uppercase tracking-wide leading-tight text-right">${tabTxt}${tabFlag}</div>`;
-} else {
-  pTabHTML = '';
-}
+        pTabHTML = (pTAB && pTAB.trim() !== "") ? `<div class="text-[8px] md:text-[9px] text-pastis-500 font-bold uppercase mt-0.5">TAB: ${pTAB}</div>` : '';
+      }
 
       let perfBadge = getPerformanceBadge(textPerf);
 
@@ -1668,12 +1659,7 @@ if (isLive) {
     scoreBlock = `<div class="bg-pastis-500 px-2 md:px-4 py-1 rounded text-xl font-oswald text-navy-900 font-bold shadow-inner">${scoreA} - ${scoreB}</div>`;
   }
 
-  let tabHTML = '';
-if (vainqueurTAB !== "") {
-  const tabIsA  = (vainqueurTAB === eqA) || (getCleanName(vainqueurTAB) === getCleanName(eqA));
-  const tabTeam = tabIsA ? eqA : eqB;
-  tabHTML = `<div class="flex items-center justify-center gap-1 mt-1 text-pastis-500 text-[8px] md:text-[10px] font-bold uppercase tracking-wide leading-tight text-center"><span class="emoji-flag text-sm">${getFlagOnly(tabTeam)}</span><span>${getCleanName(tabTeam)} <span class="opacity-60">(TAB)</span></span></div>`;
-}
+  let tabHTML = vainqueurTAB !== "" ? `<div class="text-center text-[10px] text-gray-400 font-bold mt-1 uppercase">TAB : ${vainqueurTAB}</div>` : '';
   const styles = getTeamDisplayStyles(eqA, eqB, scoreA, scoreB, vainqueurTAB);
 
   let fifaA = getFifaRank(eqA); let fifaB = getFifaRank(eqB);
