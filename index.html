@@ -1363,6 +1363,31 @@ function getPointsBadge(points) {
       return { winA, winB, real1N2, clsEqA, clsEqB, flagOpacityA, flagOpacityB, iconA, iconB };
     }
 
+    /* ===== Puce TAB (vainqueur aux tirs au but) =====
+   Drapeau côté équipe A (gauche) ou équipe B (droite), avec libellé (TAB).
+   variant : 'reel' (jaune Pastis) | 'bon' (vert = prono correct) | 'neutre' (gris)
+   size    : 'sm' (défaut, listes) | 'md' (en-tête fiche match) */
+function buildTabChip(tabTeam, eqA, eqB, variant, size) {
+  if (!tabTeam || String(tabTeam).trim() === "") return "";
+  const nameTab = getCleanName(tabTeam);
+  const isB  = (nameTab === getCleanName(eqB)); // équipe B => drapeau à droite
+  const flag = <span class="emoji-flag text-[1.25em] leading-none">${getFlagOnly(tabTeam)}</span>;
+  const name = <span class="truncate">${nameTab}</span>;
+  const tab  = <span class="opacity-60">(TAB)</span>;
+
+  let cls;
+  if (variant === 'reel')     cls = 'bg-pastis-500/15 text-pastis-400 border-pastis-500/40';
+  else if (variant === 'bon') cls = 'bg-green-500/15 text-green-400 border-green-500/40';
+  else                        cls = 'bg-navy-900/70 text-gray-300 border-navy-600';
+
+  const sz = (size === 'md')
+    ? 'text-[10px] md:text-xs gap-1.5 px-2.5 py-1'
+    : 'text-[8px] md:text-[10px] gap-1 px-1.5 py-0.5';
+
+  const inner = isB ? ${tab}${name}${flag} : ${flag}${name}${tab};
+  return <div class="inline-flex items-center ${sz} ${cls} border font-bold uppercase rounded-full mt-1 max-w-full leading-none tracking-wide">${inner}</div>;
+}
+    
     function generatePlayerHistoryItemHTML(match, prono) {
       let idMatch = match[0], date = match[1], phase = match[8], eqA = match[3], eqB = match[4];
       let scoreA = match[5], scoreB = match[6], vainqueurTABReel = match[7];
@@ -1659,7 +1684,9 @@ if (isLive) {
     scoreBlock = `<div class="bg-pastis-500 px-2 md:px-4 py-1 rounded text-xl font-oswald text-navy-900 font-bold shadow-inner">${scoreA} - ${scoreB}</div>`;
   }
 
-  let tabHTML = vainqueurTAB !== "" ? `<div class="text-center text-[10px] text-gray-400 font-bold mt-1 uppercase">TAB : ${vainqueurTAB}</div>` : '';
+  let tabHTML = (vainqueurTAB && vainqueurTAB !== "") ? <div class="flex justify-center">${buildTabChip(vainqueurTAB, eqA, eqB, 'reel')}</div>
+    : '';
+
   const styles = getTeamDisplayStyles(eqA, eqB, scoreA, scoreB, vainqueurTAB);
 
   let fifaA = getFifaRank(eqA); let fifaB = getFifaRank(eqB);
@@ -3408,7 +3435,7 @@ function renderMatchPronos() {
   const match = appData.calendrier.find(r => r[0] == idMatch);
   if (!match) return;
 
-  const eqA = match[3], eqB = match[4];
+  const eqA = match[3], eqB = match[4], vainqueurTAB = match[7];4b.
   const scoreA = match[5], scoreB = match[6];
   const phase = match[8];
   const isPlayed = (scoreA !== "" && scoreB !== "");
@@ -3466,7 +3493,7 @@ if (pronosMatch.length === 0) {
         let colorProno = isJoker ? 'text-pastis-500' : 'text-white';
         pronoBloc = `<span class="font-black font-oswald tracking-widest text-base md:text-2xl ${colorProno}">${pronoA}-${pronoB}</span>`;
 
-        pTabHTML = (pTAB && pTAB.trim() !== "") ? `<div class="text-[9px] text-pastis-500 font-bold uppercase mt-0.5">TAB: ${pTAB}</div>` : '';
+        pTabHTML = (pTAB && pTAB.trim() !== "") ? buildTabChip(pTAB, eqA, eqB, (isPlayed && getCleanName(pTAB) === getCleanName(vainqueurTAB)) ? 'bon' : 'neutre') : '';
 
         const pA = parseInt(pronoA) || 0;
         const pB = parseInt(pronoB) || 0;
@@ -3555,7 +3582,8 @@ function openMatchDetails(idMatch) {
     backBtn.className = "flex items-center justify-center text-pastis-500 hover:text-pastis-600 mb-8 font-medium bg-navy-800/80 backdrop-blur px-6 py-2 rounded-full w-fit mx-auto transition border border-navy-700 shadow-lg relative z-20";
   }
 
-let tabDetailHTML = vainqueurTAB !== "" ? `<p class="text-gray-400 font-bold text-sm mt-3 uppercase tracking-widest drop-shadow-md">Victoire ${vainqueurTAB} (TAB)</p>` : '';
+ let tabDetailHTML = (vainqueurTAB && vainqueurTAB !== "")
+    ? <div class="flex justify-center mt-3">${buildTabChip(vainqueurTAB, eqA, eqB, 'reel', 'md')}</div> : '';
   const styles = getTeamDisplayStyles(eqA, eqB, scoreA, scoreB, vainqueurTAB);
   
   let tvHTML = tvChannel !== "" ? getTvLogoHTML(tvChannel) : '';
