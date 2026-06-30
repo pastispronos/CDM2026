@@ -3398,6 +3398,11 @@ function pronoTendance(p) {
   return 'N';
 }
 
+function toggleTendanceFilter(t) {
+  matchFilter.tendance = (matchFilter.tendance === t) ? null : t; // re-clic = on enlève
+  renderMatchPronos();
+}
+
 function toggleTabFilter(team) {
   matchFilter.tabPick = (matchFilter.tabPick === team) ? null : team; // re-clic = on enlève
   renderMatchPronos();
