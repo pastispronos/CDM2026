@@ -398,8 +398,8 @@
   <script>
     const API_URL = 'https://script.google.com/macros/s/AKfycbwGOIbrYyAU_jkaKiYSQl8O_BEz_EgbN1EKC5G9wMNKJf-4TZIV7X8YeRPq-OPJXRAu/exec?api=1';
     let appData = { classement: [], calendrier: [], pronostics: [], equipes: [], chaines: [], reglement: [], joueursMasques: [] };
-    let matchFilter = { idMatch: null, tendance: null, joueur: '', joker: false };
-
+let matchFilter = { idMatch: null, tendance: null, joueur: '', joker: false, tabPick: null };
+    
     // 🔒 Renvoie true si le joueur est marqué "Masqué" (colonne T de la feuille Joueurs)
     function estJoueurMasque(nom) {
       if (!nom || !appData.joueursMasques) return false;
@@ -1386,7 +1386,7 @@ function buildTabChip(tabTeam, eqA, eqB, variant, size) {
   const inner = isB ? `${tab}${name}${flag}` : `${flag}${name}${tab}`;
   return `<div class="inline-flex items-center ${sz} ${cls} border font-bold uppercase rounded-full mt-1 max-w-full leading-none tracking-wide">${inner}</div>`;
 }
-function buildTabVotesHTML(eqA, eqB, nA, nB, tabWinReal) {
+function buildTabVotesHTML(eqA, eqB, nA, nB, tabWinReal, interactive) {
   const total = (nA || 0) + (nB || 0);
   if (total <= 0) return "";
 
@@ -1394,17 +1394,24 @@ function buildTabVotesHTML(eqA, eqB, nA, nB, tabWinReal) {
 
   const cell = (team, n, side) => {
     const isWin = realWin !== "" && getCleanName(team) === getCleanName(realWin);
-    // mêmes états que refreshTendanceCells() : vert = résultat réel, sinon neutre
     const state = isWin
       ? "bg-green-900/40 text-white border-green-600 shadow-[0_0_10px_rgba(34,197,94,0.25)]"
       : "bg-navy-800 text-white border-navy-700 shadow-sm";
     const lblColor = isWin ? "text-green-300" : "text-gray-300";
 
     const flag = `<span class="emoji-flag text-base md:text-lg leading-none flex-shrink-0">${getFlagOnly(team)}</span>`;
-    const name = `<span class="text-[9px] md:text-[11px] font-bold uppercase truncate mx-1 md:mx-1.5 ${lblColor}">${getCleanName(team)}</span>`;
     const num  = `<span class="font-black text-sm md:text-base flex-shrink-0">${n || 0}</span>`;
-    const inner = side === 'B' ? `${num}${name}${flag}` : `${flag}${name}${num}`;
 
+    if (interactive) {
+      // Fiche match : taille FIXE + cliquable. État repeint par refreshTabCells().
+      const name = `<span class="tab-label flex-1 truncate text-center text-[9px] md:text-[11px] font-bold uppercase ${lblColor}">${getCleanName(team)}</span>`;
+      const inner = side === 'B' ? `${num}${name}${flag}` : `${flag}${name}${num}`;
+      return `<div id="tab-cell-${side}" data-team="${getCleanName(team)}" data-win="${isWin ? '1' : '0'}" onclick="toggleTabFilter(this.dataset.team)" title="Filtrer : TAB pour ${getCleanName(team)}" class="tab-cell flex items-center justify-center gap-1.5 px-2 py-1 rounded border w-[140px] md:w-[160px] overflow-hidden cursor-pointer hover:brightness-110 active:scale-95 transition relative z-20 ${state}">${inner}</div>`;
+    }
+
+    // Carte : version statique (auto-largeur)
+    const name = `<span class="text-[9px] md:text-[11px] font-bold uppercase truncate mx-1 md:mx-1.5 ${lblColor}">${getCleanName(team)}</span>`;
+    const inner = side === 'B' ? `${num}${name}${flag}` : `${flag}${name}${num}`;
     return `<div class="flex items-center justify-center px-2 py-0.5 rounded border ${state} transition overflow-hidden max-w-[150px]">${inner}</div>`;
   };
 
@@ -3391,9 +3398,34 @@ function pronoTendance(p) {
   return 'N';
 }
 
-function toggleTendanceFilter(t) {
-  matchFilter.tendance = (matchFilter.tendance === t) ? null : t; // re-clic = on enlève
+function toggleTabFilter(team) {
+  matchFilter.tabPick = (matchFilter.tabPick === team) ? null : team; // re-clic = on enlève
   renderMatchPronos();
+}
+
+function refreshTabCells() {
+  const BASE = "tab-cell flex items-center justify-center gap-1.5 px-2 py-1 rounded border w-[140px] md:w-[160px] overflow-hidden cursor-pointer hover:brightness-110 active:scale-95 transition relative z-20";
+  ['A', 'B'].forEach(side => {
+    const el = document.getElementById('tab-cell-' + side);
+    if (!el) return;
+    const team = el.dataset.team || '';
+    const isActive = matchFilter.tabPick && getCleanName(matchFilter.tabPick) === getCleanName(team);
+    const isWin = el.dataset.win === '1';
+    let state, lblColor;
+    if (isActive) {                 // 🟡 OR — filtre sélectionné
+      state = "bg-pastis-500 text-navy-900 border-pastis-500";
+      lblColor = "text-navy-900/70";
+    } else if (isWin) {             // 🟢 VERT — vainqueur TAB réel
+      state = "bg-green-900/40 text-white border-green-600 shadow-[0_0_10px_rgba(34,197,94,0.25)]";
+      lblColor = "text-green-300";
+    } else {                        // ⬛ Neutre
+      state = "bg-navy-800 text-white border-navy-700 shadow-sm";
+      lblColor = "text-gray-300";
+    }
+    el.className = BASE + " " + state;
+    const lbl = el.querySelector('.tab-label');
+    if (lbl) lbl.className = "tab-label flex-1 truncate text-center text-[9px] md:text-[11px] font-bold uppercase " + lblColor;
+  });
 }
 
 function toggleJokerFilter() {
@@ -3411,14 +3443,16 @@ function resetMatchFilters() {
   matchFilter.tendance = null;
   matchFilter.joueur = '';
   matchFilter.joker = false
+  matchFilter.tabPick = null;
   const sel = document.getElementById('select-prono-joueur');
   if (sel) sel.value = '';
   renderMatchPronos();
 }
 
 function updatePronoFilterUI(visibleCount) {
-  refreshTendanceCells(); // peint les 3 cellules selon filtre actif (or) / résultat réel (vert)
-
+refreshTendanceCells(); // peint les 3 cellules selon filtre actif (or) / résultat réel (vert)
+  refreshTabCells();      // idem pour les 2 cellules TABS
+  
   // Surlignage du filtre "Joker(s) sur ce match"
   const jokerBox = document.getElementById('joker-filter-box');
   if (jokerBox) {
@@ -3429,7 +3463,7 @@ function updatePronoFilterUI(visibleCount) {
 
   const badge = document.getElementById('prono-filter-count');
   if (!badge) return;
-  if (matchFilter.tendance || matchFilter.joueur || matchFilter.joker) {
+  if (matchFilter.tendance || matchFilter.joueur || matchFilter.joker || matchFilter.tabPick) {
     badge.textContent = visibleCount + ' affiché' + (visibleCount > 1 ? 's' : '') + ' ✕';
     badge.classList.remove('hidden');
   } else {
@@ -3482,6 +3516,7 @@ function renderMatchPronos() {
   if (matchFilter.joueur)   pronosMatch = pronosMatch.filter(p => p[0] === matchFilter.joueur);
   if (matchFilter.tendance) pronosMatch = pronosMatch.filter(p => pronoTendance(p) === matchFilter.tendance);
   if (matchFilter.joker) pronosMatch = pronosMatch.filter(p => p[8] && String(p[8]).toLowerCase()==='oui');
+  if (matchFilter.tabPick) pronosMatch = pronosMatch.filter(p => p[7] && getCleanName(p[7]) === getCleanName(matchFilter.tabPick));
 
 // Tri : points marqués sur ce match d'abord, puis rang réel au classement général (gère les ex-æquo "-")
   pronosMatch.sort((a, b) => {
@@ -3498,7 +3533,7 @@ function renderMatchPronos() {
 
 if (pronosMatch.length === 0) {
     let msgVide;
-    if (matchFilter.tendance || matchFilter.joueur || matchFilter.joker) {
+    if (matchFilter.tendance || matchFilter.joueur || matchFilter.joker || matchFilter.tabPick) {
       msgVide = 'Aucun prono ne correspond à ce filtre.';
     } else if (!isPhaseStarted && !isPlayed) {
       msgVide = '🔒 Pronostics masqués jusqu’au coup d’envoi du match.';
@@ -3597,7 +3632,7 @@ function openMatchDetails(idMatch) {
   if(!match) return;
   lastOpenedMatchId = idMatch; // NOUVEAU : pour le rafraîchissement live de la fiche
   if (matchFilter.idMatch !== idMatch) {
-    matchFilter = { idMatch: idMatch, tendance: null, joueur: '', joker: false }; // nouveau match → on réinitialise
+    matchFilter = { idMatch: idMatch, tendance: null, joueur: '', joker: false, tabPick: null }; // nouveau match → on réinitialise
   } else {
     matchFilter.idMatch = idMatch; // même match (refresh live) → on garde les filtres
   }
@@ -3617,10 +3652,9 @@ function openMatchDetails(idMatch) {
   const isPlayed = (scoreA !== "" && scoreB !== "");
   const isPhaseStarted = matchPronosReveles(match);
 
-  const tabVotesDetailHTML = (isPhaseStarted && String(phase).trim() !== "Poules")
-    ? buildTabVotesHTML(eqA, eqB, tabVoteA, tabVoteB, vainqueurTAB)
+const tabVotesDetailHTML = (isPhaseStarted && String(phase).trim() !== "Poules")
+    ? buildTabVotesHTML(eqA, eqB, tabVoteA, tabVoteB, vainqueurTAB, true)
     : "";
-
   const backBtn = document.querySelector('#view-match > button');
   if (backBtn) {
     backBtn.className = "flex items-center justify-center text-pastis-500 hover:text-pastis-600 mb-8 font-medium bg-navy-800/80 backdrop-blur px-6 py-2 rounded-full w-fit mx-auto transition border border-navy-700 shadow-lg relative z-20";
