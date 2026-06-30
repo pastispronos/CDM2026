@@ -1386,6 +1386,31 @@ function buildTabChip(tabTeam, eqA, eqB, variant, size) {
   const inner = isB ? `${tab}${name}${flag}` : `${flag}${name}${tab}`;
   return `<div class="inline-flex items-center ${sz} ${cls} border font-bold uppercase rounded-full mt-1 max-w-full leading-none tracking-wide">${inner}</div>`;
 }
+    /* ===== Détail des pronos "Vainqueur aux T.A.B." (phases à élimination) =====
+   Deux pilules : drapeau + nom + compteur, miroir (A à gauche / B à droite).
+   Réutilise getFlagOnly() + getCleanName(). Rend "" si aucun vote. */
+function buildTabVotesHTML(eqA, eqB, nA, nB) {
+  const total = (nA || 0) + (nB || 0);
+  if (total <= 0) return "";
+
+  const pill = (team, n, side) => {
+    const flag = `<span class="emoji-flag text-[1.15em] leading-none">${getFlagOnly(team)}</span>`;
+    const name = `<span class="truncate max-w-[64px] sm:max-w-[90px] md:max-w-[130px]">${getCleanName(team)}</span>`;
+    const num  = `<span class="bg-pastis-500 text-navy-900 text-[10px] md:text-xs font-black px-1.5 py-0.5 rounded leading-none flex-shrink-0">${n || 0}</span>`;
+    const inner = side === 'B' ? `${num}${name}${flag}` : `${flag}${name}${num}`;
+    return `<div class="inline-flex items-center gap-1 md:gap-1.5 px-2 py-1 bg-navy-900/70 border border-navy-600 rounded-full text-[9px] md:text-[11px] text-gray-200 font-bold uppercase tracking-wide leading-none max-w-full">${inner}</div>`;
+  };
+
+  return `
+    <div class="flex flex-col items-center mt-2 w-full">
+      <span class="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold mb-1.5 text-center">Vainqueur aux T.A.B.</span>
+      <div class="flex items-center justify-center gap-2 md:gap-3 w-full px-1 flex-wrap">
+        ${pill(eqA, nA, 'A')}
+        <span class="text-gray-600 text-[10px] md:text-xs font-black">VS</span>
+        ${pill(eqB, nB, 'B')}
+      </div>
+    </div>`;
+}
     function generatePlayerHistoryItemHTML(match, prono) {
       let idMatch = match[0], date = match[1], phase = match[8], eqA = match[3], eqB = match[4];
       let scoreA = match[5], scoreB = match[6], vainqueurTABReel = match[7];
@@ -1657,6 +1682,8 @@ function generateMatchCardHTML(row, logicalTodayStr) {
   const stat1 = row[13], statN = row[14], stat2 = row[15];
   const bonus = (row[16] || "").replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
   const jokerCount = row[17] || "";
+  const tabVoteA = parseInt(row[18]) || 0;   // S : nb pronos TAB → Équipe A
+  const tabVoteB = parseInt(row[20]) || 0;   // U : nb pronos TAB → Équipe B
 
   const isPlayed = (scoreA !== "" && scoreB !== "");
   // --- détection LIVE (colonne AV = index 47, minute AW = index 48) ---
@@ -1715,6 +1742,10 @@ let jokerHTML = "";
       `;
     }
 
+    const tabVotesHTML = (String(phase).trim() !== "Poules")
+      ? buildTabVotesHTML(eqA, eqB, tabVoteA, tabVoteB)
+      : "";
+
     statsHTML = `
       <div class="flex flex-col items-center mt-2 w-full relative z-10 border-t border-navy-700/50 pt-2 pb-1">
         <div class="relative flex justify-center w-full px-1">
@@ -1737,6 +1768,7 @@ let jokerHTML = "";
           ${jokerHTML}
 
         </div>
+        ${tabVotesHTML}
         ${bonus !== "" ? `<div class="text-[10px] md:text-xs font-bold text-pastis-500 uppercase tracking-wide text-center mt-2">${bonus}</div>` : ''}
       </div>
     `;
