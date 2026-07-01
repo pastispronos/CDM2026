@@ -1448,22 +1448,18 @@ function buildTabVotesHTML(eqA, eqB, nA, nB, tabWinReal, interactive) {
     const state = isWin
       ? "bg-green-900/40 text-white border-green-600 shadow-[0_0_10px_rgba(34,197,94,0.25)]"
       : "bg-navy-800 text-white border-navy-700 shadow-sm";
-    const lblColor = isWin ? "text-green-300" : "text-gray-300";
 
-    const flag = `<span class="emoji-flag text-base md:text-lg leading-none flex-shrink-0">${getFlagOnly(team)}</span>`;
+    const flag = `<span class="emoji-flag text-lg md:text-xl leading-none flex-shrink-0">${getFlagOnly(team)}</span>`;
     const num  = `<span class="font-black text-sm md:text-base flex-shrink-0">${n || 0}</span>`;
+    const inner = side === 'B' ? `${num}${flag}` : `${flag}${num}`;
 
     if (interactive) {
       // Fiche match : taille FIXE + cliquable. État repeint par refreshTabCells().
-      const name = `<span class="tab-label flex-1 truncate text-center text-[9px] md:text-[11px] font-bold uppercase ${lblColor}">${getCleanName(team)}</span>`;
-      const inner = side === 'B' ? `${num}${name}${flag}` : `${flag}${name}${num}`;
-      return `<div id="tab-cell-${side}" data-team="${getCleanName(team)}" data-win="${isWin ? '1' : '0'}" onclick="toggleTabFilter(this.dataset.team)" title="Filtrer : TAB pour ${getCleanName(team)}" class="tab-cell flex items-center justify-center gap-1.5 px-2 py-1 rounded border w-[140px] md:w-[160px] overflow-hidden cursor-pointer hover:brightness-110 active:scale-95 transition relative z-20 ${state}">${inner}</div>`;
+      return `<div id="tab-cell-${side}" data-team="${getCleanName(team)}" data-win="${isWin ? '1' : '0'}" onclick="toggleTabFilter(this.dataset.team)" title="Filtrer : TAB pour ${getCleanName(team)}" class="tab-cell flex items-center justify-center gap-1.5 px-3 py-1 rounded border w-[70px] md:w-[80px] overflow-hidden cursor-pointer hover:brightness-110 active:scale-95 transition relative z-20 ${state}">${inner}</div>`;
     }
 
-    // Carte : version statique (auto-largeur)
-    const name = `<span class="text-[9px] md:text-[11px] font-bold uppercase truncate mx-1 md:mx-1.5 ${lblColor}">${getCleanName(team)}</span>`;
-    const inner = side === 'B' ? `${num}${name}${flag}` : `${flag}${name}${num}`;
-    return `<div class="flex items-center justify-center px-2 py-0.5 rounded border ${state} transition overflow-hidden max-w-[150px]">${inner}</div>`;
+    // Carte : version statique
+    return `<div title="${getCleanName(team)}" class="flex items-center justify-center gap-1.5 px-2 py-0.5 rounded border ${state} transition overflow-hidden">${inner}</div>`;
   };
 
   return `
@@ -3715,27 +3711,22 @@ function toggleTabFilter(team) {
 }
 
 function refreshTabCells() {
-  const BASE = "tab-cell flex items-center justify-center gap-1.5 px-2 py-1 rounded border w-[140px] md:w-[160px] overflow-hidden cursor-pointer hover:brightness-110 active:scale-95 transition relative z-20";
+  const BASE = "tab-cell flex items-center justify-center gap-1.5 px-3 py-1 rounded border w-[70px] md:w-[80px] overflow-hidden cursor-pointer hover:brightness-110 active:scale-95 transition relative z-20";
   ['A', 'B'].forEach(side => {
     const el = document.getElementById('tab-cell-' + side);
     if (!el) return;
     const team = el.dataset.team || '';
     const isActive = matchFilter.tabPick && getCleanName(matchFilter.tabPick) === getCleanName(team);
     const isWin = el.dataset.win === '1';
-    let state, lblColor;
+    let state;
     if (isActive) {                 // 🟡 OR — filtre sélectionné
       state = "bg-pastis-500 text-navy-900 border-pastis-500";
-      lblColor = "text-navy-900/70";
     } else if (isWin) {             // 🟢 VERT — vainqueur TAB réel
       state = "bg-green-900/40 text-white border-green-600 shadow-[0_0_10px_rgba(34,197,94,0.25)]";
-      lblColor = "text-green-300";
     } else {                        // ⬛ Neutre
       state = "bg-navy-800 text-white border-navy-700 shadow-sm";
-      lblColor = "text-gray-300";
     }
     el.className = BASE + " " + state;
-    const lbl = el.querySelector('.tab-label');
-    if (lbl) lbl.className = "tab-label flex-1 truncate text-center text-[9px] md:text-[11px] font-bold uppercase " + lblColor;
   });
 }
 
