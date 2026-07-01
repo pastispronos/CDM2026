@@ -272,11 +272,18 @@
 
     <section id="view-joueurs" class="hidden animate-fade-in">
       <h2 class="text-xl font-oswald font-bold mb-4 text-white tracking-wide uppercase">Profil des Joueurs</h2>
+
+      <div class="flex bg-navy-900/60 rounded-xl p-1 shadow-inner border border-navy-700/50 gap-1 mb-4">
+        <button onclick="switchJoueurTab('profil')" id="btn-joueur-profil" class="flex-1 py-1.5 md:py-2 text-xs md:text-sm font-bold uppercase tracking-wider rounded-lg transition-colors duration-200 bg-pastis-500 text-navy-900 shadow-md font-black">📋 Profil 2026</button>
+        <button onclick="switchJoueurTab('palmares')" id="btn-joueur-palmares" class="flex-1 py-1.5 md:py-2 text-xs md:text-sm font-bold uppercase tracking-wider rounded-lg transition-colors duration-200 text-gray-400 hover:text-gray-200 hover:bg-navy-700/50">🏆 Palmarès</button>
+      </div>
+
       <label class="block text-gray-400 text-xs font-bold uppercase tracking-wider mb-2 ml-1">Sélectionner un joueur :</label>
-<select id="select-joueur" onchange="renderJoueurProfile()" class="w-full bg-navy-800 border border-navy-700 text-white rounded-lg px-4 py-3 mb-4 focus:ring-pastis-500 focus:border-pastis-500 font-semibold text-lg appearance-none shadow relative z-20">
+<select id="select-joueur" onchange="onSelectJoueurChange()" class="w-full bg-navy-800 border border-navy-700 text-white rounded-lg px-4 py-3 mb-4 focus:ring-pastis-500 focus:border-pastis-500 font-semibold text-lg appearance-none shadow relative z-20">
         <option value="">-- Liste des joueurs --</option>
       </select>
 
+      <div id="joueur-tab-profil">
       <!-- 🆕 Bouton de saisie : au-dessus du "Classement actuel" -->
       <div id="joueur-pronos-cta" class="hidden mb-6">
         <button onclick="ppOpenMesPronos()" class="w-full inline-flex items-center justify-center gap-2 bg-pastis-500 text-navy-900 font-bold rounded-lg px-4 py-2.5 text-sm hover:bg-pastis-600 transition shadow">
@@ -320,6 +327,12 @@
           </select>
         </div>
 <div id="joueur-history-list" class="space-y-1.5 md:space-y-2"></div>
+      </div>
+      </div><!-- /joueur-tab-profil -->
+
+      <div id="joueur-tab-palmares" class="hidden">
+        <div id="palmares-joueur-card" class="mb-6"></div>
+        <div id="palmares-podium-list"></div>
       </div>
     </section>
 
@@ -397,7 +410,7 @@
 
   <script>
     const API_URL = 'https://script.google.com/macros/s/AKfycbwGOIbrYyAU_jkaKiYSQl8O_BEz_EgbN1EKC5G9wMNKJf-4TZIV7X8YeRPq-OPJXRAu/exec?api=1';
-    let appData = { classement: [], calendrier: [], pronostics: [], equipes: [], chaines: [], reglement: [], joueursMasques: [] };
+    let appData = { classement: [], calendrier: [], pronostics: [], equipes: [], chaines: [], reglement: [], joueursMasques: [], palmares: [], palmaresHeaders: [], palmaresPodium: [] };
 let matchFilter = { idMatch: null, tendance: null, joueur: '', joker: false, tabPick: null };
     
     // 🔒 Renvoie true si le joueur est marqué "Masqué" (colonne T de la feuille Joueurs)
@@ -2460,6 +2473,174 @@ teams.forEach((t, index) => {
         const cls = on ? "bg-pastis-500 text-navy-900 shadow-md font-black" : "text-gray-400 hover:text-gray-200 hover:bg-navy-700/50";
         return `<button data-ko-tab="${r.key}" onclick="switchKoRound('${r.key}')" class="flex-shrink-0 whitespace-nowrap px-3 md:px-4 py-2 text-xs md:text-sm font-bold uppercase tracking-wider rounded-lg transition-colors duration-200 ${cls}">${r.label}</button>`;
       }).join('');
+
+      // ==========================================
+// PALMARÈS HISTORIQUE (Hall of Fame multi-compétitions)
+// ==========================================
+let currentJoueurTab = 'profil';
+
+function onSelectJoueurChange() {
+  renderJoueurProfile();
+  if (currentJoueurTab === 'palmares') renderPalmares();
+}
+
+function switchJoueurTab(tab) {
+  currentJoueurTab = tab;
+  const btnProfil = document.getElementById('btn-joueur-profil');
+  const btnPalmares = document.getElementById('btn-joueur-palmares');
+  const tabProfil = document.getElementById('joueur-tab-profil');
+  const tabPalmares = document.getElementById('joueur-tab-palmares');
+
+  const activeCls = "bg-pastis-500 text-navy-900 shadow-md font-black".split(' ');
+  const inactiveCls = "text-gray-400 hover:text-gray-200 hover:bg-navy-700/50".split(' ');
+
+  [btnProfil, btnPalmares].forEach(b => { b.classList.remove(...activeCls); b.classList.add(...inactiveCls); });
+
+  if (tab === 'palmares') {
+    tabPalmares.classList.remove('hidden');
+    tabProfil.classList.add('hidden');
+    btnPalmares.classList.remove(...inactiveCls);
+    btnPalmares.classList.add(...activeCls);
+    renderPalmares();
+  } else {
+    tabProfil.classList.remove('hidden');
+    tabPalmares.classList.add('hidden');
+    btnProfil.classList.remove(...inactiveCls);
+    btnProfil.classList.add(...activeCls);
+  }
+}
+
+function renderPalmares() {
+  const joueur = document.getElementById('select-joueur').value;
+  renderPalmaresJoueurCard(joueur);
+  renderPalmaresPodiumList(joueur);
+}
+
+function extractRangNumPalmares(txt) {
+  if (!txt || txt === '-') return null;
+  const n = parseInt(String(txt).replace(/\D/g, ''), 10);
+  return isNaN(n) ? null : n;
+}
+
+function medalPalmares(n) {
+  if (n === 1) return '🥇';
+  if (n === 2) return '🥈';
+  if (n === 3) return '🥉';
+  return '';
+}
+
+function renderPalmaresJoueurCard(joueur) {
+  const container = document.getElementById('palmares-joueur-card');
+  if (!container) return;
+
+  if (!joueur) {
+    container.innerHTML = `<p class="text-center text-gray-500 italic py-6">Sélectionne un joueur ci-dessus pour voir son palmarès historique.</p>`;
+    return;
+  }
+
+  const headers = appData.palmaresHeaders || [];
+  const cible = joueur.toString().trim().toUpperCase();
+  const row = (appData.palmares || []).find(r => (r[0] || '').toString().trim().toUpperCase() === cible);
+
+  if (!row) {
+    container.innerHTML = `<p class="text-center text-gray-500 italic py-6">Aucun historique enregistré pour <b class="text-white">${joueur}</b>.</p>`;
+    return;
+  }
+
+  const nbPart = row[1] || '0';
+  const editions = [];
+  for (let i = 2; i < headers.length; i++) {
+    const label = (headers[i] || '').toString().trim();
+    if (!label) continue;
+    const val = (row[i] || '').toString().trim();
+    editions.push({ label, val, num: extractRangNumPalmares(val) });
+  }
+  editions.reverse(); // édition la plus récente en premier
+
+  const participations = editions.filter(e => e.num !== null);
+  const meilleur = participations.length ? Math.min(...participations.map(e => e.num)) : null;
+  const nbTop3 = participations.filter(e => e.num <= 3).length;
+
+  const rowsHTML = editions.map(e => {
+    const medal = medalPalmares(e.num);
+    const highlight = (e.num && e.num <= 3) ? 'bg-pastis-500/10 border-pastis-500/40' : 'bg-navy-900 border-navy-700';
+    const affiche = e.num === null ? '<span class="text-gray-600">N\'a pas participé</span>' : `<span class="text-white">${e.val}</span>`;
+    return `
+      <div class="flex items-center justify-between px-3 py-2 rounded-lg border ${highlight}">
+        <span class="text-sm font-semibold text-gray-200">${medal ? medal + ' ' : ''}${e.label}</span>
+        <span class="text-sm font-bold">${affiche}</span>
+      </div>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="bg-navy-800 rounded-xl border border-navy-700 shadow-lg p-4">
+      <h3 class="font-oswald font-bold text-white uppercase tracking-wide text-sm mb-3">🏆 Palmarès de ${joueur}</h3>
+      <div class="grid grid-cols-3 gap-2 mb-4">
+        <div class="bg-navy-900 p-3 rounded-lg text-center border border-navy-700">
+          <span class="block text-[10px] text-gray-400 uppercase">Participations</span>
+          <span class="font-oswald font-black text-xl text-white">${nbPart}</span>
+        </div>
+        <div class="bg-navy-900 p-3 rounded-lg text-center border border-navy-700">
+          <span class="block text-[10px] text-gray-400 uppercase">Meilleur classement</span>
+          <span class="font-oswald font-black text-xl text-pastis-500">${meilleur ? '#' + meilleur : '-'}</span>
+        </div>
+        <div class="bg-navy-900 p-3 rounded-lg text-center border border-navy-700">
+          <span class="block text-[10px] text-gray-400 uppercase">Podiums</span>
+          <span class="font-oswald font-black text-xl text-white">${nbTop3} 🏆</span>
+        </div>
+      </div>
+      <div class="space-y-1.5 max-h-[360px] overflow-y-auto custom-scrollbar pr-1">${rowsHTML}</div>
+    </div>
+  `;
+}
+
+function renderPalmaresPodiumList(joueurSelectionne) {
+  const container = document.getElementById('palmares-podium-list');
+  if (!container) return;
+
+  const rows = appData.palmaresPodium || [];
+  if (!rows.length) {
+    container.innerHTML = `<p class="text-center text-gray-500 italic py-6">Aucune donnée de podium pour le moment.</p>`;
+    return;
+  }
+
+  const cible = (joueurSelectionne || '').toString().trim().toUpperCase();
+
+  const podiumSlot = (label, medal, nom) => {
+    const isMe = cible && (nom || '').toString().toUpperCase().includes(cible);
+    return `
+      <div class="flex-1 text-center px-2 py-2 rounded-lg border ${isMe ? 'bg-pastis-500/20 border-pastis-500' : 'bg-navy-900 border-navy-700'}">
+        <div class="text-lg">${medal}</div>
+        <div class="text-[9px] text-gray-500 uppercase tracking-wider">${label}</div>
+        <div class="text-xs font-bold truncate ${isMe ? 'text-pastis-500' : 'text-white'}">${nom || '-'}</div>
+      </div>`;
+  };
+
+  const cardsHTML = [...rows].reverse().map(r => {
+    const competition = r[0] || '';
+    const nbJoueurs = r[1] || '';
+    const first = r[2] || '';
+    const second = r[3] || '';
+    const third = r[4] || '';
+    return `
+      <div class="bg-navy-800 rounded-xl border border-navy-700 shadow p-3">
+        <div class="flex items-center justify-between mb-2">
+          <span class="font-oswald font-bold text-white uppercase tracking-wide text-xs">${competition}</span>
+          <span class="text-[10px] text-gray-500">${nbJoueurs} joueurs</span>
+        </div>
+        <div class="flex gap-2">
+          ${podiumSlot('1er', '🥇', first)}
+          ${podiumSlot('2ème', '🥈', second)}
+          ${podiumSlot('3ème', '🥉', third)}
+        </div>
+      </div>`;
+  }).join('');
+
+  container.innerHTML = `
+    <h3 class="font-oswald font-bold text-white uppercase tracking-wide text-sm mb-3 mt-2">📜 Hall of Fame — Podiums par édition</h3>
+    <div class="space-y-3">${cardsHTML}</div>
+  `;
+}
 
       // Construit les paires "match du tour -> match suivant" reliées par un connecteur.
       // ⚠️ On NE PAIRE PLUS par adjacence (77+78...) : c'est ce qui sortait des affiches
