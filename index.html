@@ -3180,15 +3180,19 @@ let jokersHTML = '';
 
       const nbJoueursParEdition = getNbJoueursParEdition();
       const nbPart = row[1] || '0';
-      const editions = [];
+
+      // Ordre CHRONOLOGIQUE (2007 → aujourd'hui) — nécessaire pour le graphique
+      const chronoEditions = [];
       for (let i = 2; i < headers.length; i++) {
         const label = (headers[i] || '').toString().trim();
         if (!label) continue;
         const val = (row[i] || '').toString().trim();
         const nbTotal = nbJoueursParEdition[normCompetitionKey(label)] || '';
-        editions.push({ label, val, num: extractRangNumPalmares(val), nbTotal });
+        chronoEditions.push({ label, val, num: extractRangNumPalmares(val), nbTotal });
       }
-      editions.reverse(); // édition la plus récente en premier
+
+      // Ordre AFFICHAGE liste : le plus récent en premier
+      const editions = [...chronoEditions].reverse();
 
       const participations = editions.filter(e => e.num !== null);
       const meilleur = participations.length ? Math.min(...participations.map(e => e.num)) : null;
@@ -3208,6 +3212,16 @@ let jokersHTML = '';
           </div>`;
       }).join('');
 
+      const hasChartData = chronoEditions.some(e => e.num !== null);
+      const chartHTML = hasChartData ? `
+        <div class="bg-navy-900 p-3 rounded-lg border border-navy-700 shadow-inner mb-4">
+          <h4 class="text-pastis-500 font-bold uppercase text-xs md:text-sm mb-2">Évolution du classement</h4>
+          <div class="relative h-[180px] md:h-[220px] w-full">
+            <canvas id="palmaresEvolutionChart"></canvas>
+          </div>
+        </div>
+      ` : '';
+
       container.innerHTML = `
         <div class="bg-navy-800 rounded-xl border border-navy-700 shadow-lg p-4">
           <h3 class="font-oswald font-bold text-white uppercase tracking-wide text-sm mb-3">🏆 Palmarès de ${joueur}</h3>
@@ -3225,11 +3239,63 @@ let jokersHTML = '';
               <span class="font-oswald font-black text-xl text-white">${nbTop3} 🏆</span>
             </div>
           </div>
+          ${chartHTML}
           <div class="space-y-1.5 max-h-[360px] overflow-y-auto custom-scrollbar pr-1">${rowsHTML}</div>
         </div>
       `;
+
+      if (hasChartData) drawPalmaresChart(chronoEditions);
     }
 
+    let palmaresChartInstance = null;
+
+    function drawPalmaresChart(chronoEditions) {
+      const canvas = document.getElementById('palmaresEvolutionChart');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (palmaresChartInstance) palmaresChartInstance.destroy();
+
+      const labels = chronoEditions.map(e => (e.label.match(/\d{4}/) || [e.label])[0]);
+      const dataArray = chronoEditions.map(e => e.num); // null = pas de participation → trou dans la courbe
+
+      palmaresChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Classement',
+            data: dataArray,
+            borderColor: '#F7D11A',
+            backgroundColor: 'rgba(247, 209, 26, 0.1)',
+            tension: 0.3, borderWidth: 3, pointRadius: 4, pointHoverRadius: 6, fill: true,
+            spanGaps: false
+          }]
+        },
+        options: {
+          layout: { padding: { top: 20 } },
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#212E55', titleColor: '#F7D11A', bodyColor: '#fff', bodyFont: { weight: 'bold' },
+              callbacks: {
+                title: (items) => chronoEditions[items[0].dataIndex].label,
+                label: (item) => {
+                  const e = chronoEditions[item.dataIndex];
+                  return e.num !== null ? ('#' + e.num + (e.nbTotal ? ' / ' + e.nbTotal + ' joueurs' : '')) : "N'a pas participé";
+                }
+              }
+            }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: '#9ca3af', font: { size: 10 } } },
+            y: { reverse: true, min: 1, grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#9ca3af', font: { size: 10 }, stepSize: 1 } }
+          },
+          interaction: { mode: 'nearest', axis: 'x', intersect: false }
+        }
+      });
+    }
+    
     function renderPalmaresPodiumList(joueurSelectionne) {
       const container = document.getElementById('palmares-podium-list');
       if (!container) return;
