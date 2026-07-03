@@ -231,7 +231,7 @@
       </div>
       
       <div id="main-table-container" class="bg-navy-800 rounded-b-xl md:rounded-t-none rounded-xl shadow-lg border border-navy-700 overflow-x-scroll custom-scrollbar pb-3 relative z-10">
-        <table class="text-sm text-center whitespace-nowrap table-fixed">
+        <table class="min-w-full text-sm text-center whitespace-nowrap table-fixed">
           <thead id="classement-head" class="bg-navy-900 text-gray-400 text-[10px] md:text-xs uppercase font-semibold border-b border-navy-700 select-none sticky top-0 z-40 shadow-sm"></thead>
           <tbody id="classement-list" class="divide-y divide-navy-700"></tbody>
         </table>
@@ -2662,13 +2662,16 @@ function renderClassement() {
               <span class="text-[8px] md:text-[9px] ${currentSort.col === 3 ? 'text-pastis-500 opacity-100' : 'text-gray-600 opacity-50'} transition-colors">${currentSort.col === 3 ? (currentSort.asc ? '▲' : '▼') : '▼'}</span>
             </div>
           </th>
+          <th class="hidden md:table-cell bg-navy-900"></th>
           ${thSort(25, "Total", true, "sticky left-[120px] md:left-[200px] z-30 px-1 md:px-4 py-3 text-pastis-500 text-sm md:text-base w-[40px] md:w-[60px] min-w-[40px] md:min-w-[60px] font-oswald bg-navy-900 border-r-2 border-navy-600 shadow-[3px_0_5px_rgba(0,0,0,0.3)]")}
           <th class="table-cell md:hidden px-2 py-3 text-center bg-navy-900 border-r border-white/5 w-[110px] min-w-[110px] max-w-[110px] whitespace-nowrap">🏆 Favori / Finaliste</th>
-          ${thSort(36, "Favori", false, "hidden md:table-cell px-4 py-3 text-left border-r border-white/5 w-[220px] md:w-[240px] min-w-[220px] md:min-w-[240px] max-w-[220px] md:max-w-[240px] bg-navy-900")}
-          ${thSort(40, "Finaliste", false, "hidden md:table-cell px-4 py-3 text-left border-r border-white/5 w-[220px] md:w-[240px] min-w-[220px] md:min-w-[240px] max-w-[220px] md:max-w-[240px] bg-navy-900")}
+          ${thSort(36, "Favori", false, "hidden md:table-cell px-2 py-3 text-left border-r border-white/5 w-[140px] min-w-[140px] max-w-[140px] bg-navy-900")}
+          ${thSort(40, "Finaliste", false, "hidden md:table-cell px-2 py-3 text-left w-[140px] min-w-[140px] max-w-[140px] bg-navy-900")}
       `;
-      // ★ Plus de colonne éponge : sans min-w-full sur le <table>, le tableau ne fait plus que la somme
-      // exacte de ces largeurs fixes. L'espace restant (s'il y en a) affiche simplement le fond de la carte.
+      // ★ La <th> vide juste après "Joueur" est un RESSORT invisible : sans largeur définie, c'est la seule
+      // colonne à absorber tout l'espace en trop (grâce à min-w-full sur <table>), ce qui repousse
+      // Total vers une position plus centrale, exactement comme sur ton ancienne version.
+      // Favori/Finaliste gardent désormais une largeur FIXE et resserrée (140px), collées à droite.
 
       if(phasesVisibility.showPts25) headHTML += thSort(4, "25", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-white/5`);
       if(phasesVisibility.showPts20) headHTML += thSort(5, "20", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-white/5`);
@@ -2792,7 +2795,7 @@ let ppLastTotal = null; // mémorise le total de la ligne précédente (ex-æquo
               </div>
             </div>`;
 
-          // Version compacte MOBILE uniquement (inchangée) : flag + nom, barré si éliminé
+          // Version compacte MOBILE uniquement (strictement inchangée) : flag + nom, barré si éliminé
           favFinCompactHTML = `
             <div class="flex flex-col justify-center gap-1 py-0.5">
               <div class="flex items-center gap-1 min-w-0 ${isElimFav ? 'opacity-50' : ''}">
@@ -2813,12 +2816,13 @@ let ppLastTotal = null; // mémorise le total de la ligne précédente (ex-æquo
             <td class="sticky left-[30px] md:left-[80px] z-20 px-1 md:px-2 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 w-[90px] md:w-[120px] min-w-[90px] md:min-w-[120px] max-w-[90px] md:max-w-[120px]">
               <div onclick="goToPlayerProfile('${escapeJS(joueur)}')" class="truncate text-left font-bold text-white hover:text-pastis-500 cursor-pointer tracking-wide w-full">${joueur}</div>
             </td>
+            <td class="hidden md:table-cell bg-navy-800 group-hover:bg-navy-700"></td>
             <td class="sticky left-[120px] md:left-[200px] z-20 bg-navy-800 group-hover:bg-navy-700 px-1 md:px-4 py-3 text-pastis-500 font-bold text-sm md:text-xl font-oswald w-[40px] md:w-[60px] min-w-[40px] md:min-w-[60px] border-r-2 border-navy-600 shadow-[3px_0_5px_rgba(0,0,0,0.3)]">${total}</td>
             <td class="table-cell md:hidden px-2 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 w-[110px] min-w-[110px] max-w-[110px]">
               ${favFinCompactHTML}
             </td>
-            <td class="hidden md:table-cell px-4 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 w-[220px] md:w-[240px] min-w-[220px] md:min-w-[240px] max-w-[220px] md:max-w-[240px] text-left">${favHTML}</td>
-            <td class="hidden md:table-cell px-4 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 w-[220px] md:w-[240px] min-w-[220px] md:min-w-[240px] max-w-[220px] md:max-w-[240px] text-left">${finHTML}</td>
+            <td class="hidden md:table-cell px-2 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 w-[140px] min-w-[140px] max-w-[140px] text-left">${favHTML}</td>
+            <td class="hidden md:table-cell px-2 py-3 bg-navy-800 group-hover:bg-navy-700 w-[140px] min-w-[140px] max-w-[140px] text-left">${finHTML}</td>
             ${ptsColsHTML}
             ${phasesColsHTML}
             
