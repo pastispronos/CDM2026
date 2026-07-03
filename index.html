@@ -2663,9 +2663,11 @@ function renderClassement() {
             </div>
           </th>
           ${thSort(25, "Total", true, "sticky left-[120px] md:left-[200px] z-30 px-1 md:px-4 py-3 text-pastis-500 text-sm md:text-base w-[40px] md:w-[60px] min-w-[40px] md:min-w-[60px] font-oswald bg-navy-900 border-r-2 border-navy-600 shadow-[3px_0_5px_rgba(0,0,0,0.3)]")}
-          <th class="px-2 md:px-3 py-3 text-center bg-navy-900 border-r border-white/5 w-[110px] md:w-[130px] min-w-[110px] md:min-w-[130px] max-w-[110px] md:max-w-[130px] whitespace-nowrap">🏆 Favori / Finaliste</th>
+          <th class="table-cell md:hidden px-2 py-3 text-center bg-navy-900 border-r border-white/5 w-[110px] min-w-[110px] max-w-[110px] whitespace-nowrap">🏆 Favori / Finaliste</th>
+          ${thSort(36, "Favori", false, "hidden md:table-cell px-4 py-3 text-left border-r border-white/5 min-w-[170px] bg-navy-900")}
+          ${thSort(40, "Finaliste", false, "hidden md:table-cell px-4 py-3 text-left border-r border-white/5 min-w-[170px] bg-navy-900")}
       `;
-      // ★ Colonne compacte Favori/Finaliste (remplace l'ancienne colonne Jokers) — visible en permanence, PC + mobile.
+      // ★ Compact (mobile) vs colonnes complètes toujours visibles (PC) — voir logique dans le forEach ci-dessous.
 
       if(phasesVisibility.showPts25) headHTML += thSort(4, "25", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-white/5`);
       if(phasesVisibility.showPts20) headHTML += thSort(5, "20", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-white/5`);
@@ -2692,10 +2694,12 @@ function renderClassement() {
       headHTML += `
           <th class="px-4 py-3 detail-col ${dClass} font-normal text-gray-500 border-r border-white/5">Forme</th>
           ${thSort(33, "Réussite", true, `px-3 py-3 detail-col ${dClass} border-r border-navy-700`)}
-          ${thSort(36, "Favori", false, `px-4 py-3 detail-col ${dClass} text-left border-r border-white/5 min-w-[150px]`)}
-          ${thSort(40, "Finaliste", false, `px-4 py-3 detail-col ${dClass} text-left min-w-[150px]`)}
+          ${thSort(36, "Favori", false, `px-4 py-3 detail-col ${dClass} md:hidden text-left border-r border-white/5 min-w-[150px]`)}
+          ${thSort(40, "Finaliste", false, `px-4 py-3 detail-col ${dClass} md:hidden text-left min-w-[150px]`)}
         </tr>
       `;
+      // ★ Les 2 colonnes Favori/Finaliste "détaillées" sont forcées en md:hidden : sur PC elles sont
+      // remplacées par les colonnes toujours visibles ci-dessus, plus besoin de les dupliquer.
       headContainer.innerHTML = headHTML;
       
       let html = '';
@@ -2759,7 +2763,7 @@ let ppLastTotal = null; // mémorise le total de la ligne précédente (ex-æquo
 
         let favHTML = ""; let finHTML = ""; let favFinCompactHTML = "";
         const estMasque = !isTournamentStarted || estJoueurMasque(joueur);
-        // 🆕 Élimination détectée depuis le libellé de statut (ex: "Éliminé") → sert à barrer le nom en vue compacte
+        // 🆕 Élimination détectée depuis le libellé de statut (ex: "Éliminé") → sert à barrer le nom en vue compacte mobile
         const isElimFav = statutFav && statutFav.toString().toLowerCase().includes('élimin');
         const isElimFin = statutFin && statutFin.toString().toLowerCase().includes('élimin');
 
@@ -2789,16 +2793,16 @@ let ppLastTotal = null; // mémorise le total de la ligne précédente (ex-æquo
               </div>
             </div>`;
 
-          // 🆕 Version compacte (colonne toujours visible, remplace l'ex-colonne Jokers) : flag + nom, barré si éliminé
+          // Version compacte mobile uniquement : flag + nom, barré si éliminé
           favFinCompactHTML = `
             <div class="flex flex-col justify-center gap-1 py-0.5">
               <div class="flex items-center gap-1 min-w-0 ${isElimFav ? 'opacity-50' : ''}">
                 <span class="text-xs emoji-flag flex-shrink-0">${getFlagOnly(favori)}</span>
-                <span class="text-[10px] md:text-[11px] font-semibold truncate ${isElimFav ? 'line-through text-gray-500' : 'text-white'}">${getCleanName(favori)}</span>
+                <span class="text-[10px] font-semibold truncate ${isElimFav ? 'line-through text-gray-500' : 'text-white'}">${getCleanName(favori)}</span>
               </div>
               <div class="flex items-center gap-1 min-w-0 ${isElimFin ? 'opacity-50' : ''}">
                 <span class="text-xs emoji-flag flex-shrink-0">${getFlagOnly(finaliste)}</span>
-                <span class="text-[10px] md:text-[11px] font-semibold truncate ${isElimFin ? 'line-through text-gray-500' : 'text-white'}">${getCleanName(finaliste)}</span>
+                <span class="text-[10px] font-semibold truncate ${isElimFin ? 'line-through text-gray-500' : 'text-white'}">${getCleanName(finaliste)}</span>
               </div>
             </div>`;
         }
@@ -2811,16 +2815,18 @@ let ppLastTotal = null; // mémorise le total de la ligne précédente (ex-æquo
               <div onclick="goToPlayerProfile('${escapeJS(joueur)}')" class="truncate text-left font-bold text-white hover:text-pastis-500 cursor-pointer tracking-wide w-full">${joueur}</div>
             </td>
             <td class="sticky left-[120px] md:left-[200px] z-20 bg-navy-800 group-hover:bg-navy-700 px-1 md:px-4 py-3 text-pastis-500 font-bold text-sm md:text-xl font-oswald w-[40px] md:w-[60px] min-w-[40px] md:min-w-[60px] border-r-2 border-navy-600 shadow-[3px_0_5px_rgba(0,0,0,0.3)]">${total}</td>
-            <td class="px-2 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 w-[110px] md:w-[130px] min-w-[110px] md:min-w-[130px] max-w-[110px] md:max-w-[130px]">
+            <td class="table-cell md:hidden px-2 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 w-[110px] min-w-[110px] max-w-[110px]">
               ${favFinCompactHTML}
             </td>
+            <td class="hidden md:table-cell px-4 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 min-w-[170px] text-left">${favHTML}</td>
+            <td class="hidden md:table-cell px-4 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 min-w-[170px] text-left">${finHTML}</td>
             ${ptsColsHTML}
             ${phasesColsHTML}
             
             <td class="px-4 py-3 detail-col ${dClass} border-r border-white/5">${formeHTML}</td>
             <td class="px-3 py-3 detail-col ${dClass} font-bold font-oswald text-base text-green-400 tracking-wider border-r border-navy-700">${bonsResultats}</td>
-            <td class="px-4 py-3 detail-col ${dClass} text-left border-r border-white/5 min-w-[150px]">${favHTML}</td>
-            <td class="px-4 py-3 detail-col ${dClass} text-left min-w-[150px]">${finHTML}</td>
+            <td class="px-4 py-3 detail-col ${dClass} md:hidden text-left border-r border-white/5 min-w-[150px]">${favHTML}</td>
+            <td class="px-4 py-3 detail-col ${dClass} md:hidden text-left min-w-[150px]">${finHTML}</td>
           </tr>
         `;
       });
