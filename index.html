@@ -2664,11 +2664,10 @@ function renderClassement() {
           </th>
           ${thSort(25, "Total", true, "sticky left-[120px] md:left-[200px] z-30 px-1 md:px-4 py-3 text-pastis-500 text-sm md:text-base w-[40px] md:w-[60px] min-w-[40px] md:min-w-[60px] font-oswald bg-navy-900 border-r-2 border-navy-600 shadow-[3px_0_5px_rgba(0,0,0,0.3)]")}
           <th class="table-cell md:hidden px-2 py-3 text-center bg-navy-900 border-r border-white/5 w-[110px] min-w-[110px] max-w-[110px] whitespace-nowrap">🏆 Favori / Finaliste</th>
-          ${thSort(36, "Favori", false, "hidden md:table-cell px-4 py-3 text-left border-r border-white/5 w-[200px] md:w-[240px] min-w-[200px] md:min-w-[240px] max-w-[200px] md:max-w-[240px] bg-navy-900")}
-          ${thSort(40, "Finaliste", false, "hidden md:table-cell px-4 py-3 text-left border-r border-white/5 w-[200px] md:w-[240px] min-w-[200px] md:min-w-[240px] max-w-[200px] md:max-w-[240px] bg-navy-900")}
+          ${thSort(36, "Favori", false, "hidden md:table-cell px-3 py-3 text-left border-r border-white/5 w-[140px] md:w-[160px] min-w-[140px] md:min-w-[160px] max-w-[140px] md:max-w-[160px] bg-navy-900")}
+          ${thSort(40, "Finaliste", false, "hidden md:table-cell px-3 py-3 text-left border-r border-white/5 w-[140px] md:w-[160px] min-w-[140px] md:min-w-[160px] max-w-[140px] md:max-w-[160px] bg-navy-900")}
       `;
-      // ★ Compact (mobile) vs colonnes complètes toujours visibles (PC) — largeur désormais BORNÉE (w-/max-w-)
-      // pour éviter que table-fixed ne les étire sur tout l'espace restant.
+      // ★ Largeur resserrée (140/160px) sur PC — proportionnée au reste du tableau, plus de gaspillage d'espace.
 
       if(phasesVisibility.showPts25) headHTML += thSort(4, "25", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-white/5`);
       if(phasesVisibility.showPts20) headHTML += thSort(5, "20", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-white/5`);
@@ -2776,19 +2775,19 @@ let ppLastTotal = null; // mémorise le total de la ligne précédente (ex-æquo
           
           favHTML = `
             <div class="flex flex-col items-start justify-center">
-              <div class="flex items-center space-x-1.5"><span class="text-base emoji-flag">${getFlagOnly(favori)}</span><span class="font-bold text-sm whitespace-normal break-words leading-tight text-white">${getCleanName(favori)}</span></div>
-              <div class="flex items-center space-x-2 mt-0.5">
-                <span class="text-[10px] md:text-xs ${stFavClass} uppercase">${statutFav}</span>
-                ${ptsFav !== "" ? `<span class="text-[10px] md:text-xs bg-pastis-500 text-navy-900 px-1 rounded font-black">+${cleanPlus(ptsFav)}</span>` : ''}
+              <div class="flex items-center space-x-1.5 min-w-0"><span class="text-base emoji-flag flex-shrink-0">${getFlagOnly(favori)}</span><span class="font-bold text-xs md:text-sm truncate leading-tight text-white">${getCleanName(favori)}</span></div>
+              <div class="flex items-center space-x-1.5 mt-0.5">
+                <span class="text-[9px] md:text-[10px] ${stFavClass} uppercase">${statutFav}</span>
+                ${ptsFav !== "" ? `<span class="text-[9px] md:text-[10px] bg-pastis-500 text-navy-900 px-1 rounded font-black">+${cleanPlus(ptsFav)}</span>` : ''}
               </div>
             </div>`;
 
           finHTML = `
             <div class="flex flex-col items-start justify-center">
-              <div class="flex items-center space-x-1.5"><span class="text-base emoji-flag">${getFlagOnly(finaliste)}</span><span class="font-bold text-sm whitespace-normal break-words leading-tight text-white">${getCleanName(finaliste)}</span></div>
-              <div class="flex items-center space-x-2 mt-0.5">
-                <span class="text-[10px] md:text-xs ${stFinClass} uppercase">${statutFin}</span>
-                ${ptsFin !== "" ? `<span class="text-[10px] md:text-xs bg-pastis-500 text-navy-900 px-1 rounded font-black">+${cleanPlus(ptsFin)}</span>` : ''}
+              <div class="flex items-center space-x-1.5 min-w-0"><span class="text-base emoji-flag flex-shrink-0">${getFlagOnly(finaliste)}</span><span class="font-bold text-xs md:text-sm truncate leading-tight text-white">${getCleanName(finaliste)}</span></div>
+              <div class="flex items-center space-x-1.5 mt-0.5">
+                <span class="text-[9px] md:text-[10px] ${stFinClass} uppercase">${statutFin}</span>
+                ${ptsFin !== "" ? `<span class="text-[9px] md:text-[10px] bg-pastis-500 text-navy-900 px-1 rounded font-black">+${cleanPlus(ptsFin)}</span>` : ''}
               </div>
             </div>`;
 
@@ -2817,8 +2816,8 @@ let ppLastTotal = null; // mémorise le total de la ligne précédente (ex-æquo
             <td class="table-cell md:hidden px-2 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 w-[110px] min-w-[110px] max-w-[110px]">
               ${favFinCompactHTML}
             </td>
-            <td class="hidden md:table-cell px-4 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 w-[200px] md:w-[240px] min-w-[200px] md:min-w-[240px] max-w-[200px] md:max-w-[240px] text-left">${favHTML}</td>
-            <td class="hidden md:table-cell px-4 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 w-[200px] md:w-[240px] min-w-[200px] md:min-w-[240px] max-w-[200px] md:max-w-[240px] text-left">${finHTML}</td>
+            <td class="hidden md:table-cell px-3 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 w-[140px] md:w-[160px] min-w-[140px] md:min-w-[160px] max-w-[140px] md:max-w-[160px] text-left">${favHTML}</td>
+            <td class="hidden md:table-cell px-3 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 w-[140px] md:w-[160px] min-w-[140px] md:min-w-[160px] max-w-[140px] md:max-w-[160px] text-left">${finHTML}</td>
             ${ptsColsHTML}
             ${phasesColsHTML}
             
