@@ -444,6 +444,16 @@ let matchFilter = { idMatch: null, tendance: null, joueur: '', joker: false, tab
       setupSyncScrollbar(); 
     };
 
+    // 👁️ Dès que l'utilisateur revient sur l'app (déverrouillage tél, retour d'un autre onglet/appli),
+    // on force un refresh silencieux immédiat au lieu d'attendre jusqu'à 2 min de polling.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        silentRefresh();
+        setupLivePolling(); // on réaligne le timer sur ce moment précis
+      }
+    });
+    
+
     function escapeJS(str) { return str ? str.replace(/'/g, "\\'") : ""; }
 
     function parseFlags() {
