@@ -2656,7 +2656,7 @@ function renderClassement() {
         <tr>
           ${thSort(1, "Evo", true, "md:sticky md:left-0 z-10 md:z-30 w-[40px] md:w-[90px] min-w-[40px] md:min-w-[60px] max-w-[40px] md:max-w-[60px] bg-navy-900 border-r border-white/5")}
           ${thSort(2, "Rang", true, "sticky left-0 md:sticky md:left-[60px] z-30 w-[30px] md:w-[90px] min-w-[30px] md:min-w-[60px] max-w-[30px] md:max-w-[60px] bg-navy-900 border-r border-white/5")}
-          <th onclick="sortClassement(3, false)" class="cursor-pointer hover:bg-navy-700 transition select-none ${currentSort.col === 3 ? 'text-white' : ''} sticky left-[30px] md:static z-30 text-left border-r border-white/5 w-[90px] md:w-auto min-w-[90px] md:min-w-[160px] max-w-[90px] md:max-w-none bg-navy-900">
+          <th onclick="sortClassement(3, false)" class="cursor-pointer hover:bg-navy-700 transition select-none ${currentSort.col === 3 ? 'text-white' : ''} sticky left-[30px] md:static z-30 text-left border-r border-white/5 w-[90px] md:w-auto min-w-[90px] md:min-w-[190px] max-w-[90px] md:max-w-none bg-navy-900">
             <div class="flex items-center justify-start space-x-1 pl-2">
               <span>Joueur</span>
               <span class="text-[8px] md:text-[9px] ${currentSort.col === 3 ? 'text-pastis-500 opacity-100' : 'text-gray-600 opacity-50'} transition-colors">${currentSort.col === 3 ? (currentSort.asc ? '▲' : '▼') : '▼'}</span>
@@ -2664,8 +2664,8 @@ function renderClassement() {
           </th>
           ${thSort(25, "Total", true, "sticky left-[120px] md:static z-30 px-1 md:px-4 py-3 text-pastis-500 text-sm md:text-base w-[40px] md:w-[110px] min-w-[40px] md:min-w-[110px] max-w-[40px] md:max-w-[110px] font-oswald bg-navy-900 border-r-2 border-navy-600 shadow-[3px_0_5px_rgba(0,0,0,0.3)] text-center")}
           <th class="table-cell md:hidden px-2 py-3 text-center bg-navy-900 border-r border-white/5 w-[110px] min-w-[110px] max-w-[110px] whitespace-nowrap">🏆 Favori / Finaliste</th>
-          ${thSort(36, "Favori", false, "hidden md:table-cell px-2 py-3 text-left border-r border-white/5 w-[140px] min-w-[140px] max-w-[140px] bg-navy-900")}
-          ${thSort(40, "Finaliste", false, "hidden md:table-cell px-2 py-3 text-left w-[140px] min-w-[140px] max-w-[140px] bg-navy-900")}
+          ${thSort(36, "Favori", false, "hidden md:table-cell px-2 py-3 text-left border-r border-white/5 w-[120px] min-w-[120px] max-w-[120px] bg-navy-900")}
+          ${thSort(40, "Finaliste", false, "hidden md:table-cell px-2 py-3 text-left w-[120px] min-w-[120px] max-w-[120px] bg-navy-900")}
       `;
       // ★ Seuls Evo et Rang restent "collés" (sticky) sur PC — Joueur et Total redeviennent des
       // colonnes normales (static), ce qui permet enfin à Joueur de s'étirer librement (md:w-auto,
@@ -2811,7 +2811,7 @@ let ppLastTotal = null; // mémorise le total de la ligne précédente (ex-æquo
           <tr class="group hover:bg-navy-700 transition border-navy-700">
             <td class="md:sticky md:left-0 z-10 md:z-20 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 font-oswald text-base w-[40px] md:w-[60px] min-w-[40px] md:min-w-[60px] max-w-[40px] md:max-w-[60px]">${evolBadge}</td>
             <td class="sticky left-0 md:sticky md:left-[60px] z-20 font-bold text-gray-400 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 font-oswald text-base w-[30px] md:w-[60px] min-w-[30px] md:min-w-[60px] max-w-[30px] md:max-w-[60px]">${rang}</td>
-            <td class="sticky left-[30px] md:static z-20 px-1 md:px-2 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 w-[90px] md:w-auto min-w-[90px] md:min-w-[160px] max-w-[90px] md:max-w-none">
+            <td class="sticky left-[30px] md:static z-20 px-1 md:px-2 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 w-[90px] md:w-auto min-w-[90px] md:min-w-[190px] max-w-[90px] md:max-w-none">
               <div onclick="goToPlayerProfile('${escapeJS(joueur)}')" class="truncate text-left font-bold text-white hover:text-pastis-500 cursor-pointer tracking-wide w-full">${joueur}</div>
             </td>
             <td class="sticky left-[120px] md:static z-20 bg-navy-800 group-hover:bg-navy-700 px-1 md:px-4 py-3 text-pastis-500 font-bold text-sm md:text-xl font-oswald w-[40px] md:w-[110px] min-w-[40px] md:min-w-[110px] max-w-[40px] md:max-w-[110px] border-r-2 border-navy-600 shadow-[3px_0_5px_rgba(0,0,0,0.3)] text-center">${total}</td>
