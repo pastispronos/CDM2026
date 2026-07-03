@@ -231,7 +231,7 @@
       </div>
       
       <div id="main-table-container" class="bg-navy-800 rounded-b-xl md:rounded-t-none rounded-xl shadow-lg border border-navy-700 overflow-x-scroll custom-scrollbar pb-3 relative z-10">
-        <table class="min-w-full text-sm text-center whitespace-nowrap table-fixed">
+        <table class="text-sm text-center whitespace-nowrap table-fixed">
           <thead id="classement-head" class="bg-navy-900 text-gray-400 text-[10px] md:text-xs uppercase font-semibold border-b border-navy-700 select-none sticky top-0 z-40 shadow-sm"></thead>
           <tbody id="classement-list" class="divide-y divide-navy-700"></tbody>
         </table>
@@ -2667,8 +2667,8 @@ function renderClassement() {
           ${thSort(36, "Favori", false, "hidden md:table-cell px-4 py-3 text-left border-r border-white/5 w-[220px] md:w-[240px] min-w-[220px] md:min-w-[240px] max-w-[220px] md:max-w-[240px] bg-navy-900")}
           ${thSort(40, "Finaliste", false, "hidden md:table-cell px-4 py-3 text-left border-r border-white/5 w-[220px] md:w-[240px] min-w-[220px] md:min-w-[240px] max-w-[220px] md:max-w-[240px] bg-navy-900")}
       `;
-      // ★ Ces 2 colonnes PC ont maintenant une largeur VRAIMENT fixe (220/240px), grâce à la colonne
-      // "éponge" ajoutée en fin de ligne (voir plus bas) qui absorbe tout l'espace en trop à sa place.
+      // ★ Plus de colonne éponge : sans min-w-full sur le <table>, le tableau ne fait plus que la somme
+      // exacte de ces largeurs fixes. L'espace restant (s'il y en a) affiche simplement le fond de la carte.
 
       if(phasesVisibility.showPts25) headHTML += thSort(4, "25", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-white/5`);
       if(phasesVisibility.showPts20) headHTML += thSort(5, "20", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-white/5`);
@@ -2697,11 +2697,8 @@ function renderClassement() {
           ${thSort(33, "Réussite", true, `px-3 py-3 detail-col ${dClass} border-r border-navy-700`)}
           ${thSort(36, "Favori", false, `px-4 py-3 detail-col ${dClass} md:hidden text-left border-r border-white/5 min-w-[150px]`)}
           ${thSort(40, "Finaliste", false, `px-4 py-3 detail-col ${dClass} md:hidden text-left min-w-[150px]`)}
-          <th class="hidden md:table-cell bg-navy-900"></th>
         </tr>
       `;
-      // ★ Colonne "éponge" finale : jamais de largeur fixée → absorbe tout l'espace restant du tableau
-      // (sur PC uniquement) au lieu que ce soit Favori/Finaliste qui s'étirent. Invisible, sans contenu.
       headContainer.innerHTML = headHTML;
       
       let html = '';
@@ -2829,7 +2826,6 @@ let ppLastTotal = null; // mémorise le total de la ligne précédente (ex-æquo
             <td class="px-3 py-3 detail-col ${dClass} font-bold font-oswald text-base text-green-400 tracking-wider border-r border-navy-700">${bonsResultats}</td>
             <td class="px-4 py-3 detail-col ${dClass} md:hidden text-left border-r border-white/5 min-w-[150px]">${favHTML}</td>
             <td class="px-4 py-3 detail-col ${dClass} md:hidden text-left min-w-[150px]">${finHTML}</td>
-            <td class="hidden md:table-cell bg-navy-800 group-hover:bg-navy-700"></td>
           </tr>
         `;
       });
