@@ -2663,9 +2663,9 @@ function renderClassement() {
             </div>
           </th>
           ${thSort(25, "Total", true, "sticky left-[120px] md:left-[200px] z-30 px-1 md:px-4 py-3 text-pastis-500 text-sm md:text-base w-[40px] md:w-[60px] min-w-[40px] md:min-w-[60px] font-oswald bg-navy-900 border-r-2 border-navy-600 shadow-[3px_0_5px_rgba(0,0,0,0.3)]")}
-          <th class="px-2 md:px-3 py-3 text-center bg-navy-900 border-r border-white/5 w-[72px] min-w-[72px] whitespace-nowrap">🃏 Jokers</th>
+          <th class="px-2 md:px-3 py-3 text-center bg-navy-900 border-r border-white/5 w-[110px] md:w-[130px] min-w-[110px] md:min-w-[130px] max-w-[110px] md:max-w-[130px] whitespace-nowrap">🏆 Favori / Finaliste</th>
       `;
-      // ★ AJOUT JOKERS : la <th> ci-dessus (juste après "Total")
+      // ★ Colonne compacte Favori/Finaliste (remplace l'ancienne colonne Jokers) — visible en permanence, PC + mobile.
 
       if(phasesVisibility.showPts25) headHTML += thSort(4, "25", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-white/5`);
       if(phasesVisibility.showPts20) headHTML += thSort(5, "20", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-white/5`);
@@ -2712,10 +2712,7 @@ let ppLastTotal = null; // mémorise le total de la ligne précédente (ex-æquo
         const bonsResultats = row[33];
         const favori = row[36], statutFav = row[37], ptsFav = row[38];
         const finaliste = row[40], statutFin = row[41], ptsFin = row[42];
-        const jokerRaw   = (row[34] || "");              // ★ JOKERS AI : "★☆☆ +3 pts"
-        const jokerParts = jokerRaw.split(" +");
-        const jokerStars = jokerParts[0] || "";
-        const jokerBonus = jokerParts.length > 1 ? "+" + jokerParts[1] : "";        if(!joueur || joueur === "") return;
+        if(!joueur || joueur === "") return;
 
         let evolBadge = styleEvolText(evolRaw);
 
@@ -2760,10 +2757,16 @@ let ppLastTotal = null; // mémorise le total de la ligne précédente (ex-æquo
         if(phasesVisibility.showF) phasesColsHTML += `<td class="px-3 py-3 detail-col ${dClass} bg-navy-900 border-r border-navy-700 ${row[23]>0 ? 'text-white font-bold font-oswald text-base':'text-gray-600'}">${row[23]}</td>`;
         if(phasesVisibility.showBonus) phasesColsHTML += `<td class="px-3 py-3 detail-col ${dClass} bg-navy-900 text-pastis-500 border-r border-navy-700 ${row[24]>0 ? 'font-bold font-oswald text-base':'text-gray-600'}">${row[24]}</td>`;
 
-        let favHTML = ""; let finHTML = "";
-        if (!isTournamentStarted || estJoueurMasque(joueur)) {
+        let favHTML = ""; let finHTML = ""; let favFinCompactHTML = "";
+        const estMasque = !isTournamentStarted || estJoueurMasque(joueur);
+        // 🆕 Élimination détectée depuis le libellé de statut (ex: "Éliminé") → sert à barrer le nom en vue compacte
+        const isElimFav = statutFav && statutFav.toString().toLowerCase().includes('élimin');
+        const isElimFin = statutFin && statutFin.toString().toLowerCase().includes('élimin');
+
+        if (estMasque) {
           favHTML = `<div class="flex flex-col items-center justify-center text-gray-500"><span class="text-lg">🔒</span><span class="text-[9px] uppercase mt-1 text-center leading-tight">Favoris<br>masqués</span></div>`;
           finHTML = `<div class="flex flex-col items-center justify-center text-gray-500"><span class="text-lg">🔒</span><span class="text-[9px] uppercase mt-1 text-center leading-tight">Favoris<br>masqués</span></div>`;
+          favFinCompactHTML = `<div class="flex items-center justify-center text-gray-500"><span class="text-sm">🔒</span></div>`;
         } else {
           let stFavClass = getStatusClass(statutFav);
           let stFinClass = getStatusClass(statutFin);
@@ -2785,6 +2788,19 @@ let ppLastTotal = null; // mémorise le total de la ligne précédente (ex-æquo
                 ${ptsFin !== "" ? `<span class="text-[10px] md:text-xs bg-pastis-500 text-navy-900 px-1 rounded font-black">+${cleanPlus(ptsFin)}</span>` : ''}
               </div>
             </div>`;
+
+          // 🆕 Version compacte (colonne toujours visible, remplace l'ex-colonne Jokers) : flag + nom, barré si éliminé
+          favFinCompactHTML = `
+            <div class="flex flex-col justify-center gap-1 py-0.5">
+              <div class="flex items-center gap-1 min-w-0 ${isElimFav ? 'opacity-50' : ''}">
+                <span class="text-xs emoji-flag flex-shrink-0">${getFlagOnly(favori)}</span>
+                <span class="text-[10px] md:text-[11px] font-semibold truncate ${isElimFav ? 'line-through text-gray-500' : 'text-white'}">${getCleanName(favori)}</span>
+              </div>
+              <div class="flex items-center gap-1 min-w-0 ${isElimFin ? 'opacity-50' : ''}">
+                <span class="text-xs emoji-flag flex-shrink-0">${getFlagOnly(finaliste)}</span>
+                <span class="text-[10px] md:text-[11px] font-semibold truncate ${isElimFin ? 'line-through text-gray-500' : 'text-white'}">${getCleanName(finaliste)}</span>
+              </div>
+            </div>`;
         }
 
         html += `
@@ -2795,12 +2811,9 @@ let ppLastTotal = null; // mémorise le total de la ligne précédente (ex-æquo
               <div onclick="goToPlayerProfile('${escapeJS(joueur)}')" class="truncate text-left font-bold text-white hover:text-pastis-500 cursor-pointer tracking-wide w-full">${joueur}</div>
             </td>
             <td class="sticky left-[120px] md:left-[200px] z-20 bg-navy-800 group-hover:bg-navy-700 px-1 md:px-4 py-3 text-pastis-500 font-bold text-sm md:text-xl font-oswald w-[40px] md:w-[60px] min-w-[40px] md:min-w-[60px] border-r-2 border-navy-600 shadow-[3px_0_5px_rgba(0,0,0,0.3)]">${total}</td>
-            <td class="px-2 md:px-3 py-3 text-center whitespace-nowrap bg-navy-800 group-hover:bg-navy-700 border-r border-white/5">
-              <div class="flex flex-col items-center leading-tight">
-                <span class="text-pastis-500 text-base tracking-widest">${jokerStars}</span>
-                ${jokerBonus ? `<span class="text-[10px] font-bold text-pastis-500/80 mt-0.5">${jokerBonus}</span>` : ''}
-              </div>
-            </td>            
+            <td class="px-2 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 w-[110px] md:w-[130px] min-w-[110px] md:min-w-[130px] max-w-[110px] md:max-w-[130px]">
+              ${favFinCompactHTML}
+            </td>
             ${ptsColsHTML}
             ${phasesColsHTML}
             
