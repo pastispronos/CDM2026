@@ -26,10 +26,10 @@
     }
   </script>
 <style>
-    /* 1. Blocage de la page : pour vaincre l'iframe  mobile */
+    /* 1. Blocage de la page : pour vaincre l'iframe mobile */
     html, body { height: 100%; height: 100dvh; overflow: hidden; margin: 0; padding: 0; }
     
-    /* 2. Barre de défilement de la zone centrale sur PC  */
+    /* 2. Barre de défilement de la zone centrale sur PC */
     .main-scroll.match-view { overflow-y: auto !important; overflow-x: hidden; }
     .main-scroll { overflow-y: scroll; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: #4A5D7E #212E55; -webkit-overflow-scrolling: touch; }
     .main-scroll::-webkit-scrollbar { width: 8px; }
@@ -37,7 +37,7 @@
     .main-scroll::-webkit-scrollbar-thumb { background-color: #4A5D7E; border-radius: 4px; }
     .main-scroll::-webkit-scrollbar-thumb:hover { background-color: #F7D11A; }
 
-      /* Masque la scrollbar verticale UNIQUEMENT sur la vue match  */
+      /* Masque la scrollbar verticale UNIQUEMENT sur la vue match */
     .main-scroll.match-view {
       scrollbar-width: none !important;
       -ms-overflow-style: none !important;
@@ -50,7 +50,7 @@
     .no-scrollbar::-webkit-scrollbar { display: none !important; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     
-    /* Scrollbar interne pour les tableaux  de classement */
+    /* Scrollbar interne pour les tableaux de classement */
     .custom-scrollbar { scrollbar-width: auto; scrollbar-color: #4A5D7E #212E55; }
     .custom-scrollbar::-webkit-scrollbar { height: 10px; width: 10px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: #212E55; border-radius: 8px; border: 1px solid #314376; }
@@ -231,7 +231,7 @@
       </div>
       
       <div id="main-table-container" class="bg-navy-800 rounded-b-xl md:rounded-t-none rounded-xl shadow-lg border border-navy-700 overflow-x-scroll custom-scrollbar pb-3 relative z-10">
-        <table class="text-sm text-center whitespace-nowrap table-fixed">
+        <table class="min-w-full text-sm text-center whitespace-nowrap table-fixed">
           <thead id="classement-head" class="bg-navy-900 text-gray-400 text-[10px] md:text-xs uppercase font-semibold border-b border-navy-700 select-none sticky top-0 z-40 shadow-sm"></thead>
           <tbody id="classement-list" class="divide-y divide-navy-700"></tbody>
         </table>
@@ -443,16 +443,6 @@ let matchFilter = { idMatch: null, tendance: null, joueur: '', joker: false, tab
       fetchData(); 
       setupSyncScrollbar(); 
     };
-
-    // 👁️ Dès que l'utilisateur revient sur l'app (déverrouillage tél, retour d'un autre onglet/appli),
-    // on force un refresh silencieux immédiat au lieu d'attendre jusqu'à 2 min de polling.
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') {
-        silentRefresh();
-        setupLivePolling(); // on réaligne le timer sur ce moment précis
-      }
-    });
-    
 
     function escapeJS(str) { return str ? str.replace(/'/g, "\\'") : ""; }
 
@@ -2631,21 +2621,12 @@ function generateCompactBracketCard(match, side) {
       `;
     }
 
-function toggleClassementColumns() {
+    // --- CLASSEMENT COMPLET ---
+    function toggleClassementColumns() {
       isDetailedViewOpen = !isDetailedViewOpen;
-      renderClassement();
-      const container = document.getElementById('main-table-container');
-      if (container) {
-        if (isDetailedViewOpen) {
-          // 👁️ Joueur/Total étant désormais très larges, les nouvelles colonnes (25/20/15/Poules/Forme...)
-          // apparaissent hors champ à droite — on scrolle automatiquement pour les révéler.
-          setTimeout(() => container.scrollTo({ left: 300, behavior: 'smooth' }), 50);
-        } else {
-          container.scrollTo({ left: 0, behavior: 'smooth' });
-        }
-      }
+      renderClassement(); 
     }
-    
+
 function renderClassement() {
       const headContainer = document.getElementById('classement-head');
       const listContainer = document.getElementById('classement-list');
@@ -2663,23 +2644,18 @@ function renderClassement() {
 
       let headHTML = `
         <tr>
-          ${thSort(1, "Evo", true, "z-10 w-[40px] md:w-[90px] min-w-[40px] md:min-w-[90px] max-w-[40px] md:max-w-[90px] bg-navy-900 border-r border-white/5")}
-          ${thSort(2, "Rang", true, "sticky left-0 md:static z-30 w-[30px] md:w-[90px] min-w-[30px] md:min-w-[90px] max-w-[30px] md:max-w-[90px] bg-navy-900 border-r border-white/5")}
-          <th onclick="sortClassement(3, false)" class="cursor-pointer hover:bg-navy-700 transition select-none ${currentSort.col === 3 ? 'text-white' : ''} sticky left-[30px] md:static z-30 text-left border-r border-white/5 w-[90px] md:w-[380px] min-w-[90px] md:min-w-[380px] max-w-[90px] md:max-w-[380px] bg-navy-900">
+          ${thSort(1, "Evo", true, "md:sticky md:left-0 z-10 md:z-30 w-[40px] min-w-[40px] max-w-[40px] bg-navy-900 border-r border-white/5")}
+          ${thSort(2, "Rang", true, "sticky left-0 md:left-[40px] z-30 w-[30px] md:w-[40px] min-w-[30px] md:min-w-[40px] max-w-[30px] md:max-w-[40px] bg-navy-900 border-r border-white/5")}
+          <th onclick="sortClassement(3, false)" class="cursor-pointer hover:bg-navy-700 transition select-none ${currentSort.col === 3 ? 'text-white' : ''} sticky left-[30px] md:left-[80px] z-30 text-left border-r border-white/5 w-[90px] md:w-[120px] min-w-[90px] md:min-w-[120px] max-w-[90px] md:max-w-[120px] bg-navy-900">
             <div class="flex items-center justify-start space-x-1 pl-2">
               <span>Joueur</span>
               <span class="text-[8px] md:text-[9px] ${currentSort.col === 3 ? 'text-pastis-500 opacity-100' : 'text-gray-600 opacity-50'} transition-colors">${currentSort.col === 3 ? (currentSort.asc ? '▲' : '▼') : '▼'}</span>
             </div>
           </th>
-          ${thSort(25, "Total", true, "sticky left-[120px] md:static z-30 px-1 md:px-4 py-3 text-pastis-500 text-sm md:text-base w-[40px] md:w-[350px] min-w-[40px] md:min-w-[350px] max-w-[40px] md:max-w-[350px] font-oswald bg-navy-900 border-r-2 border-navy-600 shadow-[3px_0_5px_rgba(0,0,0,0.3)] text-center")}
-          <th class="table-cell md:hidden px-2 py-3 text-center bg-navy-900 border-r border-white/5 w-[110px] min-w-[110px] max-w-[110px] whitespace-nowrap">🏆 Favori / Finaliste</th>
-          ${thSort(36, "Favori", false, "hidden md:table-cell px-2 py-3 text-left border-r border-white/5 w-[165px] min-w-[165px] max-w-[165px] bg-navy-900")}
-          ${thSort(40, "Finaliste", false, "hidden md:table-cell px-2 py-3 text-left w-[165px] min-w-[165px] max-w-[165px] bg-navy-900")}
+          ${thSort(25, "Total", true, "sticky left-[120px] md:left-[200px] z-30 px-1 md:px-4 py-3 text-pastis-500 text-sm md:text-base w-[40px] md:w-[60px] min-w-[40px] md:min-w-[60px] font-oswald bg-navy-900 border-r-2 border-navy-600 shadow-[3px_0_5px_rgba(0,0,0,0.3)]")}
+          <th class="px-2 md:px-3 py-3 text-center bg-navy-900 border-r border-white/5 w-[72px] min-w-[72px] whitespace-nowrap">🃏 Jokers</th>
       `;
-      // ★ Largeurs desktop calibrées pour remplir exactement le conteneur (max-w-7xl ≈ 1246px interne) :
-      // Evo 90px, Rang 90px, Joueur 480px (dominante), Total 250px, Favori 165px, Finaliste 165px.
-      // Somme + bordures ≈ 1246px → plus de bande vide à droite sur un écran standard.
-      // Mobile strictement inchangé.
+      // ★ AJOUT JOKERS : la <th> ci-dessus (juste après "Total")
 
       if(phasesVisibility.showPts25) headHTML += thSort(4, "25", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-white/5`);
       if(phasesVisibility.showPts20) headHTML += thSort(5, "20", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-white/5`);
@@ -2706,8 +2682,8 @@ function renderClassement() {
       headHTML += `
           <th class="px-4 py-3 detail-col ${dClass} font-normal text-gray-500 border-r border-white/5">Forme</th>
           ${thSort(33, "Réussite", true, `px-3 py-3 detail-col ${dClass} border-r border-navy-700`)}
-          ${thSort(36, "Favori", false, `px-4 py-3 detail-col ${dClass} md:hidden text-left border-r border-white/5 min-w-[150px]`)}
-          ${thSort(40, "Finaliste", false, `px-4 py-3 detail-col ${dClass} md:hidden text-left min-w-[150px]`)}
+          ${thSort(36, "Favori", false, `px-4 py-3 detail-col ${dClass} text-left border-r border-white/5 min-w-[150px]`)}
+          ${thSort(40, "Finaliste", false, `px-4 py-3 detail-col ${dClass} text-left min-w-[150px]`)}
         </tr>
       `;
       headContainer.innerHTML = headHTML;
@@ -2726,7 +2702,10 @@ let ppLastTotal = null; // mémorise le total de la ligne précédente (ex-æquo
         const bonsResultats = row[33];
         const favori = row[36], statutFav = row[37], ptsFav = row[38];
         const finaliste = row[40], statutFin = row[41], ptsFin = row[42];
-        if(!joueur || joueur === "") return;
+        const jokerRaw   = (row[34] || "");              // ★ JOKERS AI : "★☆☆ +3 pts"
+        const jokerParts = jokerRaw.split(" +");
+        const jokerStars = jokerParts[0] || "";
+        const jokerBonus = jokerParts.length > 1 ? "+" + jokerParts[1] : "";        if(!joueur || joueur === "") return;
 
         let evolBadge = styleEvolText(evolRaw);
 
@@ -2771,16 +2750,10 @@ let ppLastTotal = null; // mémorise le total de la ligne précédente (ex-æquo
         if(phasesVisibility.showF) phasesColsHTML += `<td class="px-3 py-3 detail-col ${dClass} bg-navy-900 border-r border-navy-700 ${row[23]>0 ? 'text-white font-bold font-oswald text-base':'text-gray-600'}">${row[23]}</td>`;
         if(phasesVisibility.showBonus) phasesColsHTML += `<td class="px-3 py-3 detail-col ${dClass} bg-navy-900 text-pastis-500 border-r border-navy-700 ${row[24]>0 ? 'font-bold font-oswald text-base':'text-gray-600'}">${row[24]}</td>`;
 
-        let favHTML = ""; let finHTML = ""; let favFinCompactHTML = "";
-        const estMasque = !isTournamentStarted || estJoueurMasque(joueur);
-        // Élimination détectée depuis le libellé de statut (ex: "Éliminé") → sert à barrer le nom en vue compacte mobile
-        const isElimFav = statutFav && statutFav.toString().toLowerCase().includes('élimin');
-        const isElimFin = statutFin && statutFin.toString().toLowerCase().includes('élimin');
-
-        if (estMasque) {
+        let favHTML = ""; let finHTML = "";
+        if (!isTournamentStarted || estJoueurMasque(joueur)) {
           favHTML = `<div class="flex flex-col items-center justify-center text-gray-500"><span class="text-lg">🔒</span><span class="text-[9px] uppercase mt-1 text-center leading-tight">Favoris<br>masqués</span></div>`;
           finHTML = `<div class="flex flex-col items-center justify-center text-gray-500"><span class="text-lg">🔒</span><span class="text-[9px] uppercase mt-1 text-center leading-tight">Favoris<br>masqués</span></div>`;
-          favFinCompactHTML = `<div class="flex items-center justify-center text-gray-500"><span class="text-sm">🔒</span></div>`;
         } else {
           let stFavClass = getStatusClass(statutFav);
           let stFinClass = getStatusClass(statutFin);
@@ -2802,41 +2775,29 @@ let ppLastTotal = null; // mémorise le total de la ligne précédente (ex-æquo
                 ${ptsFin !== "" ? `<span class="text-[10px] md:text-xs bg-pastis-500 text-navy-900 px-1 rounded font-black">+${cleanPlus(ptsFin)}</span>` : ''}
               </div>
             </div>`;
-
-          // Version compacte MOBILE uniquement (strictement inchangée) : flag + nom, barré si éliminé
-          favFinCompactHTML = `
-            <div class="flex flex-col justify-center gap-1 py-0.5">
-              <div class="flex items-center gap-1 min-w-0 ${isElimFav ? 'opacity-50' : ''}">
-                <span class="text-xs emoji-flag flex-shrink-0">${getFlagOnly(favori)}</span>
-                <span class="text-[10px] font-semibold truncate ${isElimFav ? 'line-through text-gray-500' : 'text-white'}">${getCleanName(favori)}</span>
-              </div>
-              <div class="flex items-center gap-1 min-w-0 ${isElimFin ? 'opacity-50' : ''}">
-                <span class="text-xs emoji-flag flex-shrink-0">${getFlagOnly(finaliste)}</span>
-                <span class="text-[10px] font-semibold truncate ${isElimFin ? 'line-through text-gray-500' : 'text-white'}">${getCleanName(finaliste)}</span>
-              </div>
-            </div>`;
         }
 
         html += `
           <tr class="group hover:bg-navy-700 transition border-navy-700">
-            <td class="z-10 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 font-oswald text-base w-[40px] md:w-[90px] min-w-[40px] md:min-w-[90px] max-w-[40px] md:max-w-[90px]">${evolBadge}</td>
-            <td class="sticky left-0 md:static z-20 font-bold text-gray-400 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 font-oswald text-base w-[30px] md:w-[90px] min-w-[30px] md:min-w-[90px] max-w-[30px] md:max-w-[90px]">${rang}</td>
-            <td class="sticky left-[30px] md:static z-20 px-1 md:px-2 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 w-[90px] md:w-[380px] min-w-[90px] md:min-w-[380px] max-w-[90px] md:max-w-[380px]">
+            <td class="md:sticky md:left-0 z-10 md:z-20 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 font-oswald text-base w-[40px] min-w-[40px] max-w-[40px]">${evolBadge}</td>
+            <td class="sticky left-0 md:left-[40px] z-20 font-bold text-gray-400 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 font-oswald text-base w-[30px] md:w-[40px] min-w-[30px] md:min-w-[40px] max-w-[30px] md:max-w-[40px]">${rang}</td>
+            <td class="sticky left-[30px] md:left-[80px] z-20 px-1 md:px-2 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 w-[90px] md:w-[120px] min-w-[90px] md:min-w-[120px] max-w-[90px] md:max-w-[120px]">
               <div onclick="goToPlayerProfile('${escapeJS(joueur)}')" class="truncate text-left font-bold text-white hover:text-pastis-500 cursor-pointer tracking-wide w-full">${joueur}</div>
             </td>
-            <td class="sticky left-[120px] md:static z-20 bg-navy-800 group-hover:bg-navy-700 px-1 md:px-4 py-3 text-pastis-500 font-bold text-sm md:text-xl font-oswald w-[40px] md:w-[350px] min-w-[40px] md:min-w-[350px] max-w-[40px] md:max-w-[350px] border-r-2 border-navy-600 shadow-[3px_0_5px_rgba(0,0,0,0.3)] text-center">${total}</td>
-            <td class="table-cell md:hidden px-2 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 w-[110px] min-w-[110px] max-w-[110px]">
-              ${favFinCompactHTML}
-            </td>
-            <td class="hidden md:table-cell px-2 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 w-[165px] min-w-[165px] max-w-[165px] text-left">${favHTML}</td>
-            <td class="hidden md:table-cell px-2 py-3 bg-navy-800 group-hover:bg-navy-700 w-[165px] min-w-[165px] max-w-[165px] text-left">${finHTML}</td>
+            <td class="sticky left-[120px] md:left-[200px] z-20 bg-navy-800 group-hover:bg-navy-700 px-1 md:px-4 py-3 text-pastis-500 font-bold text-sm md:text-xl font-oswald w-[40px] md:w-[60px] min-w-[40px] md:min-w-[60px] border-r-2 border-navy-600 shadow-[3px_0_5px_rgba(0,0,0,0.3)]">${total}</td>
+            <td class="px-2 md:px-3 py-3 text-center whitespace-nowrap bg-navy-800 group-hover:bg-navy-700 border-r border-white/5">
+              <div class="flex flex-col items-center leading-tight">
+                <span class="text-pastis-500 text-base tracking-widest">${jokerStars}</span>
+                ${jokerBonus ? `<span class="text-[10px] font-bold text-pastis-500/80 mt-0.5">${jokerBonus}</span>` : ''}
+              </div>
+            </td>            
             ${ptsColsHTML}
             ${phasesColsHTML}
             
             <td class="px-4 py-3 detail-col ${dClass} border-r border-white/5">${formeHTML}</td>
             <td class="px-3 py-3 detail-col ${dClass} font-bold font-oswald text-base text-green-400 tracking-wider border-r border-navy-700">${bonsResultats}</td>
-            <td class="px-4 py-3 detail-col ${dClass} md:hidden text-left border-r border-white/5 min-w-[150px]">${favHTML}</td>
-            <td class="px-4 py-3 detail-col ${dClass} md:hidden text-left min-w-[150px]">${finHTML}</td>
+            <td class="px-4 py-3 detail-col ${dClass} text-left border-r border-white/5 min-w-[150px]">${favHTML}</td>
+            <td class="px-4 py-3 detail-col ${dClass} text-left min-w-[150px]">${finHTML}</td>
           </tr>
         `;
       });
