@@ -2631,12 +2631,21 @@ function generateCompactBracketCard(match, side) {
       `;
     }
 
-    // --- CLASSEMENT COMPLET ---
-    function toggleClassementColumns() {
+function toggleClassementColumns() {
       isDetailedViewOpen = !isDetailedViewOpen;
-      renderClassement(); 
+      renderClassement();
+      const container = document.getElementById('main-table-container');
+      if (container) {
+        if (isDetailedViewOpen) {
+          // 👁️ Joueur/Total étant désormais très larges, les nouvelles colonnes (25/20/15/Poules/Forme...)
+          // apparaissent hors champ à droite — on scrolle automatiquement pour les révéler.
+          setTimeout(() => container.scrollTo({ left: 300, behavior: 'smooth' }), 50);
+        } else {
+          container.scrollTo({ left: 0, behavior: 'smooth' });
+        }
+      }
     }
-
+    
 function renderClassement() {
       const headContainer = document.getElementById('classement-head');
       const listContainer = document.getElementById('classement-list');
