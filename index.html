@@ -2654,21 +2654,23 @@ function renderClassement() {
 
       let headHTML = `
         <tr>
-          ${thSort(1, "Evo", true, "z-10 w-[40px] md:w-[70px] min-w-[40px] md:min-w-[70px] max-w-[40px] md:max-w-[70px] bg-navy-900 border-r border-white/5")}
-          ${thSort(2, "Rang", true, "sticky left-0 md:static z-30 w-[30px] md:w-[70px] min-w-[30px] md:min-w-[70px] max-w-[30px] md:max-w-[70px] bg-navy-900 border-r border-white/5")}
-          <th onclick="sortClassement(3, false)" class="cursor-pointer hover:bg-navy-700 transition select-none ${currentSort.col === 3 ? 'text-white' : ''} sticky left-[30px] md:static z-30 text-left border-r border-white/5 w-[90px] md:w-[150px] min-w-[90px] md:min-w-[150px] max-w-[90px] md:max-w-[150px] bg-navy-900">
+          ${thSort(1, "Evo", true, "z-10 w-[40px] md:w-[90px] min-w-[40px] md:min-w-[90px] max-w-[40px] md:max-w-[90px] bg-navy-900 border-r border-white/5")}
+          ${thSort(2, "Rang", true, "sticky left-0 md:static z-30 w-[30px] md:w-[90px] min-w-[30px] md:min-w-[90px] max-w-[30px] md:max-w-[90px] bg-navy-900 border-r border-white/5")}
+          <th onclick="sortClassement(3, false)" class="cursor-pointer hover:bg-navy-700 transition select-none ${currentSort.col === 3 ? 'text-white' : ''} sticky left-[30px] md:static z-30 text-left border-r border-white/5 w-[90px] md:w-[480px] min-w-[90px] md:min-w-[480px] max-w-[90px] md:max-w-[480px] bg-navy-900">
             <div class="flex items-center justify-start space-x-1 pl-2">
               <span>Joueur</span>
               <span class="text-[8px] md:text-[9px] ${currentSort.col === 3 ? 'text-pastis-500 opacity-100' : 'text-gray-600 opacity-50'} transition-colors">${currentSort.col === 3 ? (currentSort.asc ? '▲' : '▼') : '▼'}</span>
             </div>
           </th>
-          ${thSort(25, "Total", true, "sticky left-[120px] md:static z-30 px-1 md:px-4 py-3 text-pastis-500 text-sm md:text-base w-[40px] md:w-[130px] min-w-[40px] md:min-w-[130px] max-w-[40px] md:max-w-[130px] font-oswald bg-navy-900 border-r-2 border-navy-600 shadow-[3px_0_5px_rgba(0,0,0,0.3)] text-center")}
+          ${thSort(25, "Total", true, "sticky left-[120px] md:static z-30 px-1 md:px-4 py-3 text-pastis-500 text-sm md:text-base w-[40px] md:w-[250px] min-w-[40px] md:min-w-[250px] max-w-[40px] md:max-w-[250px] font-oswald bg-navy-900 border-r-2 border-navy-600 shadow-[3px_0_5px_rgba(0,0,0,0.3)] text-center")}
           <th class="table-cell md:hidden px-2 py-3 text-center bg-navy-900 border-r border-white/5 w-[110px] min-w-[110px] max-w-[110px] whitespace-nowrap">🏆 Favori / Finaliste</th>
-          ${thSort(36, "Favori", false, "hidden md:table-cell px-2 py-3 text-left border-r border-white/5 w-[130px] min-w-[130px] max-w-[130px] bg-navy-900")}
-          ${thSort(40, "Finaliste", false, "hidden md:table-cell px-2 py-3 text-left w-[130px] min-w-[130px] max-w-[130px] bg-navy-900")}
+          ${thSort(36, "Favori", false, "hidden md:table-cell px-2 py-3 text-left border-r border-white/5 w-[165px] min-w-[165px] max-w-[165px] bg-navy-900")}
+          ${thSort(40, "Finaliste", false, "hidden md:table-cell px-2 py-3 text-left w-[165px] min-w-[165px] max-w-[165px] bg-navy-900")}
       `;
-      // ★ Evo 70px, Rang 70px (élargis), Joueur 150px (rapetissée), Total 130px (élargie),
-      // Favori/Finaliste 130px chacune. Mobile strictement inchangé.
+      // ★ Largeurs desktop calibrées pour remplir exactement le conteneur (max-w-7xl ≈ 1246px interne) :
+      // Evo 90px, Rang 90px, Joueur 480px (dominante), Total 250px, Favori 165px, Finaliste 165px.
+      // Somme + bordures ≈ 1246px → plus de bande vide à droite sur un écran standard.
+      // Mobile strictement inchangé.
 
       if(phasesVisibility.showPts25) headHTML += thSort(4, "25", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-white/5`);
       if(phasesVisibility.showPts20) headHTML += thSort(5, "20", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-white/5`);
@@ -2808,17 +2810,17 @@ let ppLastTotal = null; // mémorise le total de la ligne précédente (ex-æquo
 
         html += `
           <tr class="group hover:bg-navy-700 transition border-navy-700">
-            <td class="z-10 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 font-oswald text-base w-[40px] md:w-[70px] min-w-[40px] md:min-w-[70px] max-w-[40px] md:max-w-[70px]">${evolBadge}</td>
-            <td class="sticky left-0 md:static z-20 font-bold text-gray-400 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 font-oswald text-base w-[30px] md:w-[70px] min-w-[30px] md:min-w-[70px] max-w-[30px] md:max-w-[70px]">${rang}</td>
-            <td class="sticky left-[30px] md:static z-20 px-1 md:px-2 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 w-[90px] md:w-[150px] min-w-[90px] md:min-w-[150px] max-w-[90px] md:max-w-[150px]">
+            <td class="z-10 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 font-oswald text-base w-[40px] md:w-[90px] min-w-[40px] md:min-w-[90px] max-w-[40px] md:max-w-[90px]">${evolBadge}</td>
+            <td class="sticky left-0 md:static z-20 font-bold text-gray-400 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 font-oswald text-base w-[30px] md:w-[90px] min-w-[30px] md:min-w-[90px] max-w-[30px] md:max-w-[90px]">${rang}</td>
+            <td class="sticky left-[30px] md:static z-20 px-1 md:px-2 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 w-[90px] md:w-[480px] min-w-[90px] md:min-w-[480px] max-w-[90px] md:max-w-[480px]">
               <div onclick="goToPlayerProfile('${escapeJS(joueur)}')" class="truncate text-left font-bold text-white hover:text-pastis-500 cursor-pointer tracking-wide w-full">${joueur}</div>
             </td>
-            <td class="sticky left-[120px] md:static z-20 bg-navy-800 group-hover:bg-navy-700 px-1 md:px-4 py-3 text-pastis-500 font-bold text-sm md:text-xl font-oswald w-[40px] md:w-[130px] min-w-[40px] md:min-w-[130px] max-w-[40px] md:max-w-[130px] border-r-2 border-navy-600 shadow-[3px_0_5px_rgba(0,0,0,0.3)] text-center">${total}</td>
+            <td class="sticky left-[120px] md:static z-20 bg-navy-800 group-hover:bg-navy-700 px-1 md:px-4 py-3 text-pastis-500 font-bold text-sm md:text-xl font-oswald w-[40px] md:w-[250px] min-w-[40px] md:min-w-[250px] max-w-[40px] md:max-w-[250px] border-r-2 border-navy-600 shadow-[3px_0_5px_rgba(0,0,0,0.3)] text-center">${total}</td>
             <td class="table-cell md:hidden px-2 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 w-[110px] min-w-[110px] max-w-[110px]">
               ${favFinCompactHTML}
             </td>
-            <td class="hidden md:table-cell px-2 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 w-[130px] min-w-[130px] max-w-[130px] text-left">${favHTML}</td>
-            <td class="hidden md:table-cell px-2 py-3 bg-navy-800 group-hover:bg-navy-700 w-[130px] min-w-[130px] max-w-[130px] text-left">${finHTML}</td>
+            <td class="hidden md:table-cell px-2 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 w-[165px] min-w-[165px] max-w-[165px] text-left">${favHTML}</td>
+            <td class="hidden md:table-cell px-2 py-3 bg-navy-800 group-hover:bg-navy-700 w-[165px] min-w-[165px] max-w-[165px] text-left">${finHTML}</td>
             ${ptsColsHTML}
             ${phasesColsHTML}
             
