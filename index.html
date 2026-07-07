@@ -2653,9 +2653,10 @@ function renderClassement() {
             </div>
           </th>
           ${thSort(25, "Total", true, "sticky left-[120px] md:left-[200px] z-30 px-1 md:px-4 py-3 text-pastis-500 text-sm md:text-base w-[40px] md:w-[60px] min-w-[40px] md:min-w-[60px] font-oswald bg-navy-900 border-r-2 border-navy-600 shadow-[3px_0_5px_rgba(0,0,0,0.3)]")}
-          <th class="px-2 md:px-3 py-3 text-center bg-navy-900 border-r border-white/5 w-[72px] min-w-[72px] whitespace-nowrap">🃏 Jokers</th>
+          ${thSort(36, "Favori", false, "px-2 md:px-3 py-3 bg-navy-900 text-left border-r border-white/5 w-[100px] md:w-[140px] min-w-[100px] md:min-w-[140px] max-w-[100px] md:max-w-[140px]")}
+          ${thSort(40, "Finaliste", false, "px-2 md:px-3 py-3 bg-navy-900 text-left border-r border-white/5 w-[100px] md:w-[140px] min-w-[100px] md:min-w-[140px] max-w-[100px] md:max-w-[140px]")}
       `;
-      // ★ AJOUT JOKERS : la <th> ci-dessus (juste après "Total")
+      // ★ FAVORI / FINALISTE : verrouillées (w + min-w + max-w identiques), même logique que la colonne Joueur
 
       if(phasesVisibility.showPts25) headHTML += thSort(4, "25", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-white/5`);
       if(phasesVisibility.showPts20) headHTML += thSort(5, "20", true, `px-2 py-3 detail-col ${dClass} bg-navy-800 border-r border-white/5`);
@@ -2682,8 +2683,6 @@ function renderClassement() {
       headHTML += `
           <th class="px-4 py-3 detail-col ${dClass} font-normal text-gray-500 border-r border-white/5">Forme</th>
           ${thSort(33, "Réussite", true, `px-3 py-3 detail-col ${dClass} border-r border-navy-700`)}
-          ${thSort(36, "Favori", false, `px-4 py-3 detail-col ${dClass} text-left border-r border-white/5 min-w-[150px]`)}
-          ${thSort(40, "Finaliste", false, `px-4 py-3 detail-col ${dClass} text-left min-w-[150px]`)}
         </tr>
       `;
       headContainer.innerHTML = headHTML;
@@ -2702,10 +2701,7 @@ let ppLastTotal = null; // mémorise le total de la ligne précédente (ex-æquo
         const bonsResultats = row[33];
         const favori = row[36], statutFav = row[37], ptsFav = row[38];
         const finaliste = row[40], statutFin = row[41], ptsFin = row[42];
-        const jokerRaw   = (row[34] || "");              // ★ JOKERS AI : "★☆☆ +3 pts"
-        const jokerParts = jokerRaw.split(" +");
-        const jokerStars = jokerParts[0] || "";
-        const jokerBonus = jokerParts.length > 1 ? "+" + jokerParts[1] : "";        if(!joueur || joueur === "") return;
+        if(!joueur || joueur === "") return;
 
         let evolBadge = styleEvolText(evolRaw);
 
@@ -2785,19 +2781,13 @@ let ppLastTotal = null; // mémorise le total de la ligne précédente (ex-æquo
               <div onclick="goToPlayerProfile('${escapeJS(joueur)}')" class="truncate text-left font-bold text-white hover:text-pastis-500 cursor-pointer tracking-wide w-full">${joueur}</div>
             </td>
             <td class="sticky left-[120px] md:left-[200px] z-20 bg-navy-800 group-hover:bg-navy-700 px-1 md:px-4 py-3 text-pastis-500 font-bold text-sm md:text-xl font-oswald w-[40px] md:w-[60px] min-w-[40px] md:min-w-[60px] border-r-2 border-navy-600 shadow-[3px_0_5px_rgba(0,0,0,0.3)]">${total}</td>
-            <td class="px-2 md:px-3 py-3 text-center whitespace-nowrap bg-navy-800 group-hover:bg-navy-700 border-r border-white/5">
-              <div class="flex flex-col items-center leading-tight">
-                <span class="text-pastis-500 text-base tracking-widest">${jokerStars}</span>
-                ${jokerBonus ? `<span class="text-[10px] font-bold text-pastis-500/80 mt-0.5">${jokerBonus}</span>` : ''}
-              </div>
-            </td>            
+            <td class="px-2 md:px-3 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 text-left w-[100px] md:w-[140px] min-w-[100px] md:min-w-[140px] max-w-[100px] md:max-w-[140px]">${favHTML}</td>
+            <td class="px-2 md:px-3 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 text-left w-[100px] md:w-[140px] min-w-[100px] md:min-w-[140px] max-w-[100px] md:max-w-[140px]">${finHTML}</td>
             ${ptsColsHTML}
             ${phasesColsHTML}
             
             <td class="px-4 py-3 detail-col ${dClass} border-r border-white/5">${formeHTML}</td>
             <td class="px-3 py-3 detail-col ${dClass} font-bold font-oswald text-base text-green-400 tracking-wider border-r border-navy-700">${bonsResultats}</td>
-            <td class="px-4 py-3 detail-col ${dClass} text-left border-r border-white/5 min-w-[150px]">${favHTML}</td>
-            <td class="px-4 py-3 detail-col ${dClass} text-left min-w-[150px]">${finHTML}</td>
           </tr>
         `;
       });
