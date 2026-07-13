@@ -1360,7 +1360,7 @@ function getPointsBadge(points) {
     function getTvLogoHTML(channelsString) {
       if (!channelsString) return "";
       
-      let channels = channelsString.split(/[,/]/).map(c => c.trim()).filter(c => c !== "");
+      let channels = channelsString.split(/[,;/]/).map(c => c.trim()).filter(c => c !== "");
       
       let htmlArray = channels.map(channel => {
         let foundChannel = appData.chaines.find(c => c[0] && c[0].toLowerCase() === channel.toLowerCase());
