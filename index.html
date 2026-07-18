@@ -3904,8 +3904,19 @@ function goToAdjacentMatch(direction) {
   if (!idMatch) return;
   const idx = appData.calendrier.findIndex(r => r[0] == idMatch);
   if (idx === -1) return;
-  const target = appData.calendrier[idx + direction];
-  if (!target) return; // pas de match avant / après
+
+  const cible = idx + direction;
+  // 🔒 Bornes strictes : jamais avant le 1er ni après le dernier match.
+  if (cible < 0 || cible >= appData.calendrier.length) {
+    updateMatchNavButtons(idMatch); // re-grise le bouton concerné, au cas où
+    return;
+  }
+  const target = appData.calendrier[cible];
+  if (!target || target[0] === "" || target[0] == null) {
+    // Ligne vide en bas du calendrier → on ne bouge pas.
+    updateMatchNavButtons(idMatch);
+    return;
+  }
   openMatchDetails(target[0]);
 }
 
