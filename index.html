@@ -4144,6 +4144,8 @@ ${(() => {
 let ppSession = null;
   let ppCollapsed = true;
   let ppViewedJoueur = '';
+  let ppSaving = false;   // 🆕 verrou anti double-clic / double-envoi de la sauvegarde
+
   
   try { const s = sessionStorage.getItem('ppSession'); if (s) ppSession = JSON.parse(s); } catch (e) {}
 
@@ -4434,6 +4436,7 @@ function ppRenderGrid() {
 
 function ppSave() {
     if (!ppSession) return;
+    if (ppSaving) return; // 🆕 une sauvegarde est déjà en cours → on ignore clics/renvois
     const items = [];
     document.querySelectorAll('#pp-mespronos-mount .pp-match-row').forEach(row => {
       const inA = row.querySelector('.pp-score[data-side="a"]');
@@ -4451,18 +4454,34 @@ function ppSave() {
       });
     });
     if (!items.length) { ppSaveMsg('Rien à enregistrer (cases vides).', 'text-yellow-400'); return; }
+
+    // 🆕 Clé d'idempotence : générée UNE fois par clic, réutilisée par les retries de ppPost.
+    //    Le serveur dédoublonne → plus de doublon Journal_Pronos ni de mail en double.
+    const reqId = 'sv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+
+    const btn = document.getElementById('pp-save');
+    ppSaving = true;
+    if (btn) { btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed'); }
     ppSaveMsg('Enregistrement...', 'text-gray-400');
-    ppPost({ action: 'save', joueur: ppSession.joueur, mdp: ppSession.mdp, pronos: items }).then(d => {
+
+    ppPost({ action: 'save', reqId: reqId, joueur: ppSession.joueur, mdp: ppSession.mdp, pronos: items }).then(d => {
       if (!d.ok) { ppSaveMsg('Erreur : ' + (d.error || 'inconnue'), 'text-red-400'); return; }
-      let msg = `✅ ${d.misAJour} modifié(s), ${d.nouveaux} ajouté(s).`;
-      if (d.jokersRefuses && d.jokersRefuses.length) msg += ` ${d.jokersRefuses.length} joker(s) refusé(s).`;
+      const msg = d.dedup
+        ? '✅ Pronos enregistrés.'
+        : `✅ ${d.misAJour} modifié(s), ${d.nouveaux} ajouté(s).`
+          + ((d.jokersRefuses && d.jokersRefuses.length) ? ` ${d.jokersRefuses.length} joker(s) refusé(s).` : '');
       ppSaveMsg(msg, 'text-green-400');
       // Rafraîchit la session puis replie automatiquement la saisie (sans déconnexion)
       ppPost({ action: 'login', joueur: ppSession.joueur, mdp: ppSession.mdp }).then(d2 => {
         if (d2.ok) { ppSession.pronos = d2.pronos; ppSession.phasesVerrouillees = d2.phasesVerrouillees; try { sessionStorage.setItem('ppSession', JSON.stringify(ppSession)); } catch (e) {} }
       });
       setTimeout(() => { try { ppCollapse(); } catch (e) {} }, 1400);
-    }).catch(() => ppSaveMsg('Erreur réseau.', 'text-red-400'));
+    }).catch(() => ppSaveMsg('Erreur réseau.', 'text-red-400'))
+      .finally(() => {
+        // 🆕 On relâche TOUJOURS le verrou et on réactive le bouton
+        ppSaving = false;
+        if (btn) { btn.disabled = false; btn.classList.remove('opacity-50', 'cursor-not-allowed'); }
+      });
   }
 
   // ---------- Ouverture / repli ----------
