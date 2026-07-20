@@ -2428,11 +2428,12 @@ teams.forEach((t, index) => {
         else if (phase.includes("8") || phase.includes("huiti")) m8.push(m);
         else if (phase.includes("1/4") || phase.includes("quart")) m4.push(m);
         else if (phase.includes("1/2") || phase.includes("demi")) m2.push(m);
-        else if (phase.includes("3") || phase.includes("petite")) m3rd.push(m);
+        // ⚠️ La PETITE FINALE contient aussi le mot "finale" → on la teste AVANT la finale
+        else if (phase.includes("petite") || phase.includes("place") || phase.includes("3e") || phase.includes("3è") || phase.includes("3ème")) m3rd.push(m);
         else if (phase.includes("finale") || phase.includes("f.")) mF.push(m);
       });
 
-      if(matchCount === 0) return `<p class="text-gray-500 text-center italic mt-10">Aucun match de phase finale défini pour l'instant.</p>`;
+      if(matchCount === 0) return <p class="text-gray-500 text-center italic mt-10">Aucun match de phase finale défini pour l'instant.</p>;
 
       const byId = (a,b) => parseInt(String(a[0]).replace(/\D/g,'')) - parseInt(String(b[0]).replace(/\D/g,''));
       [m16,m8,m4,m2,mF,m3rd].forEach(arr => arr.sort(byId));
@@ -2454,13 +2455,14 @@ teams.forEach((t, index) => {
       }
       window.currentKoRound = active;
 
-      // Bandeau champion (finale jouée)
+      // 🏆 Champion = vainqueur de la VRAIE finale = match "Finale" d'ID le plus élevé
+      // (jamais la petite finale, qui est dans m3rd). mF trié croissant → on prend le dernier.
       let championHTML = "";
       if (mF.length > 0) {
-        const fin = mF[0], sA = fin[5], sB = fin[6];
+        const fin = mF[mF.length - 1], sA = fin[5], sB = fin[6];
         if (sA !== "" && sB !== "") {
           let win = parseInt(sA) > parseInt(sB) ? getCleanName(fin[3]) : (parseInt(sB) > parseInt(sA) ? getCleanName(fin[4]) : getCleanName(fin[7]));
-          if (win) championHTML = `<div class="mb-4 text-center bg-gradient-to-r from-pastis-500/20 via-pastis-500/10 to-pastis-500/20 border border-pastis-500/40 rounded-xl py-3"><div class="text-pastis-500 font-black uppercase font-oswald text-xl md:text-2xl tracking-wider">🏆 ${win} 🏆</div><div class="text-[10px] text-gray-400 uppercase tracking-widest mt-0.5">Champion du monde</div></div>`;
+          if (win) championHTML = <div class="mb-4 text-center bg-gradient-to-r from-pastis-500/20 via-pastis-500/10 to-pastis-500/20 border border-pastis-500/40 rounded-xl py-3"><div class="text-pastis-500 font-black uppercase font-oswald text-xl md:text-2xl tracking-wider">🏆 ${win} 🏆</div><div class="text-[10px] text-gray-400 uppercase tracking-widest mt-0.5">Champion du monde</div></div>;
         }
       }
 
