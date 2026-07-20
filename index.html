@@ -2757,20 +2757,20 @@ let ppLastTotal = null; // mémorise le total de la ligne précédente (ex-æquo
           let stFinClass = getStatusClass(statutFin);
           
           favHTML = `
-            <div class="flex flex-col items-start justify-center">
-              <div class="flex items-center space-x-1.5"><span class="text-base emoji-flag">${getFlagOnly(favori)}</span><span class="font-bold text-sm whitespace-normal break-words leading-tight text-white">${getCleanName(favori)}</span></div>
-              <div class="flex items-center space-x-2 mt-0.5">
+            <div class="flex flex-col items-start justify-center min-w-0 w-full">
+              <div class="flex items-center gap-1.5 min-w-0 w-full"><span class="text-base emoji-flag flex-shrink-0">${getFlagOnly(favori)}</span><span class="font-bold text-sm whitespace-normal break-words leading-tight text-white">${getCleanName(favori)}</span></div>
+              <div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-0.5 min-w-0 w-full">
                 <span class="text-[10px] md:text-xs ${stFavClass} uppercase">${statutFav}</span>
-                ${ptsFav !== "" ? `<span class="text-[10px] md:text-xs bg-pastis-500 text-navy-900 px-1 rounded font-black">+${cleanPlus(ptsFav)}</span>` : ''}
+                ${ptsFav !== "" ? <span class="text-[10px] md:text-xs bg-pastis-500 text-navy-900 px-1 rounded font-black whitespace-nowrap">+${cleanPlus(ptsFav)}</span> : ''}
               </div>
             </div>`;
 
           finHTML = `
-            <div class="flex flex-col items-start justify-center">
-              <div class="flex items-center space-x-1.5"><span class="text-base emoji-flag">${getFlagOnly(finaliste)}</span><span class="font-bold text-sm whitespace-normal break-words leading-tight text-white">${getCleanName(finaliste)}</span></div>
-              <div class="flex items-center space-x-2 mt-0.5">
+            <div class="flex flex-col items-start justify-center min-w-0 w-full">
+              <div class="flex items-center gap-1.5 min-w-0 w-full"><span class="text-base emoji-flag flex-shrink-0">${getFlagOnly(finaliste)}</span><span class="font-bold text-sm whitespace-normal break-words leading-tight text-white">${getCleanName(finaliste)}</span></div>
+              <div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-0.5 min-w-0 w-full">
                 <span class="text-[10px] md:text-xs ${stFinClass} uppercase">${statutFin}</span>
-                ${ptsFin !== "" ? `<span class="text-[10px] md:text-xs bg-pastis-500 text-navy-900 px-1 rounded font-black">+${cleanPlus(ptsFin)}</span>` : ''}
+                ${ptsFin !== "" ? <span class="text-[10px] md:text-xs bg-pastis-500 text-navy-900 px-1 rounded font-black whitespace-nowrap">+${cleanPlus(ptsFin)}</span> : ''}
               </div>
             </div>`;
         }
