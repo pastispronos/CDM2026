@@ -2433,12 +2433,11 @@ teams.forEach((t, index) => {
         else if (phase.includes("finale") || phase.includes("f.")) mF.push(m);
       });
 
-      if(matchCount === 0) return <p class="text-gray-500 text-center italic mt-10">Aucun match de phase finale défini pour l'instant.</p>;
+      if(matchCount === 0) return `<p class="text-gray-500 text-center italic mt-10">Aucun match de phase finale défini pour l'instant.</p>`;
 
       const byId = (a,b) => parseInt(String(a[0]).replace(/\D/g,'')) - parseInt(String(b[0]).replace(/\D/g,''));
       [m16,m8,m4,m2,mF,m3rd].forEach(arr => arr.sort(byId));
 
-      // Tours enchaînés : chaque onglet affiche le tour + le tour suivant relié
       const rounds = [
         { key:'16', label:'Seizièmes', from:m16, to:m8 },
         { key:'8',  label:'Huitièmes', from:m8,  to:m4 },
@@ -2456,13 +2455,12 @@ teams.forEach((t, index) => {
       window.currentKoRound = active;
 
       // 🏆 Champion = vainqueur de la VRAIE finale = match "Finale" d'ID le plus élevé
-      // (jamais la petite finale, qui est dans m3rd). mF trié croissant → on prend le dernier.
       let championHTML = "";
       if (mF.length > 0) {
         const fin = mF[mF.length - 1], sA = fin[5], sB = fin[6];
         if (sA !== "" && sB !== "") {
           let win = parseInt(sA) > parseInt(sB) ? getCleanName(fin[3]) : (parseInt(sB) > parseInt(sA) ? getCleanName(fin[4]) : getCleanName(fin[7]));
-          if (win) championHTML = <div class="mb-4 text-center bg-gradient-to-r from-pastis-500/20 via-pastis-500/10 to-pastis-500/20 border border-pastis-500/40 rounded-xl py-3"><div class="text-pastis-500 font-black uppercase font-oswald text-xl md:text-2xl tracking-wider">🏆 ${win} 🏆</div><div class="text-[10px] text-gray-400 uppercase tracking-widest mt-0.5">Champion du monde</div></div>;
+          if (win) championHTML = `<div class="mb-4 text-center bg-gradient-to-r from-pastis-500/20 via-pastis-500/10 to-pastis-500/20 border border-pastis-500/40 rounded-xl py-3"><div class="text-pastis-500 font-black uppercase font-oswald text-xl md:text-2xl tracking-wider">🏆 ${win} 🏆</div><div class="text-[10px] text-gray-400 uppercase tracking-widest mt-0.5">Champion du monde</div></div>`;
         }
       }
 
@@ -2755,13 +2753,13 @@ let ppLastTotal = null; // mémorise le total de la ligne précédente (ex-æquo
         } else {
           let stFavClass = getStatusClass(statutFav);
           let stFinClass = getStatusClass(statutFin);
-          
+
           favHTML = `
             <div class="flex flex-col items-start justify-center min-w-0 w-full">
               <div class="flex items-center gap-1.5 min-w-0 w-full"><span class="text-base emoji-flag flex-shrink-0">${getFlagOnly(favori)}</span><span class="font-bold text-sm whitespace-normal break-words leading-tight text-white">${getCleanName(favori)}</span></div>
               <div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-0.5 min-w-0 w-full">
                 <span class="text-[10px] md:text-xs ${stFavClass} uppercase">${statutFav}</span>
-                ${ptsFav !== "" ? <span class="text-[10px] md:text-xs bg-pastis-500 text-navy-900 px-1 rounded font-black whitespace-nowrap">+${cleanPlus(ptsFav)}</span> : ''}
+                ${ptsFav !== "" ? `<span class="text-[10px] md:text-xs bg-pastis-500 text-navy-900 px-1 rounded font-black whitespace-nowrap">+${cleanPlus(ptsFav)}</span>` : ''}
               </div>
             </div>`;
 
@@ -2770,7 +2768,7 @@ let ppLastTotal = null; // mémorise le total de la ligne précédente (ex-æquo
               <div class="flex items-center gap-1.5 min-w-0 w-full"><span class="text-base emoji-flag flex-shrink-0">${getFlagOnly(finaliste)}</span><span class="font-bold text-sm whitespace-normal break-words leading-tight text-white">${getCleanName(finaliste)}</span></div>
               <div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-0.5 min-w-0 w-full">
                 <span class="text-[10px] md:text-xs ${stFinClass} uppercase">${statutFin}</span>
-                ${ptsFin !== "" ? <span class="text-[10px] md:text-xs bg-pastis-500 text-navy-900 px-1 rounded font-black whitespace-nowrap">+${cleanPlus(ptsFin)}</span> : ''}
+                ${ptsFin !== "" ? `<span class="text-[10px] md:text-xs bg-pastis-500 text-navy-900 px-1 rounded font-black whitespace-nowrap">+${cleanPlus(ptsFin)}</span>` : ''}
               </div>
             </div>`;
         }
