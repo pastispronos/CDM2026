@@ -828,11 +828,17 @@ function initApp(data, isCached = false) {
         return new Date(yA, mA-1, dA) - new Date(yB, mB-1, dB);
       });
 
+      const favorisByPlayer = {};
       appData.classement.forEach(c => {
-        if(c[3] && c[3] !== "") historyData[c[3]] = { points: [], ranks: [], cumul: 0 };
+        if(c[3] && c[3] !== "") {
+          historyData[c[3]] = { points: [], ranks: [], cumul: 0 };
+          favorisByPlayer[c[3]] = parseInt(c[24]) || 0;   // col 25 "Favoris" (Vainqueur/Finaliste)
+        }
       });
 
-      historyTimeline.forEach(journee => {
+      const lastIndex = historyTimeline.length - 1;
+
+      historyTimeline.forEach((journee, jIndex) => {
         let matchIdsOnJournee = playedMatches
           .filter(m => getMatchJournee(m) === journee)
           .map(m => m[0]);
@@ -844,6 +850,14 @@ function initApp(data, isCached = false) {
             if(historyData[joueur] !== undefined) historyData[joueur].cumul += pts;
           });
         });
+
+        // 🏆 Points FAVORIS (Vainqueur/Finaliste) absents de l'onglet Pronostics :
+        // on les ajoute sur la DERNIÈRE journée pour aligner la courbe sur le Total réel
+        if (jIndex === lastIndex) {
+          Object.keys(historyData).forEach(j => {
+            historyData[j].cumul += (favorisByPlayer[j] || 0);
+          });
+        }
 
         let leaderboard = Object.keys(historyData).map(j => ({ joueur: j, pts: historyData[j].cumul }));
         leaderboard.sort((a,b) => b.pts - a.pts);
@@ -2781,8 +2795,8 @@ let ppLastTotal = null; // mémorise le total de la ligne précédente (ex-æquo
               <div onclick="goToPlayerProfile('${escapeJS(joueur)}')" class="truncate text-left font-bold text-white hover:text-pastis-500 cursor-pointer tracking-wide w-full">${joueur}</div>
             </td>
             <td class="sticky left-[120px] md:left-[200px] z-20 bg-navy-800 group-hover:bg-navy-700 px-1 md:px-4 py-3 text-pastis-500 font-bold text-sm md:text-xl font-oswald w-[40px] md:w-[60px] min-w-[40px] md:min-w-[60px] border-r-2 border-navy-600 shadow-[3px_0_5px_rgba(0,0,0,0.3)]">${total}</td>
-            <td class="px-2 md:px-3 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 text-left overflow-hidden w-[100px] md:w-[140px] min-w-[100px] md:min-w-[140px] max-w-[100px] md:max-w-[140px]">${favHTML}</td>
-            <td class="px-2 md:px-3 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 text-left overflow-hidden w-[100px] md:w-[140px] min-w-[100px] md:min-w-[140px] max-w-[100px] md:max-w-[140px]">${finHTML}</td>
+            <td class="px-2 md:px-3 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 text-left align-top overflow-hidden w-[100px] md:w-[140px] min-w-[100px] md:min-w-[140px] max-w-[100px] md:max-w-[140px]">${favHTML}</td>
+            <td class="px-2 md:px-3 py-3 bg-navy-800 group-hover:bg-navy-700 border-r border-white/5 text-left align-top overflow-hidden w-[100px] md:w-[140px] min-w-[100px] md:min-w-[140px] max-w-[100px] md:max-w-[140px]">${finHTML}</td>
             ${ptsColsHTML}
             ${phasesColsHTML}
             
